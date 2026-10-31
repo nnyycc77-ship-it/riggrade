@@ -24,7 +24,7 @@ import re
 import secrets
 
 from . import BENCH_VERSION
-from .classes import DATA_CENTRE, price_tier
+from .classes import DATA_CENTRE, PEER_CLASSES, WORKLOAD_CLASSES, price_tier
 from .engine import grade_session, preview
 from .grading import ReferenceBook
 from .heartbeat import Heartbeats
@@ -38,6 +38,10 @@ USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 # Decided prices (plan Revision 5, decided items 1), USDC atomic units.
 POINT_PRICE_ATOMIC = {DATA_CENTRE: 5_000_000, "consumer": 3_000_000}
 WALLET = re.compile(r"^0x[0-9a-fA-F]{40}$")
+# Plan Decision 15, restated for payers (spec section 10a).
+APPEALS = ("Appeals within 30 days of the grade, decided on the evidence already "
+           "held, with no paid retest. A proven error is corrected by an appended "
+           "correction; the original entry stays visible.")
 
 
 class Config:
@@ -120,9 +124,13 @@ class GradingApp:
         sale = {"on_sale": self.on_sale}
         if not self.on_sale:
             sale["reasons_off"] = self.config.reasons_off(self.adapter)
+        references = {cid: {w: self.references.basis(cid, w) for w in WORKLOAD_CLASSES}
+                      for cid in PEER_CLASSES}
         return {"product": "RigGrade", "bench_version": BENCH_VERSION,
                 "spec": "docs/grading-spec.md", "statement": STATEMENT,
                 "point_grade_price_usdc": {"data_centre": "5", "consumer": "3"},
+                "references": references,
+                "appeals": APPEALS,
                 "sale": sale}
 
     def new_session(self, start_response, body):
@@ -149,7 +157,8 @@ class GradingApp:
                          {"accepted": False, "errors": errors, "charged": False})
         session = self.store.get(sid)
         return _json(start_response, "200 OK",
-                     {"accepted": True, "preview": preview(body, session["workloads"])})
+                     {"accepted": True,
+                      "preview": preview(body, session["workloads"], self.references)})
 
     def grade(self, start_response, sid, environ):
         session = self.store.get(sid)
@@ -159,7 +168,7 @@ class GradingApp:
         if session.get("graded"):
             return _json(start_response, "409 Conflict",
                          {"error": "session already graded", "charged": False})
-        prev = preview(session["bundle"], session["workloads"])
+        prev = preview(session["bundle"], session["workloads"], self.references)
         if not self.on_sale:
             return _json(start_response, "503 Service Unavailable",
                          {"charged": False, "preview": prev,

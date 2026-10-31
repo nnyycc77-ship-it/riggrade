@@ -183,6 +183,21 @@ class PaidTests(Harness):
         _s, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
         self.assertEqual(doc["accepts"][0]["maxAmountRequired"], "5000000")
 
+    def test_preview_warns_before_payment_while_reference_building(self):
+        app = self.app()
+        sid, _st, b = self.run_session(app)
+        cls = b["preview"]["classes"]["inference"]
+        self.assertEqual(cls["notice"], "reference-building session, speed not graded")
+        _s, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
+        self.assertEqual(doc["preview"]["classes"]["inference"]["notice"],
+                         "reference-building session, speed not graded")
+
+    def test_descriptor_publishes_reference_basis_and_appeals(self):
+        app = self.app()
+        _s, _h, doc = call(app, "GET", "/riggrade/v1")
+        self.assertEqual(doc["references"]["rtx4090-24"]["inference"]["rigs"], 0)
+        self.assertIn("30 days", doc["appeals"])
+
     def test_first_sessions_print_insufficient_speed_then_grades(self):
         app = self.app()
         for i in range(5):
@@ -203,6 +218,9 @@ class PaidTests(Harness):
         self.assertEqual(label["pillars"]["reliability"], "not measured (point grade)")
         self.assertEqual(headers["X-PAYMENT-RESPONSE"], "eyJ0eCI6ICJvayJ9")
         self.assertEqual(doc["evidence_pack"]["paying_wallet"], PAYER)
+        basis = doc["evidence_pack"]["classes"]["inference"]["reference_basis"]
+        self.assertEqual(basis["rigs"], 5)
+        self.assertIn("single session", doc["badges"][0])
         sales = salelog.read_chain(self.log)
         self.assertEqual(len(sales), 6)
         self.assertEqual(sales[-1]["amount_atomic"], "3000000")

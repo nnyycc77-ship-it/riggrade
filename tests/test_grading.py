@@ -135,6 +135,24 @@ class ReferenceTests(unittest.TestCase):
             book.add("rtx4090-24", "inference", "rig-%d" % i, v)
         self.assertEqual(book.reference("rtx4090-24", "inference"), (120, True))
 
+    def test_attested_rigs_take_priority(self):
+        book = g.ReferenceBook()
+        for i in range(5):
+            book.add("h100-sxm-80", "inference", "un-%d" % i, 50.0)
+        self.assertEqual(book.reference("h100-sxm-80", "inference")[0], 50.0)
+        for i in range(5):
+            book.add("h100-sxm-80", "inference", "at-%d" % i, 100.0, attested=True)
+        self.assertEqual(book.reference("h100-sxm-80", "inference")[0], 100.0)
+        self.assertEqual(book.basis("h100-sxm-80", "inference")["attested_rigs"], 5)
+        self.assertIn("attested rigs only", book.basis("h100-sxm-80", "inference")["basis"])
+
+    def test_basis_before_five_rigs(self):
+        book = g.ReferenceBook()
+        book.add("rtx4090-24", "training", "r1", 10.0)
+        info = book.basis("rtx4090-24", "training")
+        self.assertEqual((info["rigs"], info["provisional"]), (1, True))
+        self.assertIn("speed not graded", info["basis"])
+
     def test_controlled_replaces_provisional(self):
         book = g.ReferenceBook()
         book.set_controlled("h100-sxm-80", "training", 5000.0)
@@ -157,11 +175,12 @@ class LabelTests(unittest.TestCase):
                             "assigned", evidence_tag("buyer", False, provisional=True),
                             {"from": 0, "to": 1})
         text = badge_text(label, "2 Nov 2026")
-        self.assertEqual(text, "Grade 2 · RTX 4090 class · Inference · point grade · "
+        self.assertEqual(text, "Grade 2 · RTX 4090 class · Inference · point grade, single session · "
                                "capped by Consistency · declared buyer run, unattested · "
                                "provisional bars · 2 Nov 2026")
         self.assertEqual(lint([STATEMENT, text]), [])
         self.assertEqual(label["pillars"]["reliability"], g.NOT_MEASURED)
+        self.assertEqual(label["evidence_basis"], "single session")
 
     def test_lint_catches_promise_words(self):
         self.assertEqual(lint(["Guaranteed uptime!", "certified rig"]),

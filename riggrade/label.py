@@ -35,6 +35,7 @@ def build_label(rig_id, class_id, workload, grade, form, capped_by, pillars,
         "workload_class": workload,
         "grade": grade,
         "form": form,
+        "evidence_basis": "single session" if form == "point" else "trailing windows",
         "capped_by": capped_by,
         "pillars": pillars,
         "status": status,
@@ -55,7 +56,7 @@ def badge_text(label, date_text):
     parts = [head,
              "%s class" % label_name(label["peer_class"]),
              WORKLOAD_NAMES[label["workload_class"]],
-             "point grade" if label["form"] == "point" else "full grade"]
+             "point grade, single session" if label["form"] == "point" else "full grade"]
     if label.get("capped_by") and grade != INSUFFICIENT:
         parts.append("capped by %s" % PILLAR_NAMES[label["capped_by"]])
     if label["status"] == "on_watch":

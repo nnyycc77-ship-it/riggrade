@@ -200,20 +200,38 @@ class ReferenceBook:
     """Spec 13: provisional class references from the first paid sessions.
 
     Only the first session per rig identity counts, so one host cannot steer
-    a reference with repeat sessions. Controlled reference runs, once they
-    exist, replace the provisional median.
+    a reference with repeat sessions. Attested sessions take priority: once
+    5 attested rigs exist, the median uses them alone. Controlled reference
+    runs, once they exist, replace the provisional median.
     """
 
     def __init__(self):
         self._samples = {}
         self._controlled = {}
 
-    def add(self, class_id, workload, rig_id, throughput):
+    def add(self, class_id, workload, rig_id, throughput, attested=False):
         bucket = self._samples.setdefault((class_id, workload), {})
-        bucket.setdefault(rig_id, throughput)
+        bucket.setdefault(rig_id, (throughput, bool(attested)))
 
     def set_controlled(self, class_id, workload, throughput):
         self._controlled[(class_id, workload)] = throughput
+
+    def basis(self, class_id, workload):
+        """What the reference rests on, for publication (spec 13)."""
+        key = (class_id, workload)
+        if key in self._controlled:
+            return {"basis": "controlled reference run", "provisional": False}
+        bucket = self._samples.get(key, {})
+        attested = [v for v, a in bucket.values() if a]
+        info = {"provisional": True, "rigs": len(bucket),
+                "attested_rigs": len(attested), "min_rigs": MIN_REFERENCE_RIGS}
+        if len(attested) >= MIN_REFERENCE_RIGS:
+            info["basis"] = "median of first sessions, attested rigs only, one per rig"
+        elif len(bucket) >= MIN_REFERENCE_RIGS:
+            info["basis"] = "median of first sessions, one per rig"
+        else:
+            info["basis"] = "reference-building: speed not graded yet"
+        return info
 
     def reference(self, class_id, workload):
         """Returns (reference throughput or None, provisional flag)."""
@@ -221,9 +239,12 @@ class ReferenceBook:
         if key in self._controlled:
             return self._controlled[key], False
         bucket = self._samples.get(key, {})
+        attested = [v for v, a in bucket.values() if a]
+        if len(attested) >= MIN_REFERENCE_RIGS:
+            return statistics.median(attested), True
         if len(bucket) < MIN_REFERENCE_RIGS:
             return None, True
-        return statistics.median(bucket.values()), True
+        return statistics.median(v for v, _a in bucket.values()), True
 
 
 def promise_words_in(text):

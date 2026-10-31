@@ -21,9 +21,13 @@ from .classes import identify
 from .label import build_label, evidence_tag
 
 
-def preview(bundle, workloads):
+REFERENCE_BUILDING_NOTICE = "reference-building session, speed not graded"
+
+
+def preview(bundle, workloads, references=None):
     """Free preview: gate result per class and the number of pillars that
-    will be measured. Never a grade (spec 6 step 5)."""
+    will be measured. Never a grade (spec 6 step 5). Where a class has no
+    reference yet, the preview says so before payment (spec 13)."""
     identity = bundle.get("identity") or {}
     class_id = identify(identity.get("device_name"), identity.get("memory_gb"))
     out = {"peer_class": class_id, "classes": {}}
@@ -32,9 +36,14 @@ def preview(bundle, workloads):
         passed, failed = grading.gate(workload, g.get("results") or {},
                                       g.get("free_memory_gb"),
                                       identity.get("card_count") or 1)
-        out["classes"][workload] = {"gate_passed": passed and class_id is not None,
-                                    "gate_failed": failed,
-                                    "pillars_measured": 2 if passed else 0}
+        entry = {"gate_passed": passed and class_id is not None,
+                 "gate_failed": failed,
+                 "pillars_measured": 2 if passed else 0}
+        if class_id is not None and references is not None:
+            entry["reference"] = references.basis(class_id, workload)
+            if references.reference(class_id, workload)[0] is None:
+                entry["notice"] = REFERENCE_BUILDING_NOTICE
+        out["classes"][workload] = entry
     return out
 
 
@@ -111,12 +120,14 @@ def grade_session(session, references, envelopes=None, attested=False,
                                   capped_by, pillars, status, tag, window,
                                   bundle.get("slice")))
         pack_classes[workload] = {"measured_throughput": measured,
-                                  "reference": reference, "speed_ratio": ratio,
+                                  "reference": reference,
+                                  "reference_basis": references.basis(class_id, workload),
+                                  "speed_ratio": ratio,
                                   "consistency_measures": cmeasures,
                                   "downtime_hours": hours,
                                   "recheck_matched": matched}
         if record_reference and measured:
-            references.add(class_id, workload, rig_id, measured)
+            references.add(class_id, workload, rig_id, measured, attested)
     return labels, _pack(session, class_id, pack_classes, attested, host_paid)
 
 
