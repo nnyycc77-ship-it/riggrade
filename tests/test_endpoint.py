@@ -234,6 +234,27 @@ class PaidTests(Harness):
         self.assertFalse(doc["charged"])
         self.assertEqual(salelog.read_chain(self.log), [])
 
+    def test_charged_without_grade_is_logged_for_reconciliation(self):
+        class Unknown(FakeAdapter):
+            def settle(self, header, requirement):
+                self.calls.append((header, requirement))
+                return {"ok": False, "charged": "unknown", "error": "settle got no answer"}
+        app = self.app(adapter=Unknown())
+        sid, _st, _b = self.run_session(app)
+        status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid,
+                               payment="pay")
+        self.assertEqual(status, "402 Payment Required")
+        self.assertEqual(doc["charged"], "unknown")
+        (entry,) = salelog.read_chain(self.log)
+        self.assertEqual(entry["status"], "charged_without_grade")
+        self.assertEqual(entry["session_id"], sid)
+        req = self.adapter.calls[0][1]
+        self.assertEqual(req["extra"], {"name": "USD Coin", "version": "2"})
+        self.assertEqual(req["maxTimeoutSeconds"], 300)
+        # the session stays ungraded, so it is not marked sold
+        status, _h, _d = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
+        self.assertEqual(status, "402 Payment Required")
+
     def test_unknown_class_is_not_sold(self):
         app = self.app()
         sid, _st, _b = self.run_session(app, device="Tesla T4", memory=15)

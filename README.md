@@ -8,6 +8,7 @@ Status: step 1 (spec, sample grades, container and endpoint, built and tested wi
 - [Sample grading of three fictional rigs](docs/sample-grading.md)
 - [Preflight check](docs/preflight.md): free one-minute check of a rented or hosted GPU box (throttling, foreign processes, driver vs CUDA, PCIe link, download and disk speed). `python3 -m runner.preflight`. Not a grade.
 - [GPU index method, v0 draft](docs/index-method.md): daily listed price per GPU-hour by peer class, and price per unit of measured work once graded rigs exist. Method published before any value. Recorder: `python3 -m pricewatch.record --out PATH`.
+- [Payments](docs/payments.md): x402 through keyless public facilitators with an automatic backup; payer screened before settle. The sale is off.
 - [Smoke test notebook](notebooks/smoke_test.ipynb): checks the GPU code paths on a free Colab or Kaggle GPU. Not a grade: small model, short run, local endpoint with the sale off. Command: `python3 -m runner.smoke --minutes 2`.
 
 ## Rules for this repo
