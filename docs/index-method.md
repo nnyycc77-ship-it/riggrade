@@ -1,6 +1,7 @@
 # RigGrade GPU index: method, v0 (draft)
 
-Status: draft. No index values are published yet. This method is published
+Status: draft, revised 31 Oct 2026 after Coordinator review (Message 159).
+No index values are published yet. This method is published
 before any number so that the rules cannot be fitted to the data.
 
 ## 1. What the index is
@@ -24,9 +25,13 @@ and its terms allow reading and republishing aggregates. Each source is
 checked against its terms before its first use, and that check is recorded in
 the source table below.
 
-| Source | Status | Terms checked |
-|---|---|---|
-| Vast.ai public offers | adapter built, not yet run | not yet: host blocked from the build environment |
+No recorder run rests on a source until both its terms and its adapter format
+are verified for that source. Both checks are recorded in the source table.
+So is whether the source's listed total includes storage or bandwidth charges.
+
+| Source | Status | Terms verified | Format verified | Total includes storage or bandwidth |
+|---|---|---|---|---|
+| Vast.ai public offers | adapter built, not yet run | not yet: host blocked from the build environment | not yet | not yet known |
 
 No host, machine or offer identifier is stored. Each run keeps only the
 aggregates in section 3. Raw listings are read, aggregated in memory and
@@ -52,7 +57,15 @@ For each source and class, one snapshot a day, taken at 00:00 to 01:00 UTC:
 - **Minimum sample.** A class with fewer than 10 offers from a source that
   day is published as "insufficient" for that source, with no price.
 - **Combined figure.** The median across all in-scope GPUs from every source
-  that met the minimum sample that day.
+  that met the minimum sample that day. The minimum applies per class and
+  per source here too: a cell marked insufficient is left out of the
+  combined figure for that class. The combined figure publishes the median
+  only, by design. Percentiles pooled across sources with different listing
+  practices would suggest a precision the pooled data does not have.
+- **Missing fields stop the run for that source.** If a source's data lacks
+  a field the adapter requires, nothing is recorded for that source that
+  day. The day shows as a gap for that source, with the source recorded as
+  failed. A partial or guessed figure is never recorded.
 
 ## 4. Listed is not paid
 
@@ -66,10 +79,19 @@ for this reason.
 For each class and workload:
 
     performance-adjusted price = combined median listed price per GPU-hour
-                                 / median measured throughput per GPU-hour
+                                 / median measured throughput per GPU
+                                   (units of work per GPU-hour)
 
-Throughput comes from graded sessions. It is the same ruler and the same
-first session per rig used for the class references (grading spec section 13).
+The result is a price per unit of measured work, published per million units
+(for inference, per million tokens).
+
+Throughput comes from graded sessions, on the same ruler as the class
+references. Its basis follows grading spec section 13 as amended in spec
+v0.1:
+- at most one session per rig identity;
+- attested rigs only, once 5 attested rigs exist in the class;
+- controlled references as soon as granted access exists.
+
 It is published only once at least 5 distinct rigs of that class have been
 graded. Until then it reads "reference-building", the same rule as speed
 grades.

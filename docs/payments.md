@@ -5,6 +5,10 @@ it on.
 
 ## How a payment moves
 
+The paid resource is `POST /riggrade/v1/grade` with `{"session_id": ...}`, one
+stable URL for every session. The older per-session route
+`/riggrade/v1/session/{id}/grade` still works.
+
 1. A grade request without payment answers `402 Payment Required` with one
    payment requirement:
    - the price in USDC on Base, from the decided prices;
@@ -33,6 +37,12 @@ code holds a private key.
 If money may have moved but no grade was issued (`charged` is `true` or
 `unknown`), the case is appended to the sale log as `charged_without_grade`,
 for reconciliation and a refund by hand.
+
+The 402 answer also carries x402 Bazaar discovery metadata (`extensions.bazaar`):
+how to call the resource, an example output, and tags. A catalogue lists a
+service only after a paid call settles and echoes that block. Shipping it
+therefore lists nothing on its own. Making the first paid call is the listing
+step, and it is the owner's decision.
 
 ## Configuration
 

@@ -114,6 +114,13 @@ class GradingApp:
                     return self.bundle(start_response, sid, body)
                 if action == "grade":
                     return self.grade(start_response, sid, environ)
+            if rest == ["grade"]:
+                # One stable paid resource for every session, so a discovery
+                # catalogue lists RigGrade once rather than once per sale.
+                if not isinstance(body, dict) or not body.get("session_id"):
+                    raise BadRequest("session_id is required")
+                return self.grade(start_response, str(body["session_id"]), environ,
+                                  resource_path=PREFIX + "/grade")
             if rest == ["heartbeat"]:
                 return self.heartbeat(start_response, body)
         except BadRequest as exc:
@@ -162,7 +169,7 @@ class GradingApp:
                      {"accepted": True,
                       "preview": preview(body, session["workloads"], self.references)})
 
-    def grade(self, start_response, sid, environ):
+    def grade(self, start_response, sid, environ, resource_path=None):
         session = self.store.get(sid)
         if session is None or session.get("bundle") is None:
             return _json(start_response, "409 Conflict",
@@ -187,7 +194,7 @@ class GradingApp:
         requirement = {"scheme": "exact", "network": self.config.network,
                        "asset": USDC_BASE, "payTo": self.config.wallet,
                        "maxAmountRequired": str(amount),
-                       "resource": _url(environ, PREFIX + "/session/%s/grade" % sid),
+                       "resource": _url(environ, resource_path or PREFIX + "/session/%s/grade" % sid),
                        "description": "RigGrade point grade, %d workload class(es)"
                                       % len(session["workloads"]),
                        "mimeType": "application/json",
@@ -198,6 +205,7 @@ class GradingApp:
         if not header:
             return _json(start_response, "402 Payment Required",
                          {"x402Version": 1, "accepts": [requirement],
+                          "extensions": {"bazaar": bazaar_extension()},
                           "preview": prev})
         result = self.adapter.settle(header, requirement)
         if not result.get("ok") and result.get("charged") in (True, "unknown"):
@@ -247,6 +255,37 @@ class GradingApp:
             return _json(start_response, "200 OK", self.heartbeats.register(body["rig_id"]))
         return _json(start_response, "200 OK",
                      self.heartbeats.beat(body["rig_id"], body.get("prev"), body.get("echo")))
+
+
+def bazaar_extension():
+    """x402 Bazaar discovery metadata for the stable grade resource. A
+    catalogue indexes it only after a paid call settles and echoes it, so
+    shipping it lists nothing by itself; listing stays an owner decision."""
+    return {
+        "info": {
+            "input": {"type": "http", "method": "POST", "bodyType": "json",
+                      "body": {"session_id": "rg_s_..."}},
+            "output": {"type": "application/json",
+                       "example": {"labels": [{"grade": 2, "peer_class": "rtx4090-24",
+                                               "workload": "inference",
+                                               "capped_by": "consistency"}],
+                                   "badges": ["Grade 2 · RTX 4090 class · Inference · ..."],
+                                   "evidence_pack": {}}},
+        },
+        "schema": {
+            "type": "object",
+            "properties": {
+                "session_id": {"type": "string",
+                               "description": "A session whose result bundle was accepted: "
+                                              "POST /riggrade/v1/session, run the open "
+                                              "container, POST the bundle, then pay here."},
+            },
+            "required": ["session_id"],
+            "additionalProperties": False,
+        },
+        "serviceName": "RigGrade",
+        "tags": ["gpu", "benchmark", "verification", "grading"],
+    }
 
 
 class BadRequest(ValueError):
