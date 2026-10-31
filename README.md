@@ -12,6 +12,7 @@ Status: step 1 (spec, sample grades, container and endpoint, built and tested wi
 - MCP server for agents: `python3 -m riggrade.mcp` exposes `gpu_preflight` and `riggrade_service_info` over stdio.
 - [Payments](docs/payments.md): x402 through keyless public facilitators with an automatic backup; payer screened before settle. The sale is off.
 - [Reconstructed price history method, v0 draft](docs/index-reconstructed-method.md): a separate, labelled series from third-party records, never joined to the live index; no reconstructed grades.
+- [Smoke test from Google Drive](notebooks/smoke_test_drive.ipynb): the same free GPU test, reading the code from Drive after checking it against a manifest (`scripts/stage_for_drive.py`) and writing both reports back to Drive.
 - [Smoke test notebook](notebooks/smoke_test.ipynb): checks the GPU code paths on a free Colab or Kaggle GPU. Not a grade: small model, short run, local endpoint with the sale off. Command: `python3 -m runner.smoke --minutes 2`.
 
 ## Rules for this repo
