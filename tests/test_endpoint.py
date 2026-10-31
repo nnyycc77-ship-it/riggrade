@@ -255,6 +255,22 @@ class PaidTests(Harness):
         status, _h, _d = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
         self.assertEqual(status, "402 Payment Required")
 
+    def test_stable_grade_resource_and_bazaar_metadata(self):
+        app = self.app()
+        sid, _st, _b = self.run_session(app)
+        status, _h, doc = call(app, "POST", "/riggrade/v1/grade", {"session_id": sid})
+        self.assertEqual(status, "402 Payment Required")
+        self.assertTrue(doc["accepts"][0]["resource"].endswith("/riggrade/v1/grade"))
+        bazaar = doc["extensions"]["bazaar"]
+        self.assertEqual(bazaar["schema"]["required"], ["session_id"])
+        self.assertIn("gpu", bazaar["tags"])
+        status, _h, doc = call(app, "POST", "/riggrade/v1/grade", {"session_id": sid},
+                               payment="pay")
+        self.assertEqual(status, "200 OK")
+        self.assertTrue(self.adapter.calls[-1][1]["resource"].endswith("/riggrade/v1/grade"))
+        status, _h, _d = call(app, "POST", "/riggrade/v1/grade", {})
+        self.assertEqual(status, "400 Bad Request")
+
     def test_unknown_class_is_not_sold(self):
         app = self.app()
         sid, _st, _b = self.run_session(app, device="Tesla T4", memory=15)
