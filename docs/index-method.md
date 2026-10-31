@@ -91,6 +91,7 @@ v0.1:
 - at most one session per rig identity;
 - attested rigs only, once 5 attested rigs exist in the class;
 - controlled references as soon as granted access exists.
+
 It is published only once at least 5 distinct rigs of that class have been
 graded. Until then it reads "reference-building", the same rule as speed
 grades.
