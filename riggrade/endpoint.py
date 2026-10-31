@@ -1,16 +1,18 @@
 """WSGI grading endpoint (spec section 6), shipped with the sale off.
 
 The sale is on only when every switch below is set AND a payment adapter is
-given. This package ships no adapter: verifying and settling an x402
-payment, and screening the payer, belong to the adapter, which the shelf
-supplies at step 2. Until then every grade request answers 503 and charges
-nothing.
+given. Verifying and settling an x402 payment, and screening the payer,
+belong to the adapter (riggrade.payment), which deploy code passes in at
+step 2. Until then every grade request answers 503 and charges nothing.
 
     RIGGRADE_ENABLED=1
     PAYOUT_WALLET_ADDRESS=0x...       (40 hex digits)
     RIGGRADE_SALE_LOG=/path/to/sales.jsonl   (chain must read clean)
     RIGGRADE_SECRET=...               (session parameter seed)
     RIGGRADE_IMAGE_DIGESTS=sha256:...,sha256:...   (pinned images accepted)
+
+riggrade.payment.FacilitatorAdapter is the adapter for keyless public
+facilitators; deploy code passes it in. Nothing here builds one by itself.
 
 Adapter contract: adapter.settle(x_payment_header, requirement) returns a
 dict {"ok": bool, "payer": str, "tx": str, "receipt_header": str,
@@ -187,13 +189,27 @@ class GradingApp:
                        "maxAmountRequired": str(amount),
                        "resource": PREFIX + "/session/%s/grade" % sid,
                        "description": "RigGrade point grade, %d workload class(es)"
-                                      % len(session["workloads"])}
+                                      % len(session["workloads"]),
+                       "mimeType": "application/json",
+                       "maxTimeoutSeconds": 300,
+                       # EIP-712 domain of USDC on Base, needed to check the signature.
+                       "extra": {"name": "USD Coin", "version": "2"}}
         header = environ.get("HTTP_X_PAYMENT")
         if not header:
             return _json(start_response, "402 Payment Required",
                          {"x402Version": 1, "accepts": [requirement],
                           "preview": prev})
         result = self.adapter.settle(header, requirement)
+        if not result.get("ok") and result.get("charged") in (True, "unknown"):
+            # Money may have moved without a grade: log it for reconciliation
+            # and a refund by hand. The session stays ungraded.
+            salelog.append(self.config.sale_log,
+                           {"product": "riggrade_point_grade", "session_id": sid,
+                            "status": "charged_without_grade",
+                            "charged": result.get("charged"),
+                            "amount_atomic": requirement["maxAmountRequired"],
+                            "payer": result.get("payer"), "tx": result.get("tx"),
+                            "error": result.get("error"), "at": self.clock()})
         if not result.get("ok"):
             return _json(start_response, "402 Payment Required",
                          {"error": result.get("error", "payment failed"),
