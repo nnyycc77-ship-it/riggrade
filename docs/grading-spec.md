@@ -1,6 +1,6 @@
-# RigGrade grading spec, v0 draft
+# RigGrade grading spec, v0.1
 
-Status: draft for review. It implements Revision 5 of the GPU quality grading plan (31 October 2026). Where this spec has to choose something the plan left open, the choice is marked **[proposed]** and listed again in section 15, so the reviewer can accept or change it in one place. Numbers marked **[proposed]** are design choices, not measured facts.
+Status: v0.1. It folds in the coordinator's review of v0 (board Messages 143b and 146) and the corrections found while building the engine. It implements Revision 5 of the GPU quality grading plan (31 October 2026). Where this spec has to choose something the plan left open, the choice is marked **[proposed]** and listed again in section 15, so the reviewer can accept or change it in one place. Numbers marked **[proposed]** are design choices, not measured facts.
 
 Nothing here switches a sale on. The endpoint ships with the sale off, and going live is an owner-gated step.
 
@@ -106,7 +106,7 @@ Where a marketplace exposes availability data through an interface, it is record
 
 ### 5.4 Minimum evidence
 
-- **Point grade.** One session holding at least 3 timed passes of the ruler, plus the 60-minute sustained run. The CV is computed across those passes, and the label states "single session". **[proposed]** The plan's '3 benchmark runs on separate days' rule is applied to full grades only. A point grade is one paid session by definition, so if that rule applied to it, every point grade would print Insufficient data for consistency. See section 15, item 1.
+- **Point grade.** One session holding at least 3 timed passes of the ruler, plus the 60-minute sustained run. The CV is computed across those passes. The label carries `"evidence_basis": "single session"`, and the badge reads "point grade, single session". The plan's '3 benchmark runs on separate days' rule applies to full grades only; this was accepted in review (Message 143b).
 - **Full grade.** At least 3 sessions on separate days within the trailing 7 days for speed and consistency. A heartbeat chain covering at least 25 of the trailing 30 days for reliability, with the not-yet-covered days counted as down. Below either minimum, that pillar prints Insufficient data.
 
 ### 5.5 Top-grade rule
@@ -118,10 +118,10 @@ Grade 1 in any pillar becomes the overall Grade 1 only if the session evidence i
 All endpoints are under `/riggrade/v1/`. Every request and response is JSON.
 
 1. **Nonce.** `POST /riggrade/v1/session` with `{workload_classes: [...], declared_runner: "buyer"|"host", host_wallet?: "0x..."}`. This returns `{session_id, nonce, expires_at}`. Issuing a nonce is free. Here `expires_at` is the completion window: **[proposed]** 3 hours from issue.
-2. **Parameters at run start.** The container calls `POST /riggrade/v1/session/{id}/start` and receives the run parameters: batch sizes, prompt and output lengths, concurrency, pass order and the aggressor schedule for slices. Parameters are drawn from the published distribution (`spec/param-distribution.json`, to be added with the endpoint) using `HMAC-SHA256(server_secret, nonce)` as the seed. They are revealed only at this call, so they cannot be tuned for in advance. The draw can be reproduced by anyone holding the secret, which lets an appeal re-derive it.
+2. **Parameters at run start.** The container calls `POST /riggrade/v1/session/{id}/start` and receives the run parameters: batch sizes, prompt and output lengths, concurrency, pass order and the aggressor schedule for slices. Parameters are drawn from the published distribution (`spec/param-distribution.json`) each field drawn with `HMAC-SHA256(server_secret, nonce || field)`. They are revealed only at this call, so they cannot be tuned for in advance. The draw can be reproduced by anyone holding the secret, which lets an appeal re-derive it.
 3. **Run.** Gate, ruler passes, the sustained run, and the slice tests where they apply, all under the pinned image. Attestation is captured where available, with the session nonce as the attestation nonce.
 4. **Submit.** `POST /riggrade/v1/session/{id}/bundle` with the result bundle (section 11). The endpoint checks the nonce, the window, the image digest and the parameter echo. A bundle that fails any check is refused, and nothing is charged.
-5. **Pay and grade.** The grade is returned behind x402. An unpaid request receives 402 with the price for the classes requested and a preview: gate pass or fail, and the count of pillars measured. It never shows a grade. A session with an unknown class, or with no class that passed its gate, is not sold at all: the preview already says so, and a grade that can only read unrated is refused with nothing charged. After payment, the response is the label and the evidence pack, and the sale record is appended to the hash-chained sale log, following the shelf's existing pattern.
+5. **Pay and grade.** The grade is returned behind x402. The payment adapter verifies the payment, screens the payer under the program's compliance rules and only then settles, and every sale is appended to the sale log. An unpaid request receives 402 with the price for the classes requested and a preview: gate pass or fail, and the count of pillars measured. It never shows a grade. Where a class has no reference yet (section 13), the preview carries the notice "reference-building session, speed not graded" before any payment. A session with an unknown class, or with no class that passed its gate, is not sold at all: the preview already says so, and a grade that can only read unrated is refused with nothing charged. After payment, the response is the label and the evidence pack, and the sale record is appended to the hash-chained sale log, following the shelf's existing pattern.
 6. **Publication.** A grade from a declared buyer run is private to the paying wallet. It is published only when the host's registered wallet signs a publish request (plan, discussion decision 3).
 
 ## 7. Heartbeat (subscription)
@@ -174,6 +174,10 @@ States: `assigned`, `affirmed`, `on_watch`, `demoted`, `expired`, `withdrawn`.
 
 A material change to the tested configuration (a card swapped, the link changed, the rig moved) ends the grade for the old configuration. A published grade stays public through every state, in the same record.
 
+## 10a. Appeals
+
+Plan Decision 15, restated for payers and in the endpoint descriptor. A host may appeal within 30 days of a grade. The appeal is decided on the evidence already held, with no paid retest. A proven error is corrected by appending a correction to the record, never by silently editing the original grade. A buyer complaint triggers a review, and does not by itself put a grade on watch.
+
 ## 11. Result bundle and evidence pack
 
 The result bundle (from the container) holds:
@@ -205,6 +209,7 @@ The machine-readable label:
   "workload_class": "inference",
   "grade": 2,
   "form": "point",
+  "evidence_basis": "single session",
   "capped_by": "consistency",
   "pillars": {"speed": 1, "consistency": 2, "reliability": "not measured (point grade)"},
   "status": "assigned",
@@ -217,14 +222,17 @@ The machine-readable label:
 
 The text form, for the badge:
 
-> Grade 2 · RTX 4090 class · Inference · point grade · capped by Consistency · declared buyer run, unattested · provisional bars · 2 Nov 2026
+> Grade 2 · RTX 4090 class · Inference · point grade, single session · capped by Consistency · declared buyer run, unattested · provisional bars · 2 Nov 2026
 
 A public badge is a live link to the current record, never a static image, and the badge page links to the aggregate counts (plan, discussion decision 5). Promise words ("guaranteed", "guarantee", "certified", "certification", "warranty", "safe") must never appear in label, badge or listing text. A lint test in the endpoint package will enforce this.
 
 ## 13. Provisional bars at launch
 
-Class references need runs, and the capital boundary rules out rentals ahead of revenue. So v0 launches with **provisional references**: for each class, the median of the ruler throughputs from the first paid sessions in that class. Until at least 5 sessions exist in a class, no speed grade is issued in it, and speed prints Insufficient data.
-- **[proposed]** This replaces the plan's "published results for the open benchmark". Published results for our exact pinned image and rulers will not exist, because the rulers are ours. See section 15, item 2.
+Class references need runs, and the capital boundary rules out rentals ahead of revenue. So v0 launches with **provisional references**: for each class, the median of the ruler throughputs from the first paid sessions in that class. Until at least 5 distinct rigs stand behind it, no speed grade is issued in that class, and speed prints Insufficient data. This replaces the plan's "published results for the open benchmark", which cannot exist for our own pinned image and rulers; accepted in review (section 15, item 2).
+
+- **Before payment.** While a class has fewer than 5 rigs behind its reference, the preview tells the payer "reference-building session, speed not graded". The price does not change, because prices are decided items (Message 146).
+- **Published basis.** The endpoint descriptor and every evidence pack publish, per class, the number of rigs behind the reference, how many are attested, and the basis used.
+- **Steering defences.** At most one session per rig identity counts. Once 5 attested rigs exist, the median uses attested rigs only. Controlled reference runs replace the provisional median as soon as granted access exists, without waiting for a fixed count.
 
 Every grade under provisional references carries the `provisional` tag. References switch to controlled reference runs, taken on access granted under paid work, through the 4-week version overlap (plan Decision 14).
 
@@ -237,10 +245,13 @@ Every grade under provisional references carries the `provisional` tag. Referenc
 
 ## 15. Open items for review
 
-1. **Point-grade evidence.** Apply the 3-sessions-on-separate-days minimum to full grades only. Point grades use 3 passes within one session, labelled "single session" (section 5.4).
-2. **Provisional references.** Use the median of the first paid sessions per class, with no speed grade until 5 sessions exist, instead of "published results" (section 13).
+1. **Point-grade evidence.** Accepted in review (Message 143b).
+2. **Provisional references.** Accepted in review (Message 143b), with the disclosure, publication and steering conditions now written into section 13. This is an agreed amendment to plan discussion decision 11, for the next plan revision.
 3. **v0 bars.** All values in section 5 are proposals: speed 0.95/0.92 and 0.85/0.82; CV 3%/7%; decay 5%/10%; p99/p50 2.0/3.0; isolation 5%/12%; downtime 3.6 h/14.4 h.
 4. **Rulers.** Qwen2.5-7B-Instruct on vLLM for inference, and GPT-2 124M on synthetic tokens for training (section 3). The inference gate's 20 GB free minimum leaves 16 GB cards unrated for inference in v0. (v0 said 24 GB free, which no 24 GB card can show after driver load; corrected while building the engine.)
 5. **Completion window.** 3 hours from nonce issue (section 6).
 6. **Identity mismatch threshold.** 25% outside the class envelope (section 8.3).
 7. **Licence for the open container.** Not chosen yet. The owner decides it before step 2, since the container is published then.
+8. **Reliability cross-check rule.** A disagreement of more than 2 hours between the heartbeat and the marketplace data holds the pillar at the lower of the two (section 5.3).
+9. **Heartbeat minimum.** A chain covering at least 25 of the trailing 30 days (section 5.4).
+10. **Pre-payment preview.** Gate result, pillar count and the reference-building notice, never a grade (section 6).
