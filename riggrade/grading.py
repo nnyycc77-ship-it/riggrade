@@ -67,12 +67,14 @@ def gate(workload, gate_results, free_memory_gb, card_count):
     return not failed, failed
 
 
-def speed_grade(ratio, held=None):
-    """Spec 5.1. Returns (grade, below_keep).
+def speed_grade(ratio, held=None, on_watch=False):
+    """Spec 5.1 and plan Decision 10. Returns (grade, below_keep).
 
     `held` is the grade the rig already holds, if any. A held grade is kept
-    while the ratio stays at or above its keep bar; below it the grade falls
-    to what the ratio earns and below_keep is True, which puts it on watch.
+    while the ratio stays at or above its keep bar. The first week below the
+    keep bar keeps the held grade and puts it on watch (below_keep True).
+    Only a second consecutive week below (`on_watch` already True) lands the
+    grade on what the ratio earns.
     """
     if ratio is None:
         return INSUFFICIENT, False
@@ -84,7 +86,7 @@ def speed_grade(ratio, held=None):
     if held in (1, 2) and earned > held:
         if ratio >= SPEED_KEEP[held]:
             return held, False
-        return earned, True
+        return (earned if on_watch else held), True
     return earned, False
 
 
@@ -165,7 +167,8 @@ def overall(pillars, form):
         form = "point"
     used = ["speed", "consistency"] + (["reliability"] if form == "full" else [])
     worst = max(pillars[name] for name in used)
-    capped_by = next(name for name in used if pillars[name] == worst)
+    # Nothing caps a grade whose pillars are all at the top.
+    capped_by = None if worst == 1 else next(name for name in used if pillars[name] == worst)
     return worst, capped_by, form
 
 

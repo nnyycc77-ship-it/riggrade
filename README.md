@@ -4,7 +4,8 @@ RigGrade is an independent GPU rig grading service. Whoever holds access to a ri
 
 Status: step 1 (spec, sample grades, container and endpoint, built and tested with the sale switched off). Nothing here is live.
 
-- [Grading spec, v0 draft](docs/grading-spec.md)
+- [Grading spec, v0.1](docs/grading-spec.md)
+- [Sample grading of three fictional rigs](docs/sample-grading.md)
 
 ## Rules for this repo
 

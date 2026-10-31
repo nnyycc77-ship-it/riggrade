@@ -47,10 +47,16 @@ class SpeedTests(unittest.TestCase):
 
     def test_keep_buffer(self):
         self.assertEqual(g.speed_grade(0.93, held=1), (1, False))
-        self.assertEqual(g.speed_grade(0.91, held=1), (2, True))
         self.assertEqual(g.speed_grade(0.83, held=2), (2, False))
-        self.assertEqual(g.speed_grade(0.80, held=2), (3, True))
         self.assertEqual(g.speed_grade(0.97, held=2), (1, False))
+
+    def test_watch_before_demotion(self):
+        # Decision 10: first bad week keeps the held grade, on watch.
+        self.assertEqual(g.speed_grade(0.91, held=1), (1, True))
+        self.assertEqual(g.speed_grade(0.80, held=2), (2, True))
+        # Second consecutive bad week lands on what the numbers earn.
+        self.assertEqual(g.speed_grade(0.91, held=1, on_watch=True), (2, True))
+        self.assertEqual(g.speed_grade(0.70, held=1, on_watch=True), (3, True))
 
 
 class ConsistencyTests(unittest.TestCase):
@@ -106,7 +112,7 @@ class OverallTests(unittest.TestCase):
     def test_full_falls_back_to_point_without_reliability(self):
         self.assertEqual(g.overall({"speed": 1, "consistency": 1,
                                     "reliability": g.INSUFFICIENT}, "full"),
-                         (1, "speed", "point"))
+                         (1, None, "point"))
 
     def test_full_uses_reliability(self):
         self.assertEqual(g.overall({"speed": 1, "consistency": 1,
@@ -114,9 +120,9 @@ class OverallTests(unittest.TestCase):
                          (3, "reliability", "full"))
 
     def test_top_grade_rule(self):
-        self.assertEqual(g.top_grade_rule(1, "speed", False, False), (2, "evidence"))
-        self.assertEqual(g.top_grade_rule(1, "speed", True, False), (1, "speed"))
-        self.assertEqual(g.top_grade_rule(1, "speed", False, True), (1, "speed"))
+        self.assertEqual(g.top_grade_rule(1, None, False, False), (2, "evidence"))
+        self.assertEqual(g.top_grade_rule(1, None, True, False), (1, None))
+        self.assertEqual(g.top_grade_rule(1, None, False, True), (1, None))
         self.assertEqual(g.top_grade_rule(2, "speed", False, False), (2, "speed"))
 
     def test_recheck_tolerance(self):

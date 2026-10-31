@@ -59,8 +59,8 @@ def badge_text(label, date_text):
              "point grade, single session" if label["form"] == "point" else "full grade"]
     if label.get("capped_by") and grade != INSUFFICIENT:
         parts.append("capped by %s" % PILLAR_NAMES[label["capped_by"]])
-    if label["status"] == "on_watch":
-        parts.append("on watch")
+    if label["status"] in ("on_watch", "demoted"):
+        parts.append(label["status"].replace("_", " "))
     parts.append("declared %s run, %s" % (runner, attested))
     if "provisional" in tag:
         parts.append("provisional bars")
