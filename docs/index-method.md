@@ -92,6 +92,12 @@ v0.1:
 - attested rigs only, once 5 attested rigs exist in the class;
 - controlled references as soon as granted access exists.
 
+**Hardware cost, not model progress.** The ruler is a pinned model on a
+pinned container. Cheaper work from newer, more efficient models therefore
+does not move this series. It moves only with the price and delivered
+throughput of the hardware. A change of ruler is a method change: it gets 14
+days' notice, and the old and new series are never joined into one line.
+
 It is published only once at least 5 distinct rigs of that class have been
 graded. Until then it reads "reference-building", the same rule as speed
 grades.

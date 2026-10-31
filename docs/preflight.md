@@ -4,6 +4,13 @@ A one-minute check to run on a GPU box right after renting it, or on your own
 box before listing it. It answers one question: is this box behaving like the
 card it reports?
 
+The largest GPU buyers pay for capacity only once it passes acceptance
+testing. Preflight is that first check for everyone else: a renter with no
+lawyers and no test plan gets a verdict in a minute.
+
+From an agent, run it as an MCP tool: `python3 -m riggrade.mcp` on the
+rented box exposes `gpu_preflight` and `riggrade_service_info`.
+
     docker run --gpus all <riggrade image> python3 -m runner.preflight
     # or, from a checkout with torch installed:
     python3 -m runner.preflight [--seconds 30] [--url URL] [--skip-download] [--dir PATH]
