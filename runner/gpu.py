@@ -47,16 +47,25 @@ def memory_integrity(device=0, fraction=0.9, chunk_gb=1.0):
     return ok and done > 0
 
 
-def gemm(device=0, n=8192, reps=20):
-    """BF16 GEMM: correctness against FP32 on a small case, then TFLOPS."""
+def preferred_dtype(device=0):
+    """bfloat16 where the card supports it (graded runs), else float16.
+    Older cards such as the T4 have no bf16; the smoke test uses fp16 there."""
     torch = _torch()
+    return "bfloat16" if torch.cuda.is_bf16_supported() else "float16"
+
+
+def gemm(device=0, n=8192, reps=20, dtype="bfloat16"):
+    """GEMM (BF16 for graded runs): correctness against FP32 on a small
+    case, then TFLOPS."""
+    torch = _torch()
+    dt = getattr(torch, dtype)
     a = torch.randn(256, 256, device=device)
     b = torch.randn(256, 256, device=device)
     ref = a @ b
-    got = (a.bfloat16() @ b.bfloat16()).float()
+    got = (a.to(dt) @ b.to(dt)).float()
     correct = bool(torch.allclose(got, ref, rtol=5e-2, atol=5e-1))
-    x = torch.randn(n, n, device=device, dtype=torch.bfloat16)
-    y = torch.randn(n, n, device=device, dtype=torch.bfloat16)
+    x = torch.randn(n, n, device=device, dtype=dt)
+    y = torch.randn(n, n, device=device, dtype=dt)
     for _ in range(3):
         x @ y
     torch.cuda.synchronize(device)

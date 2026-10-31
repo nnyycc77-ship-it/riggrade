@@ -18,13 +18,15 @@ SERVER_PORT = 8811
 
 
 class InferenceServer:
-    def __init__(self, model=INFERENCE_MODEL, port=SERVER_PORT):
+    def __init__(self, model=INFERENCE_MODEL, port=SERVER_PORT, dtype="bfloat16",
+                 extra_args=()):
         self.model, self.port, self.proc = model, port, None
+        self.dtype, self.extra_args = dtype, list(extra_args)
 
     def __enter__(self):
         self.proc = subprocess.Popen(
-            ["vllm", "serve", self.model, "--dtype", "bfloat16",
-             "--port", str(self.port), "--tensor-parallel-size", "1"],
+            ["vllm", "serve", self.model, "--dtype", self.dtype,
+             "--port", str(self.port), "--tensor-parallel-size", "1"] + self.extra_args,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         deadline = time.time() + 900
         while time.time() < deadline:
@@ -83,13 +85,13 @@ class InferenceServer:
             [g for r in results for g in r[2]]
 
 
-def training_pass(params, seconds=60, device=0):
+def training_pass(params, seconds=60, device=0, dtype="bfloat16"):
     """GPT-2 124M on synthetic tokens. Returns training tokens per second
     per card on one card."""
     import torch
     from transformers import GPT2Config, GPT2LMHeadModel
     p = params["training"]
-    model = GPT2LMHeadModel(GPT2Config()).to(device).to(torch.bfloat16)
+    model = GPT2LMHeadModel(GPT2Config()).to(device).to(getattr(torch, dtype))
     opt = torch.optim.AdamW(model.parameters(), lr=1e-4)
     batch, seq = p["micro_batch"], p["sequence_length"]
     tokens = 0

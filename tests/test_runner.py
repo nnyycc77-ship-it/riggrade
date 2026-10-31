@@ -1,5 +1,4 @@
 import io
-import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,6 +7,7 @@ from riggrade.endpoint import GradingApp
 from runner import identity, stats
 from runner.main import measure, run
 from runner.bundle import output_entry
+from runner.local import InProcessClient
 
 CSV = ("NVIDIA GeForce RTX 4090, 24564, 550.54, 00000000:01:00.0, GPU-aaa\n"
        "NVIDIA GeForce RTX 4090, 24564, 550.54, 00000000:02:00.0, GPU-bbb\n")
@@ -72,37 +72,6 @@ class FakeBackend:
     def sustained_sample(self, workload, params):
         self.clock.t += 60
         return self.throughput
-
-
-class InProcessClient:
-    """Drives the real endpoint in-process, the way runner.client does over
-    HTTP."""
-
-    def __init__(self, app):
-        self.app = app
-        self.base = "http://test/riggrade/v1"
-
-    def _post(self, path, body=None):
-        data = json.dumps(body or {}).encode()
-        env = {"REQUEST_METHOD": "POST", "PATH_INFO": "/riggrade/v1" + path,
-               "CONTENT_LENGTH": str(len(data)), "wsgi.input": io.BytesIO(data)}
-        got = {}
-
-        def sr(status, headers):
-            got["status"] = status
-        out = json.loads(b"".join(self.app(env, sr)))
-        out["_status"] = got["status"]
-        return out
-
-    def new_session(self, workloads, runner, host_wallet=None):
-        return self._post("/session", {"workload_classes": workloads,
-                                       "declared_runner": runner})
-
-    def start(self, sid):
-        return self._post("/session/%s/start" % sid)
-
-    def submit(self, sid, bundle):
-        return self._post("/session/%s/bundle" % sid, bundle)
 
 
 class MeasureTests(unittest.TestCase):
