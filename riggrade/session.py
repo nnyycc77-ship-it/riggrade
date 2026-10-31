@@ -1,0 +1,139 @@
+"""Session protocol (spec section 6): nonce, parameters at run start, and
+result bundle checks. State lives in a store object so the endpoint can use
+memory in tests and a file in deployment."""
+
+import hashlib
+import hmac
+import json
+import secrets
+from pathlib import Path
+
+from . import BENCH_VERSION
+from .classes import WORKLOAD_CLASSES
+
+COMPLETION_WINDOW_S = 3 * 3600  # spec 6, [proposed]
+DISTRIBUTION_FILE = Path(__file__).resolve().parents[1] / "spec" / "param-distribution.json"
+RUNNERS = ("buyer", "host")
+
+
+class SessionError(ValueError):
+    pass
+
+
+def load_distribution(path=None):
+    return json.loads(Path(path or DISTRIBUTION_FILE).read_text(encoding="utf-8"))
+
+
+def draw(secret, nonce, field, choices):
+    """Deterministic draw: HMAC-SHA256(secret, nonce || field) mod len."""
+    digest = hmac.new(secret, (nonce + "|" + field).encode(), hashlib.sha256).digest()
+    return choices[int.from_bytes(digest, "big") % len(choices)]
+
+
+def draw_parameters(secret, nonce, workloads, distribution):
+    params = {"passes": draw(secret, nonce, "passes", distribution["passes"]),
+              "pass_order": [w for w in draw(secret, nonce, "pass_order",
+                                             distribution["pass_order"])
+                             if w in workloads]}
+    for workload in workloads:
+        params[workload] = {field: draw(secret, nonce, workload + "." + field, choices)
+                            for field, choices in sorted(distribution[workload].items())}
+    return params
+
+
+def sha256_hex(text):
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+class Sessions:
+    def __init__(self, secret, store, allowed_images, distribution=None,
+                 clock=None):
+        if not secret:
+            raise SessionError("a server secret is required")
+        self.secret = secret
+        self.store = store
+        self.allowed_images = set(allowed_images)
+        self.distribution = distribution or load_distribution()
+        self.clock = clock
+
+    def issue(self, workloads, declared_runner, host_wallet=None):
+        if not workloads or any(w not in WORKLOAD_CLASSES for w in workloads):
+            raise SessionError("workload_classes must be a non-empty subset of %s"
+                               % (WORKLOAD_CLASSES,))
+        if declared_runner not in RUNNERS:
+            raise SessionError("declared_runner must be buyer or host")
+        now = self.clock()
+        session = {"session_id": "rs_" + secrets.token_hex(8),
+                   "nonce": secrets.token_hex(16),
+                   "workloads": sorted(set(workloads)),
+                   "declared_runner": declared_runner,
+                   "host_wallet": host_wallet,
+                   "issued_at": now,
+                   "expires_at": now + COMPLETION_WINDOW_S,
+                   "started_at": None, "params": None, "bundle": None}
+        self.store.put(session["session_id"], session)
+        return session
+
+    def start(self, session_id):
+        session = self._live(session_id)
+        if session["started_at"] is None:
+            session["started_at"] = self.clock()
+            session["params"] = draw_parameters(self.secret, session["nonce"],
+                                                session["workloads"],
+                                                self.distribution)
+            self.store.put(session_id, session)
+        return session
+
+    def submit(self, session_id, bundle):
+        """Validate a result bundle (spec 6 step 4). Returns the error list;
+        an empty list means accepted and stored."""
+        session = self.store.get(session_id)
+        if session is None:
+            return ["unknown_session"]
+        errors = []
+        if session["started_at"] is None:
+            errors.append("not_started")
+        if self.clock() > session["expires_at"]:
+            errors.append("window_expired")
+        if bundle.get("nonce") != session["nonce"]:
+            errors.append("nonce_mismatch")
+        if bundle.get("bench_version") != BENCH_VERSION:
+            errors.append("bench_version_mismatch")
+        if bundle.get("image_digest") not in self.allowed_images:
+            errors.append("image_not_pinned")
+        if session["params"] is not None and bundle.get("params") != session["params"]:
+            errors.append("params_mismatch")
+        for name, out in sorted((bundle.get("outputs") or {}).items()):
+            if sha256_hex(out.get("content", "")) != out.get("sha256"):
+                errors.append("output_hash_mismatch:" + name)
+        if not bundle.get("outputs"):
+            errors.append("no_outputs")
+        if session.get("bundle") is not None:
+            errors.append("bundle_already_submitted")
+        if not errors:
+            session["bundle"] = bundle
+            self.store.put(session_id, session)
+        return errors
+
+    def _live(self, session_id):
+        session = self.store.get(session_id)
+        if session is None:
+            raise SessionError("unknown_session")
+        if self.clock() > session["expires_at"]:
+            raise SessionError("window_expired")
+        return session
+
+
+class MemoryStore:
+    def __init__(self):
+        self._data = {}
+
+    def get(self, key):
+        value = self._data.get(key)
+        return json.loads(json.dumps(value)) if value is not None else None
+
+    def put(self, key, value):
+        self._data[key] = json.loads(json.dumps(value))
+
+    def items(self):
+        return list(self._data.items())

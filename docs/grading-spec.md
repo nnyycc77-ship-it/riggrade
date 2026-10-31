@@ -51,7 +51,7 @@ The gate is pass or fail per workload class. Speed only counts for a class whose
 
 | Check | Inference | Training |
 |---|---|---|
-| Per-card memory | at least 24 GB free after driver load | at least 16 GB free |
+| Per-card memory | at least 20 GB free after driver load | at least 12 GB free |
 | Memory integrity | device memory test over 90% of free memory, zero errors | same |
 | Matrix multiply | BF16 GEMM runs and returns correct results | same |
 | Memory bandwidth | device-to-device copy completes | same |
@@ -121,7 +121,7 @@ All endpoints are under `/riggrade/v1/`. Every request and response is JSON.
 2. **Parameters at run start.** The container calls `POST /riggrade/v1/session/{id}/start` and receives the run parameters: batch sizes, prompt and output lengths, concurrency, pass order and the aggressor schedule for slices. Parameters are drawn from the published distribution (`spec/param-distribution.json`, to be added with the endpoint) using `HMAC-SHA256(server_secret, nonce)` as the seed. They are revealed only at this call, so they cannot be tuned for in advance. The draw can be reproduced by anyone holding the secret, which lets an appeal re-derive it.
 3. **Run.** Gate, ruler passes, the sustained run, and the slice tests where they apply, all under the pinned image. Attestation is captured where available, with the session nonce as the attestation nonce.
 4. **Submit.** `POST /riggrade/v1/session/{id}/bundle` with the result bundle (section 11). The endpoint checks the nonce, the window, the image digest and the parameter echo. A bundle that fails any check is refused, and nothing is charged.
-5. **Pay and grade.** The grade is returned behind x402. An unpaid request receives 402 with the price for the classes requested and a preview: gate pass or fail, and the count of pillars measured. It never shows a grade. After payment, the response is the label and the evidence pack, and the sale record is appended to the hash-chained sale log, following the shelf's existing pattern.
+5. **Pay and grade.** The grade is returned behind x402. An unpaid request receives 402 with the price for the classes requested and a preview: gate pass or fail, and the count of pillars measured. It never shows a grade. A session with an unknown class, or with no class that passed its gate, is not sold at all: the preview already says so, and a grade that can only read unrated is refused with nothing charged. After payment, the response is the label and the evidence pack, and the sale record is appended to the hash-chained sale log, following the shelf's existing pattern.
 6. **Publication.** A grade from a declared buyer run is private to the paying wallet. It is published only when the host's registered wallet signs a publish request (plan, discussion decision 3).
 
 ## 7. Heartbeat (subscription)
@@ -211,7 +211,7 @@ The machine-readable label:
   "evidence_tag": "declared:buyer attestation:unattested provisional",
   "slice": null,
   "window": {"from": "2026-11-02T10:00:00Z", "to": "2026-11-02T11:40:00Z"},
-  "statement": "Measured, not promised. A label of measured quality under the named test and window, not a guarantee of future delivery."
+  "statement": "Measured, not promised. A label of measured quality under the named test and window; it makes no promise about future delivery."
 }
 ```
 
@@ -240,7 +240,7 @@ Every grade under provisional references carries the `provisional` tag. Referenc
 1. **Point-grade evidence.** Apply the 3-sessions-on-separate-days minimum to full grades only. Point grades use 3 passes within one session, labelled "single session" (section 5.4).
 2. **Provisional references.** Use the median of the first paid sessions per class, with no speed grade until 5 sessions exist, instead of "published results" (section 13).
 3. **v0 bars.** All values in section 5 are proposals: speed 0.95/0.92 and 0.85/0.82; CV 3%/7%; decay 5%/10%; p99/p50 2.0/3.0; isolation 5%/12%; downtime 3.6 h/14.4 h.
-4. **Rulers.** Qwen2.5-7B-Instruct on vLLM for inference, and GPT-2 124M on synthetic tokens for training (section 3). The inference gate's 24 GB minimum leaves 16 GB cards unrated for inference in v0.
+4. **Rulers.** Qwen2.5-7B-Instruct on vLLM for inference, and GPT-2 124M on synthetic tokens for training (section 3). The inference gate's 20 GB free minimum leaves 16 GB cards unrated for inference in v0. (v0 said 24 GB free, which no 24 GB card can show after driver load; corrected while building the engine.)
 5. **Completion window.** 3 hours from nonce issue (section 6).
 6. **Identity mismatch threshold.** 25% outside the class envelope (section 8.3).
 7. **Licence for the open container.** Not chosen yet. The owner decides it before step 2, since the container is published then.

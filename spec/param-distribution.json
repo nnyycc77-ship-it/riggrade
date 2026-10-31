@@ -1,0 +1,15 @@
+{
+  "bench_version": "v0.1",
+  "note": "Published distribution for run parameters (spec section 6). Each field is drawn from its list using HMAC-SHA256(server_secret, nonce || field) at run start.",
+  "inference": {
+    "prompt_tokens": [128, 256, 512, 1024, 2048],
+    "output_tokens": [128, 256, 512],
+    "concurrency": [4, 8, 16, 32]
+  },
+  "training": {
+    "micro_batch": [8, 12, 16, 24],
+    "sequence_length": [512, 1024]
+  },
+  "pass_order": [["inference", "training"], ["training", "inference"]],
+  "passes": [3, 4, 5]
+}
