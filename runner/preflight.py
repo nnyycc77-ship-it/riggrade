@@ -13,12 +13,18 @@ most, none of which a marketplace listing shows:
 - a download rate far below what the host advertises
 - slow local disk
 
-It is not a grade and sends nothing anywhere: every measurement stays on
-the box and in preflight-report.json. A grade is the separate, paid step
+It is not a grade. No results are sent anywhere: every measurement stays
+on the box and in preflight-report.json. (The download check only reads a
+public file to time it.)
+
+It is built for an exclusive box. On a shared or sliced box (MIG, or
+--shared), use outside your slice can be a legitimate neighbour, so the two
+foreign-use checks are shown as skipped with that reason, never failed. A grade is the separate, paid step
 that measures the box against its peer class over a full session.
 
-Exit code: 0 for pass or warn, 1 for fail. The JSON verdict is the
-machine-readable answer for agents.
+Exit code: 0 for pass or warn, 1 for fail (with --fail-on-warn, 1 for warn
+too). The report file always carries pass, warn or fail for every check and
+overall, so a warn is never mistaken for a clean pass.
 """
 
 import argparse
@@ -151,8 +157,15 @@ def evaluate(obs):
     if obs.get("gpu_error"):
         add("gpu_visible", FAIL, "no GPU visible to nvidia-smi (%s)" % obs["gpu_error"])
 
+    shared = obs.get("shared")
     for gpu in obs.get("idle", []):
         i = int(gpu.get("index") or 0)
+        if shared:
+            for check in ("foreign_memory", "foreign_compute"):
+                add("gpu%d.%s" % (i, check), None,
+                    "shared or sliced box (%s): use outside your slice may be a "
+                    "legitimate neighbour" % shared)
+            continue
         used = gpu.get("memory.used")
         used_gb = None if used is None else used / 1024
         add("gpu%d.foreign_memory" % i,
@@ -340,6 +353,12 @@ class Probes:
     def gpus(self):
         return query_gpus()
 
+    def mig_enabled(self):
+        out = subprocess.run(["nvidia-smi", "--query-gpu=mig.mode.current",
+                              "--format=csv,noheader"],
+                             capture_output=True, text=True, timeout=30)
+        return out.returncode == 0 and "Enabled" in out.stdout
+
     def driver_cuda(self):
         out = subprocess.run(["nvidia-smi"], capture_output=True, text=True, timeout=30)
         return parse_driver_cuda(out.stdout)
@@ -360,7 +379,7 @@ class Probes:
 # ---------------------------------------------------------------- run
 
 def run(probes, seconds=30.0, url=DEFAULT_URL, download=True, directory=".",
-        out=sys.stdout):
+        out=sys.stdout, shared=False):
     obs, errors = {}, {}
 
     def attempt(name, fn):
@@ -373,6 +392,10 @@ def run(probes, seconds=30.0, url=DEFAULT_URL, download=True, directory=".",
     obs["idle"] = attempt("gpus", probes.gpus) or []
     if "gpus" in errors:
         obs["gpu_error"] = errors["gpus"]
+    if shared:
+        obs["shared"] = "declared with --shared"
+    elif getattr(probes, "mig_enabled", None) and attempt("mig", probes.mig_enabled):
+        obs["shared"] = "MIG mode on"
     obs["driver_cuda"] = attempt("driver_cuda", probes.driver_cuda)
     obs["software_cuda"] = attempt("software_cuda", probes.software_cuda)
     loaded = attempt("load", lambda: probes.load(seconds))
@@ -386,7 +409,8 @@ def run(probes, seconds=30.0, url=DEFAULT_URL, download=True, directory=".",
 
     findings = evaluate(obs)
     report = {"preflight": True,
-              "note": "Not a grade. Nothing here was sent anywhere.",
+              "note": "Not a grade. No results were sent anywhere.",
+              "exclusive_box_assumed": not obs.get("shared"),
               "gpus": [{"index": g.get("index"), "name": g.get("name"),
                         "driver": g.get("driver_version")} for g in obs["idle"]],
               "tflops_per_gpu": obs.get("tflops"),
@@ -406,9 +430,15 @@ def main(argv=None):
     ap.add_argument("--url", default=DEFAULT_URL, help="file to time a download against")
     ap.add_argument("--skip-download", action="store_true")
     ap.add_argument("--dir", default=".", help="directory for the disk write test")
+    ap.add_argument("--shared", action="store_true",
+                    help="box is shared or sliced: skip the foreign-use checks")
+    ap.add_argument("--fail-on-warn", action="store_true",
+                    help="exit 1 on warn as well as fail")
     args = ap.parse_args(argv)
-    report = run(Probes(), args.seconds, args.url, not args.skip_download, args.dir)
-    return 1 if report["verdict"] == FAIL else 0
+    report = run(Probes(), args.seconds, args.url, not args.skip_download, args.dir,
+                 shared=args.shared)
+    bad = (FAIL, WARN) if args.fail_on_warn else (FAIL,)
+    return 1 if report["verdict"] in bad else 0
 
 
 if __name__ == "__main__":

@@ -7,17 +7,30 @@ card it reports?
     docker run --gpus all <riggrade image> python3 -m runner.preflight
     # or, from a checkout with torch installed:
     python3 -m runner.preflight [--seconds 30] [--url URL] [--skip-download] [--dir PATH]
+                                [--shared] [--fail-on-warn]
 
-Nothing is sent anywhere. Results print to the screen and to
-`preflight-report.json`. Exit code 0 means pass or warn, 1 means fail, so an
-agent or script can gate a long run on it.
+No results are sent anywhere. Results print to the screen and to
+`preflight-report.json`. The download check only reads a public file to time
+it. Exit code 0 means pass or warn, 1 means fail; with `--fail-on-warn`, warn
+exits 1 too. The report file always carries `pass`, `warn` or `fail` for every
+check and for the overall `verdict`, so an agent gating a long run can tell a
+warn from a clean pass.
+
+## Exclusive box assumed
+
+Preflight in this form is built for an exclusive box: the whole card is
+yours. On a shared or sliced box, use outside your slice can be a legitimate
+neighbour rather than a fault. With `--shared`, or when MIG mode is on, the
+foreign memory and foreign compute checks are shown as skipped with that
+reason, and the report sets `exclusive_box_assumed` to false. The other
+checks still run.
 
 ## What it checks
 
 | Check | How | Warn | Fail |
 |---|---|---|---|
-| Foreign memory | memory in use before the check starts | 1 GiB | 2 GiB |
-| Foreign compute | utilisation before the check starts | 10% | 30% |
+| Foreign memory (exclusive box) | memory in use before the check starts | 1 GiB | 2 GiB |
+| Foreign compute (exclusive box) | utilisation before the check starts | 10% | 30% |
 | Clocks under load | median SM clock / max SM clock during a 30 s matmul load | below 80% | below 60% |
 | Slowdown reasons | thermal or hardware slowdown flags seen during load | | any |
 | Temperature | peak during load | 85 C | 90 C |

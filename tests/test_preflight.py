@@ -180,6 +180,39 @@ class RunTests(unittest.TestCase):
         self.assertEqual(status["gpu_visible"], pf.FAIL)
         self.assertEqual(status["compute"], "skipped")
 
+    def test_shared_box_skips_foreign_checks_not_fails(self):
+        class Busy(FakeProbes):
+            def gpus(self):
+                return pf.parse_gpu_csv(IDLE_ROW.replace("450.00, 0, 310,", "450.00, 80, 20000,"))
+        report = pf.run(Busy(), seconds=1, download=False, out=io.StringIO(), shared=True)
+        status = {f["check"]: f["status"] for f in report["findings"]}
+        self.assertEqual(status["gpu0.foreign_memory"], "skipped")
+        self.assertEqual(status["gpu0.foreign_compute"], "skipped")
+        self.assertFalse(report["exclusive_box_assumed"])
+        self.assertEqual(report["verdict"], pf.PASS)
+
+        class Mig(Busy):
+            def mig_enabled(self):
+                return True
+        report = pf.run(Mig(), seconds=1, download=False, out=io.StringIO())
+        self.assertIn("MIG", report["findings"][0]["detail"])
+        # without either, the same box fails on foreign use
+        report = pf.run(Busy(), seconds=1, download=False, out=io.StringIO())
+        self.assertEqual(report["verdict"], pf.FAIL)
+
+    def test_warn_is_distinct_in_report_and_exit_code(self):
+        class Slow(FakeProbes):
+            def download(self, url):
+                return 30.0
+        report = pf.run(Slow(), seconds=1, out=io.StringIO())
+        self.assertEqual(report["verdict"], pf.WARN)
+        status = {f["check"]: f["status"] for f in report["findings"]}
+        self.assertEqual(status["download_rate"], pf.WARN)
+        import unittest.mock as mock
+        with mock.patch.object(pf, "Probes", Slow):
+            self.assertEqual(pf.main(["--seconds", "1"]), 0)
+            self.assertEqual(pf.main(["--seconds", "1", "--fail-on-warn"]), 1)
+
     def test_disk_probe_measures_and_cleans_up(self):
         mbs = pf.measure_disk(".", mb=2)
         self.assertGreater(mbs, 0)
