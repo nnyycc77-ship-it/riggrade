@@ -26,6 +26,8 @@ _RANK = {ACCEPT: 0, EXCEPTION: 1, REJECT: 2}
 STRAGGLER = (0.90, 0.80)   # accept at or above, exception at or above, else reject
 FABRIC = (0.80, 0.60)      # measured over claimed
 STORAGE = (0.80, 0.60)
+STORAGE_BASIS = ("approximate: sum of per-node read rates; each node starts reading "
+                 "as soon as the fabric all-reduce ends, with no synchronised start")
 
 
 def _bands(ratio, bars):
@@ -64,6 +66,17 @@ def evaluate(claims, nodes):
     add("inventory", REJECT if problems else ACCEPT,
         "; ".join(problems) or "%d nodes, %d GPUs, %s" % (len(nodes), gpus, models),
         nodes=len(nodes), gpus=gpus)
+
+    # Image identity: every node must run the same container, and an
+    # unpinned image is recorded as an exception.
+    images = sorted({n.get("image") or "unrecorded" for n in nodes})
+    if len(images) > 1:
+        add("image", REJECT, "nodes ran different images: %s" % images, images=images)
+    elif not images or images[0] in ("unrecorded", "unpinned"):
+        add("image", EXCEPTION, "container image not pinned (%s)" % (images or ["none"])[0],
+            images=images)
+    else:
+        add("image", ACCEPT, "all nodes ran %s" % images[0], images=images)
 
     # Node health (preflight on every node)
     verdicts = {n["rank"]: (n.get("preflight") or {}).get("verdict") for n in nodes}
@@ -123,8 +136,10 @@ def evaluate(claims, nodes):
         total = sum(rates)
         ratio = total / sclaim
         add("storage", _bands(ratio, STORAGE),
-            "%.1f GB/s aggregate read from %d node(s) against %.1f GB/s claimed (%.0f%%)"
-            % (total, len(rates), sclaim, 100 * ratio), ratio=round(ratio, 3))
+            "%.1f GB/s aggregate read from %d node(s) against %.1f GB/s claimed (%.0f%%); "
+            "approximate: per-node rates summed, reads started together after the "
+            "fabric test but not synchronised" % (total, len(rates), sclaim, 100 * ratio),
+            ratio=round(ratio, 3), aggregate_basis=STORAGE_BASIS)
 
     return checks, verdict(checks, claims)
 
@@ -161,6 +176,7 @@ def evidence_pack(claims_path, node_paths, now=None):
             "note": "Not a grade. What this cluster delivered during this test, "
                     "against what its provider claimed.",
             "claims": claims,
+            "images": sorted({n.get("image") or "unrecorded" for n in nodes}),
             "inputs": {str(p): sha256_file(p) for p in [claims_path] + list(node_paths)},
             "nodes": nodes, "checks": checks}
     pack.update(result)
@@ -228,7 +244,9 @@ def run_node(rank, nodes, master, storage=None, preflight_probes=None,
              fabric_fn=measure_fabric, storage_fn=measure_storage, identity_fn=None):
     from . import preflight
     from . import identity as identity_mod
-    report = {"rank": rank, "method": METHOD_VERSION, "errors": {}}
+    report = {"rank": rank, "method": METHOD_VERSION, "errors": {},
+              # The pinned image sets RIGGRADE_IMAGE_DIGEST; anything else is unpinned.
+              "image": os.environ.get("RIGGRADE_IMAGE_DIGEST") or "unpinned"}
     try:
         report["identity"] = (identity_fn or identity_mod.collect)()
     except Exception as exc:  # noqa: BLE001

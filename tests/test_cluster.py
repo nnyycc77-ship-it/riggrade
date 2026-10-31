@@ -13,8 +13,8 @@ CLAIMS = {"gpu_model": "NVIDIA H100 80GB HBM3", "gpus_per_node": 8, "nodes": 4,
 
 
 def node(rank, tflops=700.0, verdict="pass", gpus=8, model="NVIDIA H100 80GB HBM3",
-         busbw=45.0, storage=3.0):
-    n = {"rank": rank,
+         busbw=45.0, storage=3.0, image="sha256:" + "ab" * 32):
+    n = {"rank": rank, "image": image,
          "identity": {"device_name": model, "card_count": gpus, "rig_id": "r%d" % rank},
          "preflight": {"verdict": verdict, "problems": []},
          "tflops_per_gpu": {str(i): tflops for i in range(gpus)},
@@ -75,6 +75,25 @@ class EvaluateTests(unittest.TestCase):
         self.assertEqual(s["straggler"], cl.NOT_MEASURED)
 
 
+class ImageAndStorageTests(unittest.TestCase):
+    def test_image_identity(self):
+        s = status(cl.evaluate(CLAIMS, [node(r) for r in range(4)])[0])
+        self.assertEqual(s["image"], cl.ACCEPT)
+        mixed = [node(0), node(1), node(2), node(3, image="sha256:" + "cd" * 32)]
+        checks, v = cl.evaluate(CLAIMS, mixed)
+        self.assertEqual(status(checks)["image"], cl.REJECT)
+        self.assertEqual(v["verdict"], "reject")
+        checks, v = cl.evaluate(CLAIMS, [node(r, image="unpinned") for r in range(4)])
+        self.assertEqual(status(checks)["image"], cl.EXCEPTION)
+        self.assertEqual(v["verdict"], "accept with exceptions")
+
+    def test_storage_aggregate_is_labelled_approximate(self):
+        checks, _v = cl.evaluate(CLAIMS, [node(r) for r in range(4)])
+        storage = [c for c in checks if c["check"] == "storage"][0]
+        self.assertIn("approximate", storage["detail"])
+        self.assertEqual(storage["aggregate_basis"], cl.STORAGE_BASIS)
+
+
 class PackAndNodeTests(unittest.TestCase):
     def test_evidence_pack_records_input_hashes(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -88,6 +107,7 @@ class PackAndNodeTests(unittest.TestCase):
             pack = cl.evidence_pack(str(t / "claims.json"), paths)
             self.assertEqual(pack["verdict"], "accept")
             self.assertEqual(len(pack["inputs"]), 5)
+            self.assertEqual(pack["images"], ["sha256:" + "ab" * 32])
             self.assertEqual(pack["inputs"][paths[0]], cl.sha256_file(paths[0]))
             out = t / "acceptance.json"
             self.assertEqual(cl.main(["evaluate", "--claims", str(t / "claims.json"),
@@ -111,6 +131,7 @@ class PackAndNodeTests(unittest.TestCase):
         self.assertIsNone(report["fabric"]["busbw_gbs"])
         self.assertIn("NCCL timeout", report["fabric"]["error"])
         self.assertEqual(report["storage_read_gbs"], 2.5)
+        self.assertEqual(report["image"], os.environ.get("RIGGRADE_IMAGE_DIGEST") or "unpinned")
 
     def test_storage_reader(self):
         with tempfile.TemporaryDirectory() as tmp:
