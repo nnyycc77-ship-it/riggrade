@@ -38,6 +38,7 @@ Two things, so it needs no reference data and works from the first run:
 | Check | Measured | Accept | Exception | Reject |
 |---|---|---|---|---|
 | Inventory | nodes and GPUs that answered, and the GPU model reported | matches the claims | | fewer nodes or GPUs than claimed, or a different model |
+| Image | the container image each node ran (`RIGGRADE_IMAGE_DIGEST`) | every node the same pinned image | an unpinned image | nodes ran different images |
 | Node health | the preflight check on every node | every node passes | a node warns | a node fails |
 | Straggler | each node's GEMM TFLOPS against the cluster median | all at least 90% | a node at 80 to 90% | a node below 80% |
 | Inter-node fabric | NCCL all-reduce bus bandwidth across all nodes, against the claimed link per GPU | at least 80% of claim | 60 to 80% | below 60% |
@@ -66,6 +67,8 @@ anyone can recheck a verdict by hand.
    reads from it straight after the fabric test, at about the same moment.
    The evaluator adds the per-node rates together to get the aggregate.
    Each file is read once, so the page cache cannot flatter a second read.
+   The start is not synchronised, so the aggregate is approximate. The
+   evidence pack says so next to the figure.
 3. Any machine then joins the node reports and the claims:
 
        python3 -m runner.cluster evaluate --claims claims.json node-*.json --out acceptance.json
@@ -74,6 +77,8 @@ anyone can recheck a verdict by hand.
 
 `acceptance.json` holds:
 - the claims as given;
+- the container image every node ran, so a verdict ties to the exact code
+  behind it;
 - each node's report;
 - the fabric and storage measurements;
 - each check's result with the numbers behind it;
