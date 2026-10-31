@@ -44,12 +44,33 @@ Facilitators are listed main first, then backup. Neither needs an account or
 an API key for this use, as described in the x402 documentation. PayAI
 documents a free allowance, with credentials needed past it.
 
+## Running it
+
+    python3 -m riggrade.serve --host 127.0.0.1 --port 8402
+    # or any WSGI host: riggrade.serve:application
+
+The adapter is built only when `RIGGRADE_FACILITATORS` and
+`RIGGRADE_SCREEN_LIST` are both set. Even then the sale opens only when every
+other switch is set too. `GET /riggrade/v1` lists the reasons the sale is off.
+
+## The payer screen list
+
+Build it from OFAC's SDN.CSV:
+
+    python3 -m riggrade.screenlist SDN.CSV --out blocked-addresses.txt
+
+Every `0x` address listed as a "Digital Currency Address" is kept, whatever
+its ticker. The file starts with a provenance header: the source URL, the
+input SHA-256, the build time and the address count. An input with no
+addresses is refused, because that means the file is wrong, not that the
+list is clean. Rebuild the list whenever OFAC publishes an update.
+
 ## Before the sale switch
 
 - **Check each facilitator live.** Call its `/supported` endpoint and confirm
   USDC on Base (`base`) with no key. Both hosts were unreachable from the
   build environment, so the `/verify` and `/settle` shapes are unverified.
   They follow the x402 v1 facilitator specification.
-- **Supply the blocked-address list** from the program's compliance source.
+- **Build the blocked-address list** from a current SDN.CSV. OFAC's host is unreachable from the build environment, so the file comes from the coordinator.
 - **Owner decisions:** the sale switch, the base image pin, the container
   licence, and the trademark search.
