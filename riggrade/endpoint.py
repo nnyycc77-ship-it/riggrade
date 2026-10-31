@@ -187,7 +187,7 @@ class GradingApp:
         requirement = {"scheme": "exact", "network": self.config.network,
                        "asset": USDC_BASE, "payTo": self.config.wallet,
                        "maxAmountRequired": str(amount),
-                       "resource": PREFIX + "/session/%s/grade" % sid,
+                       "resource": _url(environ, PREFIX + "/session/%s/grade" % sid),
                        "description": "RigGrade point grade, %d workload class(es)"
                                       % len(session["workloads"]),
                        "mimeType": "application/json",
@@ -251,6 +251,14 @@ class GradingApp:
 
 class BadRequest(ValueError):
     pass
+
+
+def _url(environ, path):
+    """Absolute URL of a path on this server, as x402 resources are named.
+    Behind a proxy, X-Forwarded-Proto gives the scheme the client used."""
+    scheme = environ.get("HTTP_X_FORWARDED_PROTO") or environ.get("wsgi.url_scheme", "http")
+    host = environ.get("HTTP_HOST") or environ.get("SERVER_NAME", "localhost")
+    return "%s://%s%s" % (scheme.split(",")[0].strip(), host, path)
 
 
 def _read(environ):
