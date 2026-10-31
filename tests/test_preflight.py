@@ -209,7 +209,8 @@ class RunTests(unittest.TestCase):
         status = {f["check"]: f["status"] for f in report["findings"]}
         self.assertEqual(status["download_rate"], pf.WARN)
         import unittest.mock as mock
-        with mock.patch.object(pf, "Probes", Slow):
+        import contextlib
+        with mock.patch.object(pf, "Probes", Slow), contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(pf.main(["--seconds", "1"]), 0)
             self.assertEqual(pf.main(["--seconds", "1", "--fail-on-warn"]), 1)
 
