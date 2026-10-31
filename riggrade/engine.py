@@ -54,7 +54,8 @@ def grade_session(session, references, envelopes=None, attested=False,
 
     references: grading.ReferenceBook. envelopes: {class_id: {measure: ref}}.
     attested: True only when the endpoint's attestation verifier accepted
-    the evidence. held: {workload: grade} the rig already holds. recheck:
+    the evidence. held: {workload: grade, or {"grade": g, "on_watch": bool}} the rig
+    already holds. recheck:
     {workload: (speed_ratio, consistency_grade)} from our own re-check in
     the window. heartbeat: list of accepted heartbeat timestamps, for a full
     grade. Returns (labels, pack).
@@ -99,7 +100,12 @@ def grade_session(session, references, envelopes=None, attested=False,
         measured = statistics.median(passes) if passes else None
         reference, provisional = references.reference(class_id, workload)
         ratio = (measured / reference) if (measured and reference) else None
-        speed, below_keep = grading.speed_grade(ratio, (held or {}).get(workload))
+        held_w = (held or {}).get(workload)
+        if isinstance(held_w, dict):
+            held_grade, was_on_watch = held_w.get("grade"), bool(held_w.get("on_watch"))
+        else:
+            held_grade, was_on_watch = held_w, False
+        speed, below_keep = grading.speed_grade(ratio, held_grade, was_on_watch)
         consistency, cmeasures = grading.consistency_grade(
             passes, m.get("decay"), m.get("p99_p50"), m.get("isolation_drop"))
         pillars = {"speed": speed, "consistency": consistency}
@@ -114,7 +120,10 @@ def grade_session(session, references, envelopes=None, attested=False,
         matched = bool(rc) and grading.recheck_matches(ratio, consistency, rc[0], rc[1])
         if grade != grading.INSUFFICIENT:
             grade, capped_by = grading.top_grade_rule(grade, capped_by, attested, matched)
-        status = "on_watch" if below_keep else "assigned"
+        if below_keep:
+            status = "demoted" if was_on_watch else "on_watch"
+        else:
+            status = "affirmed" if held_grade else "assigned"
         tag = evidence_tag(session["declared_runner"], attested, host_paid, provisional)
         labels.append(build_label(rig_id, class_id, workload, grade, form,
                                   capped_by, pillars, status, tag, window,

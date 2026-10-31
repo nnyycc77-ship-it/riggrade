@@ -1,0 +1,98 @@
+[
+  {
+    "badge": "Grade 1 \u00b7 H100 class \u00b7 Inference \u00b7 full grade \u00b7 declared host run, attested \u00b7 sample",
+    "label": {
+      "bench_version": "v0.1",
+      "capped_by": null,
+      "evidence_basis": "trailing windows",
+      "evidence_tag": "declared:host attestation:attested",
+      "form": "full",
+      "grade": 1,
+      "peer_class": "h100-sxm-80",
+      "pillars": {
+        "consistency": 1,
+        "reliability": 1,
+        "speed": 1
+      },
+      "product": "RigGrade",
+      "rig_id": "sample-rig-A",
+      "sample": "SAMPLE: fictional rig, fictional numbers, not a live grade",
+      "slice": null,
+      "statement": "Measured, not promised. A label of measured quality under the named test and window; it makes no promise about future delivery.",
+      "status": "assigned",
+      "window": {
+        "from": 1799992800,
+        "to": 1800000000
+      },
+      "workload_class": "inference"
+    },
+    "rig": "A",
+    "speed_ratio": 0.978,
+    "story": "Attested evidence, steady passes and a clean 30-day heartbeat: every pillar earns Grade 1, and attestation lets the overall grade stay at Grade 1.",
+    "title": "Fictional rig A: H100 SXM class, inference, full grade"
+  },
+  {
+    "badge": "Grade 2 \u00b7 RTX 4090 class \u00b7 Inference \u00b7 point grade, single session \u00b7 capped by Consistency \u00b7 declared buyer run, unattested \u00b7 sample",
+    "label": {
+      "bench_version": "v0.1",
+      "capped_by": "consistency",
+      "evidence_basis": "single session",
+      "evidence_tag": "declared:buyer attestation:unattested",
+      "form": "point",
+      "grade": 2,
+      "peer_class": "rtx4090-24",
+      "pillars": {
+        "consistency": 2,
+        "reliability": "not measured (point grade)",
+        "speed": 1
+      },
+      "product": "RigGrade",
+      "rig_id": "sample-rig-B",
+      "sample": "SAMPLE: fictional rig, fictional numbers, not a live grade",
+      "slice": null,
+      "statement": "Measured, not promised. A label of measured quality under the named test and window; it makes no promise about future delivery.",
+      "status": "assigned",
+      "window": {
+        "from": 1799992800,
+        "to": 1800000000
+      },
+      "workload_class": "inference"
+    },
+    "rig": "B",
+    "speed_ratio": 0.962,
+    "story": "Speed earns Grade 1, but the latency spread (p99/p50 of 2.6) earns Grade 2 on consistency, and the weakest pillar caps the grade. It is a single paid session, so reliability is not measured.",
+    "title": "Fictional rig B: RTX 4090 class, inference, point grade"
+  },
+  {
+    "badge": "Grade 1 \u00b7 A100 class \u00b7 Training \u00b7 full grade \u00b7 on watch \u00b7 declared host run, attested \u00b7 sample",
+    "label": {
+      "bench_version": "v0.1",
+      "capped_by": null,
+      "evidence_basis": "trailing windows",
+      "evidence_tag": "declared:host attestation:attested",
+      "form": "full",
+      "grade": 1,
+      "peer_class": "a100-sxm-80",
+      "pillars": {
+        "consistency": 1,
+        "reliability": 1,
+        "speed": 1
+      },
+      "product": "RigGrade",
+      "rig_id": "sample-rig-C",
+      "sample": "SAMPLE: fictional rig, fictional numbers, not a live grade",
+      "slice": null,
+      "statement": "Measured, not promised. A label of measured quality under the named test and window; it makes no promise about future delivery.",
+      "status": "on_watch",
+      "window": {
+        "from": 1799992800,
+        "to": 1800000000
+      },
+      "workload_class": "training"
+    },
+    "rig": "C",
+    "speed_ratio": 0.909,
+    "story": "The rig held Grade 1. This week its speed ratio is about 0.91, below the 0.92 keep bar. Under watch-before-demotion it keeps Grade 1 and goes on watch, and the badge says so. A second consecutive week below the keep bar would land the grade on what the numbers earn, Grade 2.",
+    "title": "Fictional rig C: A100 SXM class, training, full grade on watch"
+  }
+]
