@@ -123,8 +123,11 @@ class ProductEndpointTests(unittest.TestCase):
         status, _h, doc = call(app, "POST", "/riggrade/v1/fixit", {"preflight_report": REPORT})
         self.assertEqual(status, "402 Payment Required")
         req = doc["accepts"][0]
-        self.assertEqual(req["maxAmountRequired"], "2000000")
-        self.assertTrue(req["resource"].endswith("/riggrade/v1/fixit"))
+        self.assertEqual(req["amount"], "2000000")
+        self.assertTrue(doc["resource"]["url"].endswith("/riggrade/v1/fixit"))
+        self.assertEqual(doc["x402Version"], 2)
+        self.assertEqual(req["network"], "eip155:8453")
+        self.assertIn("PAYMENT-REQUIRED", _h)
         self.assertIn("preflight_report", doc["extensions"]["bazaar"]["schema"]["properties"])
         self.assertEqual(self.adapter.calls, [])
         status, headers, doc = call(app, "POST", "/riggrade/v1/fixit",
@@ -132,7 +135,7 @@ class ProductEndpointTests(unittest.TestCase):
         self.assertEqual(status, "200 OK")
         self.assertEqual(len(doc["report"]["items"]), 3)
         self.assertEqual(doc["report"]["paying_wallet"], PAYER)
-        self.assertEqual(headers["X-PAYMENT-RESPONSE"], "eyJ0eCI6ICJvayJ9")
+        self.assertEqual(headers["PAYMENT-RESPONSE"], "eyJ0eCI6ICJvayJ9")
         (entry,) = salelog.read_chain(self.log)
         self.assertEqual((entry["product"], entry["amount_atomic"], entry["findings"]),
                          ("riggrade_fixit_report", "2000000", 3))
@@ -143,15 +146,27 @@ class ProductEndpointTests(unittest.TestCase):
                                {"preflight_report": CLEAN}, payment="pay")
         self.assertEqual(status, "422 Unprocessable Entity")
         self.assertEqual(self.adapter.calls, [])
-        status, _h, _d = call(app, "POST", "/riggrade/v1/fixit", {"preflight_report": {"x": 1}})
+        # A bad body with a payment attached is a bad request; without one it
+        # is a bare probe and gets the challenge, before any validation.
+        status, _h, _d = call(app, "POST", "/riggrade/v1/fixit", {"preflight_report": {"x": 1}},
+                              payment="pay")
         self.assertEqual(status, "400 Bad Request")
+        self.assertEqual(self.adapter.calls, [])
+        status, _h, doc = call(app, "POST", "/riggrade/v1/fixit", {"preflight_report": {"x": 1}})
+        self.assertEqual(status, "402 Payment Required")
+        status, _h, doc = call(app, "GET", "/riggrade/v1/fixit")
+        self.assertEqual((status, doc["accepts"][0]["amount"]), ("402 Payment Required", "2000000"))
+        status, _h, doc = call(app, "GET", "/riggrade/v1/cluster/acceptance")
+        self.assertEqual((status, doc["accepts"][0]["amount"]), ("402 Payment Required", "25000000"))
+        status, _h, doc = call(app, "GET", "/riggrade/v1/grade")
+        self.assertEqual((status, doc["accepts"][0]["amount"]), ("402 Payment Required", "3000000"))
 
     def test_cluster_certificate_is_issued_stored_and_verifiable(self):
         app = self.app()
         pack = pack_for(CLAIMS, [node(0, fabric=45.0, storage=6.0), node(1, storage=6.0)])
         status, _h, doc = call(app, "POST", "/riggrade/v1/cluster/acceptance", {"evidence_pack": pack})
         self.assertEqual(status, "402 Payment Required")
-        self.assertEqual(doc["accepts"][0]["maxAmountRequired"], "25000000")
+        self.assertEqual(doc["accepts"][0]["amount"], "25000000")
         self.assertEqual(doc["preview"]["verdict"], pack["verdict"])
         status, _h, doc = call(app, "POST", "/riggrade/v1/cluster/acceptance",
                                {"evidence_pack": pack}, payment="pay")

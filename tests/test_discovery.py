@@ -32,6 +32,28 @@ class DiscoveryTests(unittest.TestCase):
                          {"gpu_preflight", "grade", "fixit", "cluster_acceptance"})
         self.assertFalse(card["payments"]["on_sale"])
 
+    def test_favicon_is_served_at_the_root(self):
+        status, headers, out = get(self.app, "/favicon.ico")
+        self.assertTrue(status.startswith("200"))
+        self.assertEqual(headers["Content-Type"], "image/x-icon")
+        self.assertEqual(out[:4], b"\x00\x00\x01\x00")  # ICO header
+        self.assertEqual(int(headers["Content-Length"]), len(out))
+
+    def test_openapi_marks_paid_and_free_operations_for_probes(self):
+        status, _h, out = get(self.app, "/openapi.json")
+        doc = json.loads(out)
+        scheme = doc["components"]["securitySchemes"]["x402"]
+        self.assertEqual((scheme["in"], scheme["name"]), ("header", "PAYMENT-SIGNATURE"))
+        paid = {p for p, ops in doc["paths"].items()
+                for op in ops.values() if op.get("security") == [{"x402": []}]}
+        free = {p for p, ops in doc["paths"].items()
+                for op in ops.values() if op.get("security") == []}
+        self.assertEqual(paid, {"/grade", "/fixit", "/cluster/acceptance"})
+        self.assertEqual(free, set(doc["paths"]) - paid)
+        for ops in doc["paths"].values():
+            for op in ops.values():
+                self.assertIn("security", op)
+
     def test_llms_txt_is_plain_text_with_the_descriptor(self):
         status, headers, out = get(self.app, "/llms.txt")
         self.assertTrue(status.startswith("200"))
@@ -88,7 +110,7 @@ class Discovery402Tests(unittest.TestCase):
                    "CONTENT_LENGTH": "0", "wsgi.input": io.BytesIO(b""),
                    "HTTP_HOST": "grade.example", "wsgi.url_scheme": "https"}
         if header:
-            environ["HTTP_X_PAYMENT"] = header
+            environ["HTTP_PAYMENT_SIGNATURE"] = header
         status = []
         out = b"".join(app(environ, lambda s, h: status.append(s)))
         return status[0], json.loads(out)
@@ -112,8 +134,9 @@ class Discovery402Tests(unittest.TestCase):
         status, doc = self.probe(app)
         self.assertTrue(status.startswith("402"), doc)
         req = doc["accepts"][0]
-        self.assertEqual(req["resource"], "https://grade.example/riggrade/v1/grade")
-        self.assertEqual(req["maxAmountRequired"], "3000000")
+        self.assertEqual(doc["resource"]["url"], "https://grade.example/riggrade/v1/grade")
+        self.assertEqual((doc["x402Version"], req["amount"], req["network"]),
+                         (2, "3000000", "eip155:8453"))
         self.assertIn("bazaar", doc["extensions"])
         self.assertFalse(doc["charged"])
         # A payment header with no session is a bad request, not a settle.

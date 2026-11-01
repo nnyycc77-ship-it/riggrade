@@ -63,8 +63,8 @@ HOW_TO_GRADE = (
     "benchmark container on the rig and POST the result bundle to "
     "{endpoint}/session/{id}/bundle; a free preview says what is gradable. "
     "4) POST {endpoint}/grade with the session_id; it answers 402 with an "
-    "x402 payment requirement (USDC on Base). Pay it with your own x402 "
-    "client and repeat the call with the X-PAYMENT header. Point grade "
+    "x402 v2 payment requirement (USDC on Base). Pay it with your own x402 "
+    "client and repeat the call with the PAYMENT-SIGNATURE header. Point grade "
     "prices: 3 USDC per workload class for consumer cards, 5 USDC for "
     "data-centre cards. A session that is not gradable is not sold.")
 

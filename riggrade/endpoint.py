@@ -21,6 +21,7 @@ and only then settle. Attestation is verified by attestation_verifier
 (bundle) -> bool; without one, every session is unattested.
 """
 
+import base64
 import json
 import re
 import secrets
@@ -38,7 +39,12 @@ from . import fixit
 from . import acceptance
 
 PREFIX = "/riggrade/v1"
-DISCOVERY_PATHS = ("/", "/.well-known/agent.json", "/llms.txt", "/openapi.json",
+X402_VERSION = 2
+NETWORK_BASE = "eip155:8453"
+PAID_ROUTES = {("grade",): "grade", ("fixit",): "fixit", ("cluster", "acceptance"): "cluster"}
+V1_REFUSED = ("x402 v1 (X-PAYMENT) is not accepted; send PAYMENT-SIGNATURE with "
+              "x402Version 2, as the PAYMENT-REQUIRED header of this answer describes")
+DISCOVERY_PATHS = ("/", "/favicon.ico", "/.well-known/agent.json", "/llms.txt", "/openapi.json",
                    PREFIX + "/openapi.json")
 MAX_BODY = 4 * 1024 * 1024
 USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
@@ -58,7 +64,7 @@ PRODUCT_NOTES = {
                "it with the service's own signature check (HMAC: not independently verifiable).",
 }
 WALLET = re.compile(r"^0x[0-9a-fA-F]{40}$")
-OPERATOR_CLAIM_NOTE = ("A free reference session is claimed with an X-PAYMENT authorisation "
+OPERATOR_CLAIM_NOTE = ("A free reference session is claimed with a PAYMENT-SIGNATURE authorisation "
                        "of 0 USDC to the payout address (the 402 states it): the facilitator "
                        "verifies the signature, nothing is settled, and the signer becomes "
                        "the rig's operator. At most 2 rigs per operator count toward a class "
@@ -81,7 +87,8 @@ class Config:
         self.secret = env.get("RIGGRADE_SECRET", "").encode()
         self.images = [d for d in env.get("RIGGRADE_IMAGE_DIGESTS", "").split(",") if d]
         self.enabled = env.get("RIGGRADE_ENABLED") == "1"
-        self.network = env.get("RIGGRADE_NETWORK", "base")
+        # CAIP-2 chain id (x402 v2): Base mainnet.
+        self.network = env.get("RIGGRADE_NETWORK", NETWORK_BASE)
         self.products = {p.strip() for p in env.get("RIGGRADE_PRODUCTS", "").split(",") if p.strip()}
 
     def reasons_off(self, adapter):
@@ -140,6 +147,10 @@ class GradingApp:
                 return _json(start_response, "200 OK", self.descriptor())
             if method == "GET" and len(rest) == 3 and rest[:2] == ["cluster", "acceptance"]:
                 return self.certificate_lookup(start_response, rest[2])
+            if method != "POST" and tuple(rest) in PAID_ROUTES:
+                # A bare probe of a paid route (x402 crawlers GET it): the 402
+                # challenge comes before any request validation.
+                return self.probe(start_response, environ, PAID_ROUTES[tuple(rest)])
             if method != "POST":
                 return _json(start_response, "405 Method Not Allowed", {"error": "use POST"})
             body = _read(environ)
@@ -157,7 +168,7 @@ class GradingApp:
                 # One stable paid resource for every session, so a discovery
                 # catalogue lists RigGrade once rather than once per sale.
                 if not isinstance(body, dict) or not body.get("session_id"):
-                    if self.on_sale and not environ.get("HTTP_X_PAYMENT"):
+                    if self.on_sale and not self._payment_header(environ):
                         # Discovery probe (x402 crawlers POST the resource with
                         # no body): the standard 402 challenge, informational.
                         # Nothing paid against it is ever settled, because a
@@ -181,6 +192,11 @@ class GradingApp:
     def discovery(self, start_response, environ, path):
         """Read-only documents for agents and crawlers (riggrade.discovery)."""
         base = _url(environ, "")
+        if path == "/favicon.ico":
+            start_response("200 OK", [("Content-Type", "image/x-icon"),
+                                      ("Content-Length", str(len(discovery.FAVICON))),
+                                      ("Cache-Control", "public, max-age=86400")])
+            return [discovery.FAVICON]
         if path == "/llms.txt":
             data = discovery.llms_txt(base, PREFIX, self.on_sale).encode()
             start_response("200 OK", [("Content-Type", "text/plain; charset=utf-8"),
@@ -289,23 +305,16 @@ class GradingApp:
             return self._free_reference_grade(start_response, sid, session, free, environ)
         tier = price_tier(class_id)
         amount = POINT_PRICE_ATOMIC[tier] * len(payable)
-        requirement = {"scheme": "exact", "network": self.config.network,
-                       "asset": USDC_BASE, "payTo": self.config.wallet,
-                       "maxAmountRequired": str(amount),
-                       "resource": _url(environ, resource_path or PREFIX + "/session/%s/grade" % sid),
-                       "description": "RigGrade point grade, %d workload class(es)%s"
-                                      % (len(payable), "; reference-building included free: "
-                                         + ", ".join(free) if free else ""),
-                       "mimeType": "application/json",
-                       "maxTimeoutSeconds": 300,
-                       # EIP-712 domain of USDC on Base, needed to check the signature.
-                       "extra": {"name": "USD Coin", "version": "2"}}
-        header = environ.get("HTTP_X_PAYMENT")
+        requirement = self._accept(amount)
+        path = resource_path or PREFIX + "/session/%s/grade" % sid
+        description = ("RigGrade point grade, %d workload class(es)%s"
+                       % (len(payable), "; reference-building included free: "
+                          + ", ".join(free) if free else ""))
+        header = self._payment_header(environ)
         if not header:
-            return _json(start_response, "402 Payment Required",
-                         {"x402Version": 1, "accepts": [requirement],
-                          "extensions": {"bazaar": bazaar_extension()},
-                          "preview": prev})
+            return self._payment_required(start_response, environ, path, amount, description,
+                                          bazaar=bazaar_extension(),
+                                          error=self._v1_error(environ), preview=prev)
         result = self.adapter.settle(header, requirement)
         if not result.get("ok") and result.get("charged") in (True, "unknown"):
             # Money may have moved without a grade: log it for reconciliation
@@ -314,7 +323,7 @@ class GradingApp:
                            {"product": "riggrade_point_grade", "session_id": sid,
                             "status": "charged_without_grade",
                             "charged": result.get("charged"),
-                            "amount_atomic": requirement["maxAmountRequired"],
+                            "amount_atomic": requirement["amount"],
                             "payer": result.get("payer"), "tx": result.get("tx"),
                             "error": result.get("error"), "at": self.clock()})
         if not result.get("ok"):
@@ -340,43 +349,80 @@ class GradingApp:
         self.store.put(sid, session)
         salelog.append(self.config.sale_log,
                        {"product": "riggrade_point_grade", "session_id": sid,
-                        "amount_atomic": requirement["maxAmountRequired"],
+                        "amount_atomic": requirement["amount"],
                         "paid_workloads": payable, "free_workloads": free,
                         "payer": result.get("payer"), "tx": result.get("tx"),
                         "at": self.clock()})
-        extra = [("X-PAYMENT-RESPONSE", result.get("receipt_header", ""))]
+        extra = [("PAYMENT-RESPONSE", result.get("receipt_header", ""))]
         return _json(start_response, "200 OK",
                      {"labels": labels, "badges": badges, "evidence_pack": pack},
                      extra)
 
     def discovery_402(self, start_response, environ):
-        requirement = {"scheme": "exact", "network": self.config.network,
-                       "asset": USDC_BASE, "payTo": self.config.wallet,
-                       "maxAmountRequired": str(POINT_PRICE_ATOMIC["consumer"]),
-                       "resource": _url(environ, PREFIX + "/grade"),
-                       "description": "RigGrade point grade: 3 USDC per workload class for "
-                                      "consumer cards, 5 USDC for data-centre cards. Open a "
-                                      "session first (POST /session), run the pinned "
-                                      "container, submit the bundle, then POST here with "
-                                      "{session_id}; the 402 for that session states the "
-                                      "exact amount.",
-                       "mimeType": "application/json",
-                       "maxTimeoutSeconds": 300,
-                       "extra": {"name": "USD Coin", "version": "2"}}
-        return _json(start_response, "402 Payment Required",
-                     {"x402Version": 1, "accepts": [requirement],
-                      "extensions": {"bazaar": bazaar_extension()},
-                      "error": "session_id is required; this 402 describes the price only",
-                      "charged": False})
+        description = ("RigGrade point grade: 3 USDC per workload class for consumer cards, "
+                       "5 USDC for data-centre cards. Open a session first (POST /session), run "
+                       "the pinned container, submit the bundle, then POST here with "
+                       "{session_id}; the 402 for that session states the exact amount.")
+        return self._payment_required(start_response, environ, PREFIX + "/grade",
+                                      POINT_PRICE_ATOMIC["consumer"], description,
+                                      bazaar=bazaar_extension(),
+                                      error=self._v1_error(environ)
+                                      or "session_id is required; this 402 describes the price only")
+
+    def probe(self, start_response, environ, name):
+        """A bare request to a paid route, any method, no body: the 402
+        challenge (or 503 with reasons while off), before any validation."""
+        if name == "grade":
+            if not self.on_sale:
+                return _json(start_response, "503 Service Unavailable",
+                             {"charged": False, "reasons_off": self.config.reasons_off(self.adapter)})
+            return self.discovery_402(start_response, environ)
+        off = self.product_reasons_off(name)
+        if off:
+            return _json(start_response, "503 Service Unavailable",
+                         {"charged": False, "reasons_off": off})
+        path = {"fixit": PREFIX + "/fixit", "cluster": PREFIX + "/cluster/acceptance"}[name]
+        return self._payment_required(start_response, environ, path, PRODUCT_PRICE_ATOMIC[name],
+                                      PRODUCT_NOTES[name], bazaar=bazaar_extension(name),
+                                      error=self._v1_error(environ)
+                                      or "POST the JSON body the description names; this 402 "
+                                         "describes the price only")
+
+    # ------------------------------------------------------------ x402 v2
+    @staticmethod
+    def _payment_header(environ):
+        return environ.get("HTTP_PAYMENT_SIGNATURE")
+
+    @staticmethod
+    def _v1_error(environ):
+        return V1_REFUSED if environ.get("HTTP_X_PAYMENT") else None
+
+    def _accept(self, amount):
+        """One x402 v2 PaymentRequirements entry: exact USDC on Base."""
+        return {"scheme": "exact", "network": self.config.network, "amount": str(amount),
+                "asset": USDC_BASE, "payTo": self.config.wallet, "maxTimeoutSeconds": 300,
+                # EIP-712 domain of USDC on Base, needed to check the signature.
+                "extra": {"name": "USD Coin", "version": "2"}}
+
+    def _payment_required(self, start_response, environ, path, amount, description,
+                          bazaar=None, error=None, **body_extra):
+        """x402 v2 challenge: the PaymentRequired object goes base64 in the
+        PAYMENT-REQUIRED header (the canonical carrier) and, for people and
+        older tooling, as the JSON body too, with charged false."""
+        doc = {"x402Version": X402_VERSION,
+               "resource": {"url": _url(environ, path), "description": description,
+                            "mimeType": "application/json", "serviceName": "RigGrade",
+                            "tags": ["gpu", "benchmark", "grading", "x402", "usdc"]},
+               "accepts": [self._accept(amount)]}
+        if error:
+            doc["error"] = error
+        if bazaar is not None:
+            doc["extensions"] = {"bazaar": bazaar}
+        header = base64.b64encode(json.dumps(doc, sort_keys=True).encode()).decode()
+        return _json(start_response, "402 Payment Required", dict(doc, charged=False, **body_extra),
+                     [("PAYMENT-REQUIRED", header)])
 
     # ------------------------------------------------------------ products
-
-    def _requirement(self, environ, path, amount, description):
-        return {"scheme": "exact", "network": self.config.network,
-                "asset": USDC_BASE, "payTo": self.config.wallet,
-                "maxAmountRequired": str(amount), "resource": _url(environ, path),
-                "description": description, "mimeType": "application/json",
-                "maxTimeoutSeconds": 300, "extra": {"name": "USD Coin", "version": "2"}}
 
     def _sell(self, start_response, environ, name, path, description, preview_doc, deliver):
         """Shared paid path for a product: 503 with reasons while off, the
@@ -387,20 +433,19 @@ class GradingApp:
         if off:
             return _json(start_response, "503 Service Unavailable",
                          {"charged": False, "preview": preview_doc, "reasons_off": off})
-        requirement = self._requirement(environ, path, PRODUCT_PRICE_ATOMIC[name], description)
-        header = environ.get("HTTP_X_PAYMENT")
+        requirement = self._accept(PRODUCT_PRICE_ATOMIC[name])
+        header = self._payment_header(environ)
         if not header:
-            return _json(start_response, "402 Payment Required",
-                         {"x402Version": 1, "accepts": [requirement],
-                          "extensions": {"bazaar": bazaar_extension(name)},
-                          "preview": preview_doc, "charged": False})
+            return self._payment_required(start_response, environ, path, PRODUCT_PRICE_ATOMIC[name],
+                                          description, bazaar=bazaar_extension(name),
+                                          error=self._v1_error(environ), preview=preview_doc)
         result = self.adapter.settle(header, requirement)
         product = {"fixit": fixit.PRODUCT, "cluster": acceptance.PRODUCT}[name]
         if not result.get("ok") and result.get("charged") in (True, "unknown"):
             salelog.append(self.config.sale_log,
                            {"product": product, "status": "charged_without_delivery",
                             "charged": result.get("charged"),
-                            "amount_atomic": requirement["maxAmountRequired"],
+                            "amount_atomic": requirement["amount"],
                             "payer": result.get("payer"), "tx": result.get("tx"),
                             "error": result.get("error"), "at": self.clock()})
         if not result.get("ok"):
@@ -412,7 +457,7 @@ class GradingApp:
         except Exception as exc:  # noqa: BLE001 - a settled charge must never go unrecorded
             salelog.append(self.config.sale_log,
                            {"product": product, "status": "charged_without_delivery",
-                            "charged": True, "amount_atomic": requirement["maxAmountRequired"],
+                            "charged": True, "amount_atomic": requirement["amount"],
                             "payer": result.get("payer"), "tx": result.get("tx"),
                             "error": "delivery failed: %s: %s" % (type(exc).__name__, exc),
                             "at": self.clock()})
@@ -420,16 +465,18 @@ class GradingApp:
                          {"error": "charged but delivery failed; recorded for refund by hand",
                           "charged": True, "tx": result.get("tx")})
         salelog.append(self.config.sale_log,
-                       dict({"product": product, "amount_atomic": requirement["maxAmountRequired"],
+                       dict({"product": product, "amount_atomic": requirement["amount"],
                              "payer": result.get("payer"), "tx": result.get("tx"),
                              "at": self.clock()}, **extra))
         return _json(start_response, "200 OK", doc,
-                     [("X-PAYMENT-RESPONSE", result.get("receipt_header", ""))])
+                     [("PAYMENT-RESPONSE", result.get("receipt_header", ""))])
 
     def fixit_report(self, start_response, environ, body):
         report = body.get("preflight_report") if isinstance(body, dict) else None
         if (not isinstance(report, dict) or report.get("preflight") is not True
                 or not isinstance(report.get("findings"), list)):
+            if not self._payment_header(environ):
+                return self.probe(start_response, environ, "fixit")
             raise BadRequest("preflight_report (the preflight-report.json content) is required")
         prev = fixit.preview(report)
         if prev["fixable"] == 0 and not self.product_reasons_off("fixit"):
@@ -450,6 +497,8 @@ class GradingApp:
         pack = body.get("evidence_pack") if isinstance(body, dict) else None
         error = acceptance.validate(pack)
         if error:
+            if not self._payment_header(environ):
+                return self.probe(start_response, environ, "cluster")
             raise BadRequest(error)
         checks, result = acceptance.recompute(pack)
         if result["verdict"] != pack.get("verdict"):
@@ -484,23 +533,19 @@ class GradingApp:
                      {"certificate": cert,
                       "signature_valid": acceptance.verify(cert, self.config.secret)})
 
+    CLAIM_DESCRIPTION = ("RigGrade free reference session: operator claim, 0 USDC. "
+                         "Verified, never settled; the signer becomes the rig's operator.")
+
     def _claim_requirement(self, environ, sid):
-        return {"scheme": "exact", "network": self.config.network,
-                "asset": USDC_BASE, "payTo": self.config.wallet,
-                "maxAmountRequired": "0",
-                "resource": _url(environ, PREFIX + "/session/%s/grade" % sid),
-                "description": "RigGrade free reference session: operator claim, 0 USDC. "
-                               "Verified, never settled; the signer becomes the rig's operator.",
-                "mimeType": "application/json", "maxTimeoutSeconds": 300,
-                "extra": {"name": "USD Coin", "version": "2"}}
+        return self._accept("0")
 
     def _operator_claim(self, environ, sid):
         """Free-session operator claim: a zero-amount x402 authorisation in
-        X-PAYMENT, verified (never settled) by the facilitator and screened.
-        Returns (operator, None) or (None, refusal text)."""
-        header = environ.get("HTTP_X_PAYMENT")
+        PAYMENT-SIGNATURE, verified (never settled) by the facilitator and
+        screened. Returns (operator, None) or (None, refusal text)."""
+        header = self._payment_header(environ)
         if not header:
-            return None, "no claim attached"
+            return None, self._v1_error(environ) or "no claim attached"
         verify = getattr(self.adapter, "verify_only", None)
         if verify is None:
             return None, "claims not supported"
@@ -516,12 +561,11 @@ class GradingApp:
         operator, refused = self._operator_claim(environ, sid)
         if operator is None:
             prev = preview(session["bundle"], session["workloads"], self.references)
-            return _json(start_response, "402 Payment Required",
-                         {"x402Version": 1,
-                          "accepts": [self._claim_requirement(environ, sid)],
-                          "free_reference_session": True,
-                          "error": refused, "charged": False,
-                          "note": OPERATOR_CLAIM_NOTE, "preview": prev})
+            return self._payment_required(start_response, environ,
+                                          PREFIX + "/session/%s/grade" % sid, "0",
+                                          self.CLAIM_DESCRIPTION, error=refused,
+                                          free_reference_session=True,
+                                          note=OPERATOR_CLAIM_NOTE, preview=prev)
         attested = bool(self.verify_attestation(session["bundle"]))
         labels, pack = grade_session(session, self.references, self.envelopes,
                                      attested=attested, now=self.clock(),
