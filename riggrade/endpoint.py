@@ -36,7 +36,8 @@ from . import salelog
 from . import discovery
 
 PREFIX = "/riggrade/v1"
-DISCOVERY_PATHS = ("/", "/.well-known/agent.json", "/llms.txt", PREFIX + "/openapi.json")
+DISCOVERY_PATHS = ("/", "/.well-known/agent.json", "/llms.txt", "/openapi.json",
+                   PREFIX + "/openapi.json")
 MAX_BODY = 4 * 1024 * 1024
 USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 # Decided prices (plan Revision 5, decided items 1), USDC atomic units.
@@ -126,6 +127,12 @@ class GradingApp:
                 # One stable paid resource for every session, so a discovery
                 # catalogue lists RigGrade once rather than once per sale.
                 if not isinstance(body, dict) or not body.get("session_id"):
+                    if self.on_sale and not environ.get("HTTP_X_PAYMENT"):
+                        # Discovery probe (x402 crawlers POST the resource with
+                        # no body): the standard 402 challenge, informational.
+                        # Nothing paid against it is ever settled, because a
+                        # settle needs a session with an accepted bundle.
+                        return self.discovery_402(start_response, environ)
                     raise BadRequest("session_id is required")
                 return self.grade(start_response, str(body["session_id"]), environ,
                                   resource_path=PREFIX + "/grade")
@@ -147,7 +154,7 @@ class GradingApp:
             return [data]
         if path == "/.well-known/agent.json":
             return _json(start_response, "200 OK", discovery.agent_card(base, PREFIX, self.on_sale))
-        if path == PREFIX + "/openapi.json":
+        if path in ("/openapi.json", PREFIX + "/openapi.json"):
             return _json(start_response, "200 OK", discovery.openapi(base, PREFIX))
         return _json(start_response, "200 OK",
                      {"product": "RigGrade", "descriptor": base + PREFIX,
@@ -294,6 +301,26 @@ class GradingApp:
         return _json(start_response, "200 OK",
                      {"labels": labels, "badges": badges, "evidence_pack": pack},
                      extra)
+
+    def discovery_402(self, start_response, environ):
+        requirement = {"scheme": "exact", "network": self.config.network,
+                       "asset": USDC_BASE, "payTo": self.config.wallet,
+                       "maxAmountRequired": str(POINT_PRICE_ATOMIC["consumer"]),
+                       "resource": _url(environ, PREFIX + "/grade"),
+                       "description": "RigGrade point grade: 3 USDC per workload class for "
+                                      "consumer cards, 5 USDC for data-centre cards. Open a "
+                                      "session first (POST /session), run the pinned "
+                                      "container, submit the bundle, then POST here with "
+                                      "{session_id}; the 402 for that session states the "
+                                      "exact amount.",
+                       "mimeType": "application/json",
+                       "maxTimeoutSeconds": 300,
+                       "extra": {"name": "USD Coin", "version": "2"}}
+        return _json(start_response, "402 Payment Required",
+                     {"x402Version": 1, "accepts": [requirement],
+                      "extensions": {"bazaar": bazaar_extension()},
+                      "error": "session_id is required; this 402 describes the price only",
+                      "charged": False})
 
     def _free_reference_grade(self, start_response, sid, session, free):
         attested = bool(self.verify_attestation(session["bundle"]))
