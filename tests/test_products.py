@@ -70,6 +70,38 @@ class FixitRulesTests(unittest.TestCase):
         self.assertEqual(doc["by_who"], {"host": 3})
         self.assertIn("not a promise", doc["statement"])
 
+    def test_new_diagnostics_have_rules_with_who_and_confidence(self):
+        report = {"preflight": True, "findings": [
+            {"check": "gpu0.ecc_errors", "status": "fail",
+             "detail": "ECC since boot: 40 corrected, 1 uncorrected (aggregate 500 / 2); retired pages pending a reset"},
+            {"check": "gpu1.ecc_errors", "status": "warn", "detail": "ECC since boot: 50 corrected, 0 uncorrected (aggregate 50 / 0)"},
+            {"check": "host.cpu_load", "status": "warn", "detail": "1-minute load 1.56 per core (8 CPUs) before our load started"},
+            {"check": "host.memory", "status": "fail", "detail": "9% of 62.5 GB RAM available"},
+            {"check": "host.swap", "status": "fail", "detail": "75% of swap in use"},
+            {"check": "host.cpu_governor", "status": "warn", "detail": "CPU frequency governor is powersave"},
+            {"check": "gpu0.memory_bandwidth", "status": "warn", "detail": "60 GB/s device-to-device copy"},
+            {"check": "disk_write", "status": "warn",
+             "detail": "137 MB/s sequential write on overlay at / (network or layered storage)"},
+        ]}
+        doc = fixit.diagnose(report)
+        by = {i["check"]: i for i in doc["items"]}
+        self.assertEqual(len(by), 8)
+        self.assertEqual((by["gpu0.ecc_errors"]["confidence"], by["gpu0.ecc_errors"]["threatens"]), ("high", "consistency"))
+        self.assertIn("1 uncorrected", by["gpu0.ecc_errors"]["cause"])
+        self.assertIn("nvidia-smi -r", " ".join(by["gpu0.ecc_errors"]["fix"]))
+        self.assertIn("50 corrected", by["gpu1.ecc_errors"]["cause"])
+        self.assertIn("1.56 per core", by["host.cpu_load"]["cause"])
+        self.assertIn("9%", by["host.memory"]["cause"])
+        self.assertIn("75%", by["host.swap"]["cause"])
+        self.assertIn("cpupower", " ".join(by["host.cpu_governor"]["fix"]))
+        self.assertIn("60 GB/s", by["gpu0.memory_bandwidth"]["cause"])
+        # The mount type turns the disk finding into a high-confidence, host-side cause.
+        self.assertEqual((by["disk_write"]["confidence"], by["disk_write"]["who"]), ("high", "host"))
+        self.assertIn("overlay", by["disk_write"]["cause"])
+        for item in doc["items"]:
+            self.assertEqual(item["who"], "host")
+            self.assertIn(item["confidence"], ("high", "medium"))
+
     def test_unknown_check_gets_a_low_confidence_item(self):
         doc = fixit.diagnose({"preflight": True, "findings": [
             {"check": "gpu0.new_thing", "status": "fail", "detail": "x"}]})

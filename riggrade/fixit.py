@@ -107,11 +107,88 @@ def _rule(base, detail, status):
                 "both", "medium", "speed")
     if base == "disk_write":
         mbs = _num(r"([\d.]+) MB/s", detail)
-        return ("Disk writes ran at %s MB/s" % (("%.0f" % mbs) if mbs is not None else "a low rate"),
+        fs = re.search(r" on (\S+) at (\S+)", detail or "")
+        rate = ("%.0f" % mbs) if mbs is not None else "a low rate"
+        if fs and "network or layered storage" in (detail or ""):
+            return ("Disk writes ran at %s MB/s because the workspace is on %s (mounted at %s): network "
+                    "or layered storage, not a local drive" % (rate, fs.group(1), fs.group(2)),
+                    ["Host: put tenant workspaces on local NVMe and mount it at the tenant's working path",
+                     "Host: if the overlay root must stay, offer a local volume (docker -v /nvme/tenant:/workspace)",
+                     "Renter: write checkpoints to the fastest local path the host offers (df -T to find it)"],
+                    "host", "high", "consistency")
+        if fs:
+            return ("Disk writes ran at %s MB/s on a local %s filesystem (mounted at %s): a slow or busy drive, "
+                    "or a thin-provisioned volume" % (rate, fs.group(1), fs.group(2)),
+                    ["Host: check the drive behind that mount (lsblk, smartctl) and other tenants' I/O on it",
+                     "Host: move tenant workspaces to NVMe",
+                     "Renter: write checkpoints to the fastest local path the host offers"],
+                    "host", "high", "consistency")
+        return ("Disk writes ran at %s MB/s" % rate,
                 ["Host: put tenant workspaces on local NVMe, not network or overlay storage",
                  "Check the mount (df, mount): a thin-provisioned or overlay volume is often the cause",
                  "Renter: write checkpoints to the fastest local path the host offers"],
                 "host", "medium", "consistency")
+    if base == "ecc_errors":
+        cor = _num(r"(\d+) corrected", detail, int)
+        unc = _num(r"(\d+) uncorrected", detail, int)
+        pending = "retired pages pending" in (detail or "")
+        if (unc or 0) > 0 or pending:
+            return ("The card's memory reported %s uncorrected ECC error(s) since boot%s: a training run "
+                    "on it can crash or silently corrupt" % (unc if unc is not None else "some",
+                                                              "; pages are waiting to be retired" if pending else ""),
+                    ["Host: nvidia-smi -q -d ECC,PAGE_RETIREMENT,ROW_REMAPPER for the full picture",
+                     "Host: reset the card (nvidia-smi -r) or reboot so pending page retirements and row remaps apply",
+                     "Host: if uncorrected errors come back, take the card out of service and RMA it",
+                     "Renter: swap the box; do not run long training on it"],
+                    "host", "high", "consistency")
+        return ("The card's memory reported %s corrected ECC errors since boot: above the quiet level, "
+                "an early sign of failing memory" % (cor if cor is not None else "many"),
+                ["Host: nvidia-smi -q -d ECC,ROW_REMAPPER; watch whether the count keeps rising",
+                 "Host: check cooling and power delivery, which drive correctable error rates up",
+                 "Renter: fine for short jobs; for a long training run prefer a card with a clean count"],
+                "host", "high" if cor is not None else "medium", "consistency")
+    if base == "cpu_load":
+        lpc = _num(r"load ([\d.]+) per core", detail)
+        return ("The host CPU was already under load (%s per core) before this check started: other tenants "
+                "or background jobs will starve the data pipeline feeding the GPU"
+                % (("%.2f" % lpc) if lpc is not None else "high"),
+                ["On the box: top or htop to see what is running; stop leftovers from a previous tenant",
+                 "Host: pin tenants to CPU cores (cgroups or docker --cpuset-cpus) and sell the core count honestly",
+                 "Renter: if data loading is your bottleneck, swap the box"],
+                "host", "high" if lpc is not None else "medium", "speed")
+    if base == "memory":
+        pct = _num(r"(\d+)% of", detail, int)
+        return ("Only %s%% of host RAM is available: data loaders and CUDA pinned buffers will swap or fail"
+                % (pct if pct is not None else "little"),
+                ["On the box: free -g and ps aux --sort=-rss to find who holds it",
+                 "Host: stop leftover processes; size the RAM offered per tenant to the cards sold",
+                 "Renter: lower num_workers and batch prefetch, or swap the box"],
+                "host", "high" if pct is not None else "medium", "speed")
+    if base == "swap":
+        pct = _num(r"(\d+)% of swap", detail, int)
+        return ("The host is %s%% into swap: memory pressure that stalls data loading unpredictably"
+                % (pct if pct is not None else "deep"),
+                ["On the box: free -g, vmstat 1 to see swapping; find the resident hog",
+                 "Host: more RAM per tenant, or fewer tenants per box",
+                 "Renter: reduce host-side memory use, or swap the box"],
+                "host", "high" if pct is not None else "medium", "consistency")
+    if base == "cpu_governor":
+        return ("The CPU frequency governor is set to powersave: the cores feeding the GPU run slow",
+                ["Host: sudo cpupower frequency-set -g performance (or write performance to "
+                 "/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor), and make it persist at boot",
+                 "Host: in BIOS, disable deep power-saving states for a compute box"],
+                "host", "high", "speed")
+    if base == "memory_bandwidth":
+        gbs = _num(r"(\d+) GB/s", detail)
+        return ("Device memory copy bandwidth measured %s GB/s, far below any current card's memory system: "
+                "memory clocks held down, a degraded memory bus, or a heavily shared card"
+                % (("%.0f" % gbs) if gbs is not None else "a low value"),
+                ["On the box: nvidia-smi --query-gpu=clocks.mem,clocks.max.mem --format=csv under load",
+                 "Host: check for a lowered memory clock (nvidia-smi -q -d CLOCK) and reset application clocks (nvidia-smi -rac)",
+                 "Host: if the memory clock is right and bandwidth stays low, the card's memory is failing; "
+                 "check ECC counts and consider RMA",
+                 "Renter: swap the box"],
+                "host", "medium", "speed")
     if base in ("gpu_visible", "compute"):
         return ("The GPU was not usable from inside the container",
                 ["Host: install the NVIDIA container toolkit and run containers with --gpus all",
