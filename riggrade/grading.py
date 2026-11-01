@@ -1,10 +1,14 @@
 """Pure grading rules (spec sections 4, 5, 8.3, 12 and 13).
 
 Grades are integers, 1 best and 3 lowest. A pillar that cannot be measured
-is INSUFFICIENT. Nothing in this module does I/O.
+is INSUFFICIENT. The only I/O is ReferenceBook saving itself when given
+a path.
 """
 
+import json
+import os
 import statistics
+from pathlib import Path
 
 INSUFFICIENT = "insufficient"
 NOT_MEASURED = "not measured (point grade)"
@@ -208,13 +212,35 @@ class ReferenceBook:
     runs, once they exist, replace the provisional median.
     """
 
-    def __init__(self):
+    def __init__(self, path=None):
+        """With a path, the book is loaded from and saved to that JSON file
+        on every change, so references survive a server restart."""
         self._samples = {}
         self._controlled = {}
+        self.path = Path(path) if path else None
+        if self.path is not None and self.path.exists():
+            data = json.loads(self.path.read_text(encoding="utf-8"))
+            for c, w, rig, value, attested in data.get("samples", []):
+                self._samples.setdefault((c, w), {})[rig] = (value, bool(attested))
+            for c, w, value in data.get("controlled", []):
+                self._controlled[(c, w)] = value
+
+    def _save(self):
+        if self.path is None:
+            return
+        data = {"samples": [[c, w, rig, v, a]
+                            for (c, w), bucket in sorted(self._samples.items())
+                            for rig, (v, a) in sorted(bucket.items())],
+                "controlled": [[c, w, v] for (c, w), v in sorted(self._controlled.items())]}
+        tmp = self.path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, sort_keys=True), encoding="utf-8")
+        os.replace(tmp, self.path)
 
     def add(self, class_id, workload, rig_id, throughput, attested=False):
         bucket = self._samples.setdefault((class_id, workload), {})
-        bucket.setdefault(rig_id, (throughput, bool(attested)))
+        if rig_id not in bucket:
+            bucket[rig_id] = (throughput, bool(attested))
+            self._save()
 
     def has_rig(self, class_id, workload, rig_id):
         """True when this rig's first session already counts for this class."""
@@ -222,6 +248,7 @@ class ReferenceBook:
 
     def set_controlled(self, class_id, workload, throughput):
         self._controlled[(class_id, workload)] = throughput
+        self._save()
 
     def basis(self, class_id, workload):
         """What the reference rests on, for publication (spec 13)."""

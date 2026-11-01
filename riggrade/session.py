@@ -5,6 +5,7 @@ memory in tests and a file in deployment."""
 import hashlib
 import hmac
 import json
+import os
 import secrets
 from pathlib import Path
 
@@ -137,3 +138,36 @@ class MemoryStore:
 
     def items(self):
         return list(self._data.items())
+
+
+class FileStore:
+    """One JSON file per key under a directory, written by temp file and
+    rename so a crash never leaves half a record. Meant for a single server
+    process (Cloud Run with max-instances 1) on a disk or a mounted bucket."""
+
+    def __init__(self, directory):
+        self.dir = Path(directory)
+        self.dir.mkdir(parents=True, exist_ok=True)
+
+    def _path(self, key):
+        return self.dir / (hashlib.sha256(key.encode("utf-8")).hexdigest() + ".json")
+
+    def get(self, key):
+        path = self._path(key)
+        if not path.exists():
+            return None
+        return json.loads(path.read_text(encoding="utf-8"))["value"]
+
+    def put(self, key, value):
+        path = self._path(key)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps({"key": key, "value": value}, sort_keys=True),
+                       encoding="utf-8")
+        os.replace(tmp, path)
+
+    def items(self):
+        out = []
+        for path in sorted(self.dir.glob("*.json")):
+            entry = json.loads(path.read_text(encoding="utf-8"))
+            out.append((entry["key"], entry["value"]))
+        return out
