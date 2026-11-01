@@ -187,6 +187,19 @@ class ProductEndpointTests(unittest.TestCase):
         self.assertEqual((entry["product"], entry["amount_atomic"], entry["certificate_id"]),
                          ("riggrade_cluster_acceptance", "25000000", cert["certificate_id"]))
 
+    def test_findings_that_are_not_objects_are_refused_not_crashed(self):
+        # Seen live on 1 Nov 2026 (four 500s): findings given as strings.
+        app = self.app()
+        bad = {"preflight": True, "findings": ["gpu0.foreign_memory: pass", "download_rate: warn"]}
+        status, _h, doc = call(app, "POST", "/riggrade/v1/fixit", {"preflight_report": bad},
+                               payment="pay")
+        self.assertEqual(status, "400 Bad Request")
+        self.assertIn("findings list", doc["error"])
+        self.assertEqual(self.adapter.calls, [])
+        status, _h, doc = call(app, "POST", "/riggrade/v1/fixit", {"preflight_report": bad})
+        self.assertEqual(status, "402 Payment Required")  # a bare probe, like any bad body
+        self.assertEqual(fixit.preview(bad)["fixable"], 0)  # the rules themselves never crash
+
     def test_delivery_failure_after_settle_is_recorded_not_served(self):
         app = self.app()
         pack = pack_for(CLAIMS, [node(0, fabric=45.0, storage=6.0), node(1, storage=6.0)])

@@ -126,6 +126,8 @@ def _rule(base, detail, status):
 def items(report):
     out = []
     for f in report.get("findings") or []:
+        if not isinstance(f, dict):
+            continue  # not a finding object; the endpoint refuses such reports
         status = f.get("status")
         if status not in ("warn", "fail"):
             continue
@@ -143,7 +145,7 @@ def preview(report):
     the causes and fixes."""
     found = items(report)
     skipped = [f.get("check") for f in report.get("findings") or []
-               if f.get("status") in (None, "skipped")]
+               if isinstance(f, dict) and f.get("status") in (None, "skipped")]
     return {"fixable": len(found),
             "checks": [i["check"] for i in found],
             "fail": sum(1 for i in found if i["status"] == "fail"),

@@ -489,10 +489,13 @@ class GradingApp:
     def fixit_report(self, start_response, environ, body):
         report = body.get("preflight_report") if isinstance(body, dict) else None
         if (not isinstance(report, dict) or report.get("preflight") is not True
-                or not isinstance(report.get("findings"), list)):
+                or not isinstance(report.get("findings"), list)
+                or not all(isinstance(f, dict) for f in report["findings"])):
             if not self._payment_header(environ):
                 return self.probe(start_response, environ, "fixit")
-            raise BadRequest("preflight_report (the preflight-report.json content) is required")
+            raise BadRequest("preflight_report (the preflight-report.json content) is required: "
+                             "an object with preflight true and a findings list of "
+                             "{check, status, detail} objects")
         prev = fixit.preview(report)
         if prev["fixable"] == 0 and not self.product_reasons_off("fixit"):
             return _json(start_response, "422 Unprocessable Entity",
