@@ -39,6 +39,7 @@ from . import discovery
 from . import fixit
 from . import acceptance
 from . import index as price_index
+from . import certificate_page
 
 PREFIX = "/riggrade/v1"
 X402_VERSION = 2
@@ -174,7 +175,7 @@ class GradingApp:
                 return _json(start_response, "200 OK", price_index.latest(self.index.current()),
                              [("Cache-Control", "public, max-age=3600")])
             if method == "GET" and len(rest) == 3 and rest[:2] == ["cluster", "acceptance"]:
-                return self.certificate_lookup(start_response, rest[2])
+                return self.certificate_lookup(start_response, rest[2], environ)
             if method != "POST" and tuple(rest) in PAID_ROUTES:
                 # A bare probe of a paid route (x402 crawlers GET it): the 402
                 # challenge comes before any request validation.
@@ -569,13 +570,20 @@ class GradingApp:
         return self._sell(start_response, environ, "cluster", PREFIX + "/cluster/acceptance",
                           description, prev, deliver)
 
-    def certificate_lookup(self, start_response, cert_id):
+    def certificate_lookup(self, start_response, cert_id, environ=None):
+        """JSON by default; a readable, printable page (the dispute copy)
+        for a browser or ?format=html. Same stored object either way."""
         cert = self.store.get("cert:" + cert_id) if cert_id.startswith("rc_") else None
         if cert is None:
             return _json(start_response, "404 Not Found", {"error": "no such certificate"})
-        return _json(start_response, "200 OK",
-                     {"certificate": cert,
-                      "signature_valid": acceptance.verify(cert, self.config.secret)})
+        valid = acceptance.verify(cert, self.config.secret)
+        if environ is not None and certificate_page.wants_html(environ):
+            json_url = _url(environ, PREFIX + "/cluster/acceptance/" + cert_id) + "?format=json"
+            data = certificate_page.render(cert, valid, json_url).encode("utf-8")
+            start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"),
+                                      ("Content-Length", str(len(data)))])
+            return [data]
+        return _json(start_response, "200 OK", {"certificate": cert, "signature_valid": valid})
 
     CLAIM_DESCRIPTION = ("RigGrade free reference session: operator claim, 0 USDC. "
                          "Verified, never settled; the signer becomes the rig's operator.")

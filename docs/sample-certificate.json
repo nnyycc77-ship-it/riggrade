@@ -1,0 +1,63 @@
+{
+ "certificate_id": "rc_sample0000000000",
+ "checks": [
+  {
+   "check": "inventory",
+   "detail": "2 nodes x 8 NVIDIA H100 80GB HBM3, as claimed",
+   "status": "accept"
+  },
+  {
+   "check": "image",
+   "detail": "every node ran the same pinned image",
+   "status": "accept"
+  },
+  {
+   "check": "node_health",
+   "detail": "preflight passed on every node",
+   "status": "accept"
+  },
+  {
+   "check": "straggler",
+   "detail": "slowest node at 98% of the cluster median",
+   "min_ratio": 0.98,
+   "status": "accept"
+  },
+  {
+   "busbw_gbs": 31.0,
+   "check": "fabric",
+   "claimed_gbs": 50.0,
+   "detail": "all-reduce bus bandwidth 31.0 GB/s against 50 GB/s claimed (62%)",
+   "ratio": 0.62,
+   "status": "exception"
+  },
+  {
+   "check": "storage",
+   "detail": "aggregate read 9.1 GB/s against 10 GB/s claimed (91%)",
+   "ratio": 0.91,
+   "status": "accept"
+  }
+ ],
+ "claims": {
+  "gpu_model": "NVIDIA H100 80GB HBM3",
+  "gpus_per_node": 8,
+  "inter_node_gbps_per_gpu": 400,
+  "nodes": 2,
+  "storage_read_gbs": 10
+ },
+ "exceptions": [
+  "fabric: 62% of the claimed inter-node link"
+ ],
+ "images": [
+  "sha256:abababababababababababababababababababababababababababababababab"
+ ],
+ "issued_at": 1793577600,
+ "method": "cluster-acceptance-v0-draft",
+ "nodes": 2,
+ "pack_sha256": "e3b0c442e3b0c442e3b0c442e3b0c442e3b0c442e3b0c442e3b0c442e3b0c442",
+ "product": "riggrade_cluster_acceptance",
+ "rejections": [],
+ "rules": "cluster-acceptance-v0-draft",
+ "signature": "0000000000000000000000000000000000000000000000000000000000000000",
+ "statement": "Measured, not promised. What this cluster delivered during the named test, against what its provider claimed; no promise about future delivery.",
+ "verdict": "accept with exceptions"
+}
