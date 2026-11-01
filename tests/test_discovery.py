@@ -29,7 +29,7 @@ class DiscoveryTests(unittest.TestCase):
         card = json.loads(out)
         self.assertEqual(card["url"], "https://grade.example/riggrade/v1")
         self.assertEqual({s["id"] for s in card["skills"]},
-                         {"gpu_preflight", "grade", "fixit", "cluster_acceptance"})
+                         {"gpu_price_index", "gpu_preflight", "grade", "fixit", "cluster_acceptance"})
         self.assertFalse(card["payments"]["on_sale"])
 
     def test_favicon_is_served_at_the_root(self):
@@ -184,7 +184,7 @@ class PackageLayoutTests(unittest.TestCase):
         self.assertIn("inference", params)
         self.assertIn(params["passes"], dist["passes"])
         text = (ROOT / "pyproject.toml").read_text()
-        self.assertIn('riggrade = ["spec/*.json"]', text)
+        self.assertIn('riggrade = ["spec/*.json", "index/*.json", "index/*.csv"]', text)
         self.assertNotIn("../spec", text)
 
 

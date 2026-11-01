@@ -64,7 +64,13 @@ def agent_card(base, prefix, on_sale):
         "defaultInputModes": ["application/json"],
         "defaultOutputModes": ["application/json"],
         "skills": [
-            {"id": "gpu_preflight", "name": "GPU preflight check",
+            {"id": "gpu_price_index", "name": "GPU price index (free)",
+         "description": "Use when you want the going listed on-demand price for a GPU class before "
+                        "renting or listing. GET %s/index: latest week per peer class, weekly series, "
+                        "reconstructed from GetDeploying's CC BY 4.0 record. Information, not an "
+                        "offer." % api,
+         "tags": ["gpu", "price", "index", "free"]},
+        {"id": "gpu_preflight", "name": "GPU preflight check",
              "description": "Use when you have just rented a GPU box, or before listing your own, "
                             "and want to know in a minute whether it behaves like the card it "
                             "reports. Free. Run on the rented box itself: `python3 -m runner.preflight` "
@@ -115,6 +121,7 @@ def llms_txt(base, prefix, on_sale):
         "- Service descriptor (JSON, includes reasons the sale is off and which products are on): " + api,
         "- Host fix-it report, 2 USDC: POST " + api + "/fixit with {preflight_report}",
         "- Cluster acceptance certificate, 25 USDC: POST " + api + "/cluster/acceptance with {evidence_pack}",
+        "- Free GPU price index (latest listed on-demand price per class, weekly): GET " + api + "/index",
         "- OpenAPI: " + api + "/openapi.json",
         "- Agent card: " + base + "/.well-known/agent.json",
         "",
@@ -123,7 +130,7 @@ def llms_txt(base, prefix, on_sale):
         "- Grading spec: " + REPO + "/blob/main/docs/grading-spec.md",
         "- Payments: " + REPO + "/blob/main/docs/payments.md",
         "- Benchmark container: " + BENCH_IMAGE + " (run by digest; see container/bench-image.env)",
-        "- MCP server (stdio): python3 -m riggrade.mcp, tools gpu_preflight and riggrade_service_info",
+        "- MCP server (stdio): python3 -m riggrade.mcp, tools gpu_preflight, gpu_price_index and riggrade_service_info",
         "",
     ])
 
@@ -191,6 +198,11 @@ def openapi(base, prefix, contact_email=None):
         "paths": {
             "/": {"get": {"summary": "Service descriptor: prices, references per class, sale state",
                           "security": [], "responses": {"200": {"description": "OK"}}}},
+            "/index": {"get": {"summary": "Free GPU price index: latest listed on-demand price per peer class, "
+                                          "weekly, reconstructed from a CC BY 4.0 third-party record",
+                               "description": "Use when you want the going listed price for a GPU class "
+                                              "before renting or listing. Information, not an offer.",
+                               "security": [], "responses": {"200": {"description": "OK"}}}},
             "/openapi.json": {"get": {"summary": "This document", "security": [],
                                       "responses": {"200": {"description": "OK"}}}},
             "/session": post("Open a session", sess),

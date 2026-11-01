@@ -1,0 +1,2289 @@
+{
+ "ambiguous_dropped": {
+  "nvidia-a100": "memory not stated: could be a100-sxm-80, a100-pcie-80 or a100-pcie-40",
+  "nvidia-h100": "form not stated: could be h100-sxm-80 or h100-pcie-80"
+ },
+ "billing": "ON_DEMAND",
+ "classes": {
+  "h200-sxm-141": {
+   "latest_week": "2026-10-26",
+   "source_name": "nvidia-h200",
+   "weeks": {
+    "2025-10-27": {
+     "max_price": 10.8438,
+     "median_price": 3.5,
+     "min_price": 2.1,
+     "offering_count": 39,
+     "provider_count": 21,
+     "provider_median_price": 3.5
+    },
+    "2025-11-03": {
+     "max_price": 10.8438,
+     "median_price": 3.5,
+     "min_price": 2.1,
+     "offering_count": 39,
+     "provider_count": 21,
+     "provider_median_price": 3.5
+    },
+    "2025-11-10": {
+     "max_price": 10.8438,
+     "median_price": 3.5,
+     "min_price": 2.1,
+     "offering_count": 52,
+     "provider_count": 23,
+     "provider_median_price": 3.5
+    },
+    "2025-11-17": {
+     "max_price": 10.8438,
+     "median_price": 3.49,
+     "min_price": 2.1,
+     "offering_count": 57,
+     "provider_count": 24,
+     "provider_median_price": 3.495
+    },
+    "2025-11-24": {
+     "max_price": 10.8438,
+     "median_price": 3.49,
+     "min_price": 2.1,
+     "offering_count": 62,
+     "provider_count": 24,
+     "provider_median_price": 3.495
+    },
+    "2025-12-01": {
+     "max_price": 10.8438,
+     "median_price": 3.49,
+     "min_price": 2.1,
+     "offering_count": 62,
+     "provider_count": 24,
+     "provider_median_price": 3.495
+    },
+    "2025-12-08": {
+     "max_price": 10.8438,
+     "median_price": 3.49,
+     "min_price": 2.1,
+     "offering_count": 62,
+     "provider_count": 24,
+     "provider_median_price": 3.495
+    },
+    "2025-12-15": {
+     "max_price": 10.8438,
+     "median_price": 3.49,
+     "min_price": 2.08,
+     "offering_count": 62,
+     "provider_count": 24,
+     "provider_median_price": 3.495
+    },
+    "2025-12-22": {
+     "max_price": 10.8438,
+     "median_price": 3.49,
+     "min_price": 2.08,
+     "offering_count": 62,
+     "provider_count": 24,
+     "provider_median_price": 3.495
+    },
+    "2025-12-29": {
+     "max_price": 10.8438,
+     "median_price": 3.49,
+     "min_price": 2.01,
+     "offering_count": 64,
+     "provider_count": 24,
+     "provider_median_price": 3.495
+    },
+    "2026-01-05": {
+     "max_price": 10.8438,
+     "median_price": 3.49,
+     "min_price": 2.01,
+     "offering_count": 64,
+     "provider_count": 24,
+     "provider_median_price": 3.495
+    },
+    "2026-01-12": {
+     "max_price": 10.8438,
+     "median_price": 3.49,
+     "min_price": 2.1,
+     "offering_count": 64,
+     "provider_count": 24,
+     "provider_median_price": 3.495
+    },
+    "2026-01-19": {
+     "max_price": 10.8438,
+     "median_price": 3.49,
+     "min_price": 2.1,
+     "offering_count": 66,
+     "provider_count": 24,
+     "provider_median_price": 3.495
+    },
+    "2026-01-26": {
+     "max_price": 10.8438,
+     "median_price": 3.49,
+     "min_price": 2.1,
+     "offering_count": 68,
+     "provider_count": 24,
+     "provider_median_price": 3.5
+    },
+    "2026-02-02": {
+     "max_price": 10.4363,
+     "median_price": 3.495,
+     "min_price": 1.805,
+     "offering_count": 28,
+     "provider_count": 19,
+     "provider_median_price": 3.59
+    },
+    "2026-02-09": {
+     "max_price": 10.4363,
+     "median_price": 3.465,
+     "min_price": 1.5,
+     "offering_count": 30,
+     "provider_count": 20,
+     "provider_median_price": 3.545
+    },
+    "2026-02-16": {
+     "max_price": 10.4363,
+     "median_price": 3.465,
+     "min_price": 1.5,
+     "offering_count": 30,
+     "provider_count": 20,
+     "provider_median_price": 3.545
+    },
+    "2026-02-23": {
+     "max_price": 10.4363,
+     "median_price": 3.415,
+     "min_price": 1.5,
+     "offering_count": 38,
+     "provider_count": 22,
+     "provider_median_price": 3.5
+    },
+    "2026-03-02": {
+     "max_price": 10.4363,
+     "median_price": 3.245,
+     "min_price": 1.5,
+     "offering_count": 52,
+     "provider_count": 22,
+     "provider_median_price": 3.5
+    },
+    "2026-03-09": {
+     "max_price": 10.4363,
+     "median_price": 3.39,
+     "min_price": 1.5,
+     "offering_count": 44,
+     "provider_count": 22,
+     "provider_median_price": 3.5
+    },
+    "2026-03-16": {
+     "max_price": 10.4363,
+     "median_price": 3.345,
+     "min_price": 1.5,
+     "offering_count": 46,
+     "provider_count": 22,
+     "provider_median_price": 3.5
+    },
+    "2026-03-23": {
+     "max_price": 10.4363,
+     "median_price": 3.39,
+     "min_price": 1.5,
+     "offering_count": 46,
+     "provider_count": 23,
+     "provider_median_price": 3.5
+    },
+    "2026-03-30": {
+     "max_price": 13.78,
+     "median_price": 3.39,
+     "min_price": 1.5,
+     "offering_count": 47,
+     "provider_count": 23,
+     "provider_median_price": 3.5
+    },
+    "2026-04-06": {
+     "max_price": 13.78,
+     "median_price": 3.39,
+     "min_price": 1.5,
+     "offering_count": 46,
+     "provider_count": 23,
+     "provider_median_price": 3.5
+    },
+    "2026-04-13": {
+     "max_price": 13.78,
+     "median_price": 3.39,
+     "min_price": 1.5,
+     "offering_count": 49,
+     "provider_count": 25,
+     "provider_median_price": 3.5
+    },
+    "2026-04-20": {
+     "max_price": 13.78,
+     "median_price": 3.19,
+     "min_price": 0.5,
+     "offering_count": 58,
+     "provider_count": 24,
+     "provider_median_price": 3.495
+    },
+    "2026-04-27": {
+     "max_price": 13.78,
+     "median_price": 3.39,
+     "min_price": 0.5,
+     "offering_count": 61,
+     "provider_count": 25,
+     "provider_median_price": 3.49
+    },
+    "2026-05-04": {
+     "max_price": 13.78,
+     "median_price": 3.39,
+     "min_price": 0.5,
+     "offering_count": 51,
+     "provider_count": 23,
+     "provider_median_price": 3.5
+    },
+    "2026-05-11": {
+     "max_price": 13.78,
+     "median_price": 3.39,
+     "min_price": 0.5,
+     "offering_count": 49,
+     "provider_count": 23,
+     "provider_median_price": 3.5
+    },
+    "2026-05-18": {
+     "max_price": 13.78,
+     "median_price": 3.49,
+     "min_price": 2.29,
+     "offering_count": 52,
+     "provider_count": 23,
+     "provider_median_price": 3.79
+    },
+    "2026-05-25": {
+     "max_price": 13.78,
+     "median_price": 3.9476,
+     "min_price": 2.29,
+     "offering_count": 67,
+     "provider_count": 23,
+     "provider_median_price": 3.975
+    },
+    "2026-06-01": {
+     "max_price": 13.78,
+     "median_price": 4.0003,
+     "min_price": 2.3,
+     "offering_count": 69,
+     "provider_count": 24,
+     "provider_median_price": 4.004
+    },
+    "2026-06-08": {
+     "max_price": 13.78,
+     "median_price": 3.7391,
+     "min_price": 2.3,
+     "offering_count": 83,
+     "provider_count": 25,
+     "provider_median_price": 4.0
+    },
+    "2026-06-15": {
+     "max_price": 13.78,
+     "median_price": 3.62,
+     "min_price": 2.277,
+     "offering_count": 81,
+     "provider_count": 25,
+     "provider_median_price": 4.29
+    },
+    "2026-06-22": {
+     "max_price": 13.78,
+     "median_price": 3.5,
+     "min_price": 1.974,
+     "offering_count": 69,
+     "provider_count": 25,
+     "provider_median_price": 4.29
+    },
+    "2026-06-29": {
+     "max_price": 13.78,
+     "median_price": 3.59,
+     "min_price": 2.3,
+     "offering_count": 68,
+     "provider_count": 25,
+     "provider_median_price": 4.29
+    },
+    "2026-07-06": {
+     "max_price": 13.78,
+     "median_price": 3.62,
+     "min_price": 2.3,
+     "offering_count": 46,
+     "provider_count": 23,
+     "provider_median_price": 4.29
+    },
+    "2026-07-13": {
+     "max_price": 13.78,
+     "median_price": 3.78,
+     "min_price": 2.3,
+     "offering_count": 49,
+     "provider_count": 26,
+     "provider_median_price": 4.11
+    },
+    "2026-07-20": {
+     "max_price": 13.78,
+     "median_price": 3.935,
+     "min_price": 2.3,
+     "offering_count": 47,
+     "provider_count": 27,
+     "provider_median_price": 4.0
+    },
+    "2026-07-27": {
+     "max_price": 13.78,
+     "median_price": 3.99,
+     "min_price": 2.3,
+     "offering_count": 43,
+     "provider_count": 26,
+     "provider_median_price": 4.29
+    },
+    "2026-08-03": {
+     "max_price": 13.78,
+     "median_price": 4.0,
+     "min_price": 2.3,
+     "offering_count": 44,
+     "provider_count": 27,
+     "provider_median_price": 4.29
+    },
+    "2026-08-10": {
+     "max_price": 13.78,
+     "median_price": 4.0,
+     "min_price": 2.3,
+     "offering_count": 47,
+     "provider_count": 26,
+     "provider_median_price": 4.47
+    },
+    "2026-08-17": {
+     "max_price": 13.78,
+     "median_price": 3.9629,
+     "min_price": 2.3,
+     "offering_count": 54,
+     "provider_count": 28,
+     "provider_median_price": 4.48
+    },
+    "2026-08-24": {
+     "max_price": 13.78,
+     "median_price": 4.0,
+     "min_price": 1.99,
+     "offering_count": 77,
+     "provider_count": 30,
+     "provider_median_price": 4.38
+    },
+    "2026-08-31": {
+     "max_price": 13.78,
+     "median_price": 4.1976,
+     "min_price": 1.99,
+     "offering_count": 76,
+     "provider_count": 30,
+     "provider_median_price": 4.4
+    },
+    "2026-09-07": {
+     "max_price": 13.78,
+     "median_price": 4.1976,
+     "min_price": 2.09,
+     "offering_count": 84,
+     "provider_count": 33,
+     "provider_median_price": 4.4
+    },
+    "2026-09-14": {
+     "max_price": 13.78,
+     "median_price": 4.2374,
+     "min_price": 2.09,
+     "offering_count": 82,
+     "provider_count": 33,
+     "provider_median_price": 4.4434
+    },
+    "2026-09-21": {
+     "max_price": 13.78,
+     "median_price": 4.4,
+     "min_price": 2.09,
+     "offering_count": 90,
+     "provider_count": 35,
+     "provider_median_price": 4.442
+    },
+    "2026-09-28": {
+     "max_price": 13.78,
+     "median_price": 4.59,
+     "min_price": 2.09,
+     "offering_count": 102,
+     "provider_count": 35,
+     "provider_median_price": 4.5
+    },
+    "2026-10-05": {
+     "max_price": 13.78,
+     "median_price": 4.9838,
+     "min_price": 2.09,
+     "offering_count": 98,
+     "provider_count": 33,
+     "provider_median_price": 4.6288
+    },
+    "2026-10-12": {
+     "max_price": 13.78,
+     "median_price": 4.875,
+     "min_price": 2.09,
+     "offering_count": 85,
+     "provider_count": 34,
+     "provider_median_price": 4.875
+    },
+    "2026-10-19": {
+     "max_price": 13.78,
+     "median_price": 5.0,
+     "min_price": 2.09,
+     "offering_count": 83,
+     "provider_count": 34,
+     "provider_median_price": 5.0
+    },
+    "2026-10-26": {
+     "max_price": 13.78,
+     "median_price": 4.81,
+     "min_price": 2.09,
+     "offering_count": 83,
+     "provider_count": 35,
+     "provider_median_price": 4.875
+    }
+   }
+  },
+  "l40s-48": {
+   "latest_week": "2026-10-26",
+   "source_name": "nvidia-l40s",
+   "weeks": {
+    "2025-10-27": {
+     "max_price": 7.58,
+     "median_price": 1.5244,
+     "min_price": 0.32,
+     "offering_count": 84,
+     "provider_count": 28,
+     "provider_median_price": 1.2825
+    },
+    "2025-11-03": {
+     "max_price": 7.58,
+     "median_price": 1.5244,
+     "min_price": 0.32,
+     "offering_count": 84,
+     "provider_count": 28,
+     "provider_median_price": 1.2825
+    },
+    "2025-11-10": {
+     "max_price": 7.58,
+     "median_price": 1.4967,
+     "min_price": 0.32,
+     "offering_count": 99,
+     "provider_count": 29,
+     "provider_median_price": 1.29
+    },
+    "2025-11-17": {
+     "max_price": 7.58,
+     "median_price": 1.405,
+     "min_price": 0.32,
+     "offering_count": 104,
+     "provider_count": 30,
+     "provider_median_price": 1.41
+    },
+    "2025-11-24": {
+     "max_price": 7.58,
+     "median_price": 1.36,
+     "min_price": 0.32,
+     "offering_count": 123,
+     "provider_count": 30,
+     "provider_median_price": 1.54
+    },
+    "2025-12-01": {
+     "max_price": 7.58,
+     "median_price": 1.36,
+     "min_price": 0.32,
+     "offering_count": 123,
+     "provider_count": 30,
+     "provider_median_price": 1.54
+    },
+    "2025-12-08": {
+     "max_price": 7.58,
+     "median_price": 1.36,
+     "min_price": 0.32,
+     "offering_count": 123,
+     "provider_count": 30,
+     "provider_median_price": 1.5388
+    },
+    "2025-12-15": {
+     "max_price": 7.58,
+     "median_price": 1.36,
+     "min_price": 0.32,
+     "offering_count": 123,
+     "provider_count": 30,
+     "provider_median_price": 1.5388
+    },
+    "2025-12-22": {
+     "max_price": 7.58,
+     "median_price": 1.36,
+     "min_price": 0.32,
+     "offering_count": 123,
+     "provider_count": 30,
+     "provider_median_price": 1.5388
+    },
+    "2025-12-29": {
+     "max_price": 7.58,
+     "median_price": 1.36,
+     "min_price": 0.32,
+     "offering_count": 124,
+     "provider_count": 30,
+     "provider_median_price": 1.5388
+    },
+    "2026-01-05": {
+     "max_price": 7.58,
+     "median_price": 1.36,
+     "min_price": 0.32,
+     "offering_count": 124,
+     "provider_count": 30,
+     "provider_median_price": 1.5388
+    },
+    "2026-01-12": {
+     "max_price": 7.58,
+     "median_price": 1.345,
+     "min_price": 0.32,
+     "offering_count": 124,
+     "provider_count": 30,
+     "provider_median_price": 1.41
+    },
+    "2026-01-19": {
+     "max_price": 7.58,
+     "median_price": 1.4967,
+     "min_price": 0.32,
+     "offering_count": 133,
+     "provider_count": 30,
+     "provider_median_price": 1.41
+    },
+    "2026-01-26": {
+     "max_price": 7.58,
+     "median_price": 1.5,
+     "min_price": 0.32,
+     "offering_count": 133,
+     "provider_count": 30,
+     "provider_median_price": 1.41
+    },
+    "2026-02-02": {
+     "max_price": 7.58,
+     "median_price": 1.57,
+     "min_price": 0.51,
+     "offering_count": 69,
+     "provider_count": 26,
+     "provider_median_price": 1.5581
+    },
+    "2026-02-09": {
+     "max_price": 7.58,
+     "median_price": 1.5725,
+     "min_price": 0.4675,
+     "offering_count": 70,
+     "provider_count": 26,
+     "provider_median_price": 1.5682
+    },
+    "2026-02-16": {
+     "max_price": 7.58,
+     "median_price": 1.5725,
+     "min_price": 0.4675,
+     "offering_count": 70,
+     "provider_count": 26,
+     "provider_median_price": 1.5682
+    },
+    "2026-02-23": {
+     "max_price": 7.58,
+     "median_price": 1.5575,
+     "min_price": 0.55,
+     "offering_count": 71,
+     "provider_count": 26,
+     "provider_median_price": 1.5682
+    },
+    "2026-03-02": {
+     "max_price": 7.58,
+     "median_price": 1.5781,
+     "min_price": 0.55,
+     "offering_count": 74,
+     "provider_count": 26,
+     "provider_median_price": 1.5682
+    },
+    "2026-03-09": {
+     "max_price": 7.58,
+     "median_price": 1.5575,
+     "min_price": 0.55,
+     "offering_count": 73,
+     "provider_count": 26,
+     "provider_median_price": 1.5575
+    },
+    "2026-03-16": {
+     "max_price": 7.58,
+     "median_price": 1.5488,
+     "min_price": 0.55,
+     "offering_count": 77,
+     "provider_count": 26,
+     "provider_median_price": 1.5337
+    },
+    "2026-03-23": {
+     "max_price": 7.58,
+     "median_price": 1.57,
+     "min_price": 0.55,
+     "offering_count": 75,
+     "provider_count": 26,
+     "provider_median_price": 1.56
+    },
+    "2026-03-30": {
+     "max_price": 7.58,
+     "median_price": 1.5725,
+     "min_price": 0.55,
+     "offering_count": 70,
+     "provider_count": 26,
+     "provider_median_price": 1.5682
+    },
+    "2026-04-06": {
+     "max_price": 7.58,
+     "median_price": 1.57,
+     "min_price": 0.55,
+     "offering_count": 71,
+     "provider_count": 26,
+     "provider_median_price": 1.5682
+    },
+    "2026-04-13": {
+     "max_price": 7.58,
+     "median_price": 1.5575,
+     "min_price": 0.55,
+     "offering_count": 75,
+     "provider_count": 27,
+     "provider_median_price": 1.57
+    },
+    "2026-04-20": {
+     "max_price": 7.5772,
+     "median_price": 1.5575,
+     "min_price": 0.55,
+     "offering_count": 77,
+     "provider_count": 27,
+     "provider_median_price": 1.57
+    },
+    "2026-04-27": {
+     "max_price": 7.5772,
+     "median_price": 1.5575,
+     "min_price": 0.55,
+     "offering_count": 73,
+     "provider_count": 27,
+     "provider_median_price": 1.5663
+    },
+    "2026-05-04": {
+     "max_price": 7.5772,
+     "median_price": 1.5537,
+     "min_price": 0.55,
+     "offering_count": 78,
+     "provider_count": 28,
+     "provider_median_price": 1.5559
+    },
+    "2026-05-11": {
+     "max_price": 7.5772,
+     "median_price": 1.5537,
+     "min_price": 0.55,
+     "offering_count": 82,
+     "provider_count": 28,
+     "provider_median_price": 1.5682
+    },
+    "2026-05-18": {
+     "max_price": 7.5772,
+     "median_price": 1.5575,
+     "min_price": 0.55,
+     "offering_count": 81,
+     "provider_count": 28,
+     "provider_median_price": 1.5625
+    },
+    "2026-05-25": {
+     "max_price": 7.5772,
+     "median_price": 1.5488,
+     "min_price": 0.55,
+     "offering_count": 83,
+     "provider_count": 28,
+     "provider_median_price": 1.56
+    },
+    "2026-06-01": {
+     "max_price": 7.5772,
+     "median_price": 1.5588,
+     "min_price": 0.55,
+     "offering_count": 72,
+     "provider_count": 29,
+     "provider_median_price": 1.56
+    },
+    "2026-06-08": {
+     "max_price": 7.5772,
+     "median_price": 1.55,
+     "min_price": 0.55,
+     "offering_count": 79,
+     "provider_count": 28,
+     "provider_median_price": 1.5632
+    },
+    "2026-06-15": {
+     "max_price": 7.5772,
+     "median_price": 1.5638,
+     "min_price": 0.55,
+     "offering_count": 72,
+     "provider_count": 27,
+     "provider_median_price": 1.5663
+    },
+    "2026-06-22": {
+     "max_price": 7.5772,
+     "median_price": 1.5537,
+     "min_price": 0.55,
+     "offering_count": 74,
+     "provider_count": 27,
+     "provider_median_price": 1.5362
+    },
+    "2026-06-29": {
+     "max_price": 7.5772,
+     "median_price": 1.5394,
+     "min_price": 0.55,
+     "offering_count": 80,
+     "provider_count": 28,
+     "provider_median_price": 1.5682
+    },
+    "2026-07-06": {
+     "max_price": 7.5772,
+     "median_price": 1.5488,
+     "min_price": 0.55,
+     "offering_count": 73,
+     "provider_count": 27,
+     "provider_median_price": 1.5663
+    },
+    "2026-07-13": {
+     "max_price": 7.5772,
+     "median_price": 1.5312,
+     "min_price": 0.55,
+     "offering_count": 67,
+     "provider_count": 27,
+     "provider_median_price": 1.53
+    },
+    "2026-07-20": {
+     "max_price": 7.5772,
+     "median_price": 1.5,
+     "min_price": 0.55,
+     "offering_count": 82,
+     "provider_count": 26,
+     "provider_median_price": 1.5294
+    },
+    "2026-07-27": {
+     "max_price": 7.5772,
+     "median_price": 1.5,
+     "min_price": 0.79,
+     "offering_count": 75,
+     "provider_count": 25,
+     "provider_median_price": 1.5375
+    },
+    "2026-08-03": {
+     "max_price": 7.5772,
+     "median_price": 1.5,
+     "min_price": 0.759,
+     "offering_count": 75,
+     "provider_count": 26,
+     "provider_median_price": 1.5394
+    },
+    "2026-08-10": {
+     "max_price": 7.5772,
+     "median_price": 1.5,
+     "min_price": 0.55,
+     "offering_count": 71,
+     "provider_count": 26,
+     "provider_median_price": 1.5381
+    },
+    "2026-08-17": {
+     "max_price": 7.5772,
+     "median_price": 1.5,
+     "min_price": 0.55,
+     "offering_count": 88,
+     "provider_count": 28,
+     "provider_median_price": 1.5
+    },
+    "2026-08-24": {
+     "max_price": 7.5772,
+     "median_price": 1.5,
+     "min_price": 0.55,
+     "offering_count": 91,
+     "provider_count": 29,
+     "provider_median_price": 1.435
+    },
+    "2026-08-31": {
+     "max_price": 7.5772,
+     "median_price": 1.5019,
+     "min_price": 0.55,
+     "offering_count": 101,
+     "provider_count": 28,
+     "provider_median_price": 1.5
+    },
+    "2026-09-07": {
+     "max_price": 7.5772,
+     "median_price": 1.425,
+     "min_price": 0.55,
+     "offering_count": 102,
+     "provider_count": 29,
+     "provider_median_price": 1.395
+    },
+    "2026-09-14": {
+     "max_price": 7.5772,
+     "median_price": 1.55,
+     "min_price": 0.55,
+     "offering_count": 112,
+     "provider_count": 30,
+     "provider_median_price": 1.535
+    },
+    "2026-09-21": {
+     "max_price": 7.5772,
+     "median_price": 1.5039,
+     "min_price": 0.55,
+     "offering_count": 119,
+     "provider_count": 33,
+     "provider_median_price": 1.57
+    },
+    "2026-09-28": {
+     "max_price": 7.5772,
+     "median_price": 1.5,
+     "min_price": 0.38,
+     "offering_count": 123,
+     "provider_count": 34,
+     "provider_median_price": 1.535
+    },
+    "2026-10-05": {
+     "max_price": 7.5772,
+     "median_price": 1.527,
+     "min_price": 0.5356,
+     "offering_count": 110,
+     "provider_count": 33,
+     "provider_median_price": 1.535
+    },
+    "2026-10-12": {
+     "max_price": 7.5772,
+     "median_price": 1.65,
+     "min_price": 0.55,
+     "offering_count": 105,
+     "provider_count": 32,
+     "provider_median_price": 1.603
+    },
+    "2026-10-19": {
+     "max_price": 7.5772,
+     "median_price": 1.8,
+     "min_price": 0.55,
+     "offering_count": 104,
+     "provider_count": 32,
+     "provider_median_price": 1.643
+    },
+    "2026-10-26": {
+     "max_price": 7.5772,
+     "median_price": 1.795,
+     "min_price": 0.38,
+     "offering_count": 105,
+     "provider_count": 33,
+     "provider_median_price": 1.57
+    }
+   }
+  },
+  "rtx3090-24": {
+   "latest_week": "2026-10-26",
+   "source_name": "nvidia-rtx-3090",
+   "weeks": {
+    "2025-10-27": {
+     "max_price": 0.31,
+     "median_price": 0.21,
+     "min_price": 0.11,
+     "offering_count": 5,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2025-11-03": {
+     "max_price": 0.31,
+     "median_price": 0.21,
+     "min_price": 0.11,
+     "offering_count": 5,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2025-11-10": {
+     "max_price": 0.46,
+     "median_price": 0.21,
+     "min_price": 0.11,
+     "offering_count": 7,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2025-11-17": {
+     "max_price": 0.46,
+     "median_price": 0.17,
+     "min_price": 0.11,
+     "offering_count": 11,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2025-11-24": {
+     "max_price": 0.3333,
+     "median_price": 0.21,
+     "min_price": 0.11,
+     "offering_count": 17,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2025-12-01": {
+     "max_price": 0.3333,
+     "median_price": 0.21,
+     "min_price": 0.11,
+     "offering_count": 17,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2025-12-08": {
+     "max_price": 0.3333,
+     "median_price": 0.21,
+     "min_price": 0.11,
+     "offering_count": 17,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2025-12-15": {
+     "max_price": 0.31,
+     "median_price": 0.1833,
+     "min_price": 0.11,
+     "offering_count": 17,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2025-12-22": {
+     "max_price": 0.31,
+     "median_price": 0.1833,
+     "min_price": 0.11,
+     "offering_count": 17,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2025-12-29": {
+     "max_price": 0.31,
+     "median_price": 0.175,
+     "min_price": 0.11,
+     "offering_count": 17,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2026-01-05": {
+     "max_price": 0.31,
+     "median_price": 0.175,
+     "min_price": 0.11,
+     "offering_count": 17,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2026-01-12": {
+     "max_price": 0.31,
+     "median_price": 0.1767,
+     "min_price": 0.11,
+     "offering_count": 17,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2026-01-19": {
+     "max_price": 0.31,
+     "median_price": 0.17,
+     "min_price": 0.11,
+     "offering_count": 17,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2026-01-26": {
+     "max_price": 0.31,
+     "median_price": 0.1743,
+     "min_price": 0.11,
+     "offering_count": 17,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2026-02-02": {
+     "max_price": 0.31,
+     "median_price": 0.1743,
+     "min_price": 0.11,
+     "offering_count": 11,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2026-02-09": {
+     "max_price": 0.31,
+     "median_price": 0.185,
+     "min_price": 0.11,
+     "offering_count": 11,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2026-02-16": {
+     "max_price": 0.31,
+     "median_price": 0.185,
+     "min_price": 0.11,
+     "offering_count": 11,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2026-02-23": {
+     "max_price": 0.31,
+     "median_price": 0.21,
+     "min_price": 0.11,
+     "offering_count": 15,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2026-03-02": {
+     "max_price": 0.335,
+     "median_price": 0.16,
+     "min_price": 0.11,
+     "offering_count": 83,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2026-03-09": {
+     "max_price": 0.34,
+     "median_price": 0.1762,
+     "min_price": 0.11,
+     "offering_count": 82,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2026-03-16": {
+     "max_price": 0.34,
+     "median_price": 0.17,
+     "min_price": 0.08,
+     "offering_count": 81,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2026-03-23": {
+     "max_price": 0.735,
+     "median_price": 0.1644,
+     "min_price": 0.11,
+     "offering_count": 82,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2026-03-30": {
+     "max_price": 0.735,
+     "median_price": 0.167,
+     "min_price": 0.09,
+     "offering_count": 83,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2026-04-06": {
+     "max_price": 0.535,
+     "median_price": 0.17,
+     "min_price": 0.11,
+     "offering_count": 57,
+     "provider_count": 5,
+     "provider_median_price": 0.21
+    },
+    "2026-04-13": {
+     "max_price": 0.35,
+     "median_price": 0.163,
+     "min_price": 0.1095,
+     "offering_count": 61,
+     "provider_count": 6,
+     "provider_median_price": 0.215
+    },
+    "2026-04-20": {
+     "max_price": 0.31,
+     "median_price": 0.1606,
+     "min_price": 0.1,
+     "offering_count": 65,
+     "provider_count": 6,
+     "provider_median_price": 0.1852
+    },
+    "2026-04-27": {
+     "max_price": 0.31,
+     "median_price": 0.1605,
+     "min_price": 0.0811,
+     "offering_count": 77,
+     "provider_count": 6,
+     "provider_median_price": 0.1832
+    },
+    "2026-05-04": {
+     "max_price": 0.31,
+     "median_price": 0.1637,
+     "min_price": 0.114,
+     "offering_count": 67,
+     "provider_count": 6,
+     "provider_median_price": 0.1863
+    },
+    "2026-05-11": {
+     "max_price": 0.31,
+     "median_price": 0.2015,
+     "min_price": 0.114,
+     "offering_count": 17,
+     "provider_count": 6,
+     "provider_median_price": 0.1765
+    },
+    "2026-05-18": {
+     "max_price": 0.803,
+     "median_price": 0.22,
+     "min_price": 0.1,
+     "offering_count": 23,
+     "provider_count": 7,
+     "provider_median_price": 0.2278
+    },
+    "2026-05-25": {
+     "max_price": 0.5345,
+     "median_price": 0.2519,
+     "min_price": 0.114,
+     "offering_count": 48,
+     "provider_count": 7,
+     "provider_median_price": 0.2679
+    },
+    "2026-06-01": {
+     "max_price": 2.0012,
+     "median_price": 0.3593,
+     "min_price": 0.1,
+     "offering_count": 45,
+     "provider_count": 6,
+     "provider_median_price": 0.26
+    },
+    "2026-06-08": {
+     "max_price": 0.46,
+     "median_price": 0.2106,
+     "min_price": 0.11,
+     "offering_count": 78,
+     "provider_count": 7,
+     "provider_median_price": 0.21
+    },
+    "2026-06-15": {
+     "max_price": 0.6704,
+     "median_price": 0.1622,
+     "min_price": 0.114,
+     "offering_count": 73,
+     "provider_count": 6,
+     "provider_median_price": 0.215
+    },
+    "2026-06-22": {
+     "max_price": 0.46,
+     "median_price": 0.162,
+     "min_price": 0.114,
+     "offering_count": 71,
+     "provider_count": 7,
+     "provider_median_price": 0.22
+    },
+    "2026-06-29": {
+     "max_price": 0.46,
+     "median_price": 0.1712,
+     "min_price": 0.11,
+     "offering_count": 83,
+     "provider_count": 7,
+     "provider_median_price": 0.21
+    },
+    "2026-07-06": {
+     "max_price": 0.46,
+     "median_price": 0.22,
+     "min_price": 0.1079,
+     "offering_count": 15,
+     "provider_count": 6,
+     "provider_median_price": 0.167
+    },
+    "2026-07-13": {
+     "max_price": 0.31,
+     "median_price": 0.1835,
+     "min_price": 0.0782,
+     "offering_count": 12,
+     "provider_count": 6,
+     "provider_median_price": 0.1691
+    },
+    "2026-07-20": {
+     "max_price": 0.5,
+     "median_price": 0.22,
+     "min_price": 0.1048,
+     "offering_count": 17,
+     "provider_count": 7,
+     "provider_median_price": 0.31
+    },
+    "2026-07-27": {
+     "max_price": 0.5,
+     "median_price": 0.22,
+     "min_price": 0.1048,
+     "offering_count": 14,
+     "provider_count": 7,
+     "provider_median_price": 0.24
+    },
+    "2026-08-03": {
+     "max_price": 0.5,
+     "median_price": 0.22,
+     "min_price": 0.103,
+     "offering_count": 15,
+     "provider_count": 7,
+     "provider_median_price": 0.22
+    },
+    "2026-08-10": {
+     "max_price": 0.5,
+     "median_price": 0.1406,
+     "min_price": 0.107,
+     "offering_count": 17,
+     "provider_count": 7,
+     "provider_median_price": 0.19
+    },
+    "2026-08-17": {
+     "max_price": 0.5,
+     "median_price": 0.13,
+     "min_price": 0.1,
+     "offering_count": 21,
+     "provider_count": 8,
+     "provider_median_price": 0.127
+    },
+    "2026-08-24": {
+     "max_price": 0.5,
+     "median_price": 0.15,
+     "min_price": 0.09,
+     "offering_count": 50,
+     "provider_count": 8,
+     "provider_median_price": 0.1449
+    },
+    "2026-08-31": {
+     "max_price": 0.5,
+     "median_price": 0.1565,
+     "min_price": 0.09,
+     "offering_count": 49,
+     "provider_count": 8,
+     "provider_median_price": 0.1689
+    },
+    "2026-09-07": {
+     "max_price": 0.5,
+     "median_price": 0.1746,
+     "min_price": 0.1,
+     "offering_count": 45,
+     "provider_count": 9,
+     "provider_median_price": 0.22
+    },
+    "2026-09-14": {
+     "max_price": 0.8388,
+     "median_price": 0.1845,
+     "min_price": 0.1,
+     "offering_count": 47,
+     "provider_count": 10,
+     "provider_median_price": 0.2
+    },
+    "2026-09-21": {
+     "max_price": 0.6695,
+     "median_price": 0.2065,
+     "min_price": 0.1,
+     "offering_count": 43,
+     "provider_count": 9,
+     "provider_median_price": 0.2514
+    },
+    "2026-09-28": {
+     "max_price": 0.523,
+     "median_price": 0.2008,
+     "min_price": 0.1,
+     "offering_count": 52,
+     "provider_count": 9,
+     "provider_median_price": 0.2013
+    },
+    "2026-10-05": {
+     "max_price": 0.5,
+     "median_price": 0.2022,
+     "min_price": 0.1,
+     "offering_count": 54,
+     "provider_count": 9,
+     "provider_median_price": 0.22
+    },
+    "2026-10-12": {
+     "max_price": 0.4899,
+     "median_price": 0.1675,
+     "min_price": 0.1,
+     "offering_count": 13,
+     "provider_count": 7,
+     "provider_median_price": 0.225
+    },
+    "2026-10-19": {
+     "max_price": 0.5,
+     "median_price": 0.2,
+     "min_price": 0.1,
+     "offering_count": 13,
+     "provider_count": 7,
+     "provider_median_price": 0.3
+    },
+    "2026-10-26": {
+     "max_price": 0.5,
+     "median_price": 0.195,
+     "min_price": 0.1,
+     "offering_count": 11,
+     "provider_count": 7,
+     "provider_median_price": 0.225
+    }
+   }
+  },
+  "rtx4090-24": {
+   "latest_week": "2026-10-26",
+   "source_name": "nvidia-rtx-4090",
+   "weeks": {
+    "2025-10-27": {
+     "max_price": 1.61,
+     "median_price": 0.65,
+     "min_price": 0.18,
+     "offering_count": 16,
+     "provider_count": 9,
+     "provider_median_price": 0.52
+    },
+    "2025-11-03": {
+     "max_price": 1.61,
+     "median_price": 0.65,
+     "min_price": 0.18,
+     "offering_count": 16,
+     "provider_count": 9,
+     "provider_median_price": 0.52
+    },
+    "2025-11-10": {
+     "max_price": 1.61,
+     "median_price": 0.6325,
+     "min_price": 0.18,
+     "offering_count": 18,
+     "provider_count": 9,
+     "provider_median_price": 0.59
+    },
+    "2025-11-17": {
+     "max_price": 1.61,
+     "median_price": 0.4,
+     "min_price": 0.18,
+     "offering_count": 31,
+     "provider_count": 9,
+     "provider_median_price": 0.59
+    },
+    "2025-11-24": {
+     "max_price": 1.61,
+     "median_price": 0.413,
+     "min_price": 0.18,
+     "offering_count": 37,
+     "provider_count": 9,
+     "provider_median_price": 0.52
+    },
+    "2025-12-01": {
+     "max_price": 1.61,
+     "median_price": 0.413,
+     "min_price": 0.18,
+     "offering_count": 37,
+     "provider_count": 9,
+     "provider_median_price": 0.52
+    },
+    "2025-12-08": {
+     "max_price": 1.61,
+     "median_price": 0.4132,
+     "min_price": 0.18,
+     "offering_count": 38,
+     "provider_count": 9,
+     "provider_median_price": 0.52
+    },
+    "2025-12-15": {
+     "max_price": 1.61,
+     "median_price": 0.44,
+     "min_price": 0.18,
+     "offering_count": 39,
+     "provider_count": 9,
+     "provider_median_price": 0.5925
+    },
+    "2025-12-22": {
+     "max_price": 1.61,
+     "median_price": 0.44,
+     "min_price": 0.18,
+     "offering_count": 39,
+     "provider_count": 9,
+     "provider_median_price": 0.5925
+    },
+    "2025-12-29": {
+     "max_price": 1.61,
+     "median_price": 0.43,
+     "min_price": 0.18,
+     "offering_count": 41,
+     "provider_count": 10,
+     "provider_median_price": 0.5262
+    },
+    "2026-01-05": {
+     "max_price": 1.61,
+     "median_price": 0.43,
+     "min_price": 0.18,
+     "offering_count": 41,
+     "provider_count": 10,
+     "provider_median_price": 0.5262
+    },
+    "2026-01-12": {
+     "max_price": 1.61,
+     "median_price": 0.4133,
+     "min_price": 0.18,
+     "offering_count": 43,
+     "provider_count": 10,
+     "provider_median_price": 0.49
+    },
+    "2026-01-19": {
+     "max_price": 1.61,
+     "median_price": 0.43,
+     "min_price": 0.18,
+     "offering_count": 43,
+     "provider_count": 10,
+     "provider_median_price": 0.49
+    },
+    "2026-01-26": {
+     "max_price": 1.61,
+     "median_price": 0.43,
+     "min_price": 0.18,
+     "offering_count": 43,
+     "provider_count": 10,
+     "provider_median_price": 0.49
+    },
+    "2026-02-02": {
+     "max_price": 1.61,
+     "median_price": 0.375,
+     "min_price": 0.18,
+     "offering_count": 19,
+     "provider_count": 9,
+     "provider_median_price": 0.46
+    },
+    "2026-02-09": {
+     "max_price": 1.61,
+     "median_price": 0.4136,
+     "min_price": 0.18,
+     "offering_count": 22,
+     "provider_count": 9,
+     "provider_median_price": 0.46
+    },
+    "2026-02-16": {
+     "max_price": 1.61,
+     "median_price": 0.4286,
+     "min_price": 0.18,
+     "offering_count": 24,
+     "provider_count": 10,
+     "provider_median_price": 0.49
+    },
+    "2026-02-23": {
+     "max_price": 1.61,
+     "median_price": 0.4,
+     "min_price": 0.18,
+     "offering_count": 25,
+     "provider_count": 10,
+     "provider_median_price": 0.5437
+    },
+    "2026-03-02": {
+     "max_price": 1.61,
+     "median_price": 0.3738,
+     "min_price": 0.18,
+     "offering_count": 125,
+     "provider_count": 10,
+     "provider_median_price": 0.46
+    },
+    "2026-03-09": {
+     "max_price": 1.61,
+     "median_price": 0.367,
+     "min_price": 0.18,
+     "offering_count": 120,
+     "provider_count": 10,
+     "provider_median_price": 0.5297
+    },
+    "2026-03-16": {
+     "max_price": 1.61,
+     "median_price": 0.38,
+     "min_price": 0.18,
+     "offering_count": 139,
+     "provider_count": 10,
+     "provider_median_price": 0.5297
+    },
+    "2026-03-23": {
+     "max_price": 1.61,
+     "median_price": 0.3775,
+     "min_price": 0.18,
+     "offering_count": 120,
+     "provider_count": 11,
+     "provider_median_price": 0.46
+    },
+    "2026-03-30": {
+     "max_price": 1.61,
+     "median_price": 0.36,
+     "min_price": 0.18,
+     "offering_count": 107,
+     "provider_count": 11,
+     "provider_median_price": 0.46
+    },
+    "2026-04-06": {
+     "max_price": 1.61,
+     "median_price": 0.387,
+     "min_price": 0.18,
+     "offering_count": 113,
+     "provider_count": 10,
+     "provider_median_price": 0.46
+    },
+    "2026-04-13": {
+     "max_price": 1.61,
+     "median_price": 0.3746,
+     "min_price": 0.1739,
+     "offering_count": 118,
+     "provider_count": 11,
+     "provider_median_price": 0.46
+    },
+    "2026-04-20": {
+     "max_price": 1.61,
+     "median_price": 0.3779,
+     "min_price": 0.184,
+     "offering_count": 126,
+     "provider_count": 12,
+     "provider_median_price": 0.47
+    },
+    "2026-04-27": {
+     "max_price": 1.61,
+     "median_price": 0.367,
+     "min_price": 0.184,
+     "offering_count": 135,
+     "provider_count": 12,
+     "provider_median_price": 0.48
+    },
+    "2026-05-04": {
+     "max_price": 1.61,
+     "median_price": 0.3953,
+     "min_price": 0.184,
+     "offering_count": 121,
+     "provider_count": 12,
+     "provider_median_price": 0.475
+    },
+    "2026-05-11": {
+     "max_price": 1.61,
+     "median_price": 0.46,
+     "min_price": 0.184,
+     "offering_count": 17,
+     "provider_count": 11,
+     "provider_median_price": 0.46
+    },
+    "2026-05-18": {
+     "max_price": 4.0022,
+     "median_price": 0.603,
+     "min_price": 0.184,
+     "offering_count": 36,
+     "provider_count": 13,
+     "provider_median_price": 0.52
+    },
+    "2026-05-25": {
+     "max_price": 1.61,
+     "median_price": 0.6696,
+     "min_price": 0.184,
+     "offering_count": 82,
+     "provider_count": 12,
+     "provider_median_price": 0.5245
+    },
+    "2026-06-01": {
+     "max_price": 2.0006,
+     "median_price": 0.8911,
+     "min_price": 0.184,
+     "offering_count": 125,
+     "provider_count": 11,
+     "provider_median_price": 0.51
+    },
+    "2026-06-08": {
+     "max_price": 1.61,
+     "median_price": 0.537,
+     "min_price": 0.184,
+     "offering_count": 159,
+     "provider_count": 13,
+     "provider_median_price": 0.52
+    },
+    "2026-06-15": {
+     "max_price": 1.61,
+     "median_price": 0.4285,
+     "min_price": 0.184,
+     "offering_count": 176,
+     "provider_count": 12,
+     "provider_median_price": 0.48
+    },
+    "2026-06-22": {
+     "max_price": 1.61,
+     "median_price": 0.4281,
+     "min_price": 0.184,
+     "offering_count": 139,
+     "provider_count": 12,
+     "provider_median_price": 0.5497
+    },
+    "2026-06-29": {
+     "max_price": 1.61,
+     "median_price": 0.4011,
+     "min_price": 0.184,
+     "offering_count": 132,
+     "provider_count": 12,
+     "provider_median_price": 0.5025
+    },
+    "2026-07-06": {
+     "max_price": 1.61,
+     "median_price": 0.4681,
+     "min_price": 0.184,
+     "offering_count": 31,
+     "provider_count": 11,
+     "provider_median_price": 0.5
+    },
+    "2026-07-13": {
+     "max_price": 1.61,
+     "median_price": 0.4671,
+     "min_price": 0.184,
+     "offering_count": 35,
+     "provider_count": 14,
+     "provider_median_price": 0.48
+    },
+    "2026-07-20": {
+     "max_price": 1.61,
+     "median_price": 0.3936,
+     "min_price": 0.184,
+     "offering_count": 35,
+     "provider_count": 13,
+     "provider_median_price": 0.46
+    },
+    "2026-07-27": {
+     "max_price": 1.61,
+     "median_price": 0.4008,
+     "min_price": 0.204,
+     "offering_count": 33,
+     "provider_count": 13,
+     "provider_median_price": 0.437
+    },
+    "2026-08-03": {
+     "max_price": 1.61,
+     "median_price": 0.3936,
+     "min_price": 0.204,
+     "offering_count": 33,
+     "provider_count": 13,
+     "provider_median_price": 0.437
+    },
+    "2026-08-10": {
+     "max_price": 1.61,
+     "median_price": 0.39,
+     "min_price": 0.204,
+     "offering_count": 38,
+     "provider_count": 13,
+     "provider_median_price": 0.437
+    },
+    "2026-08-17": {
+     "max_price": 1.61,
+     "median_price": 0.4008,
+     "min_price": 0.204,
+     "offering_count": 42,
+     "provider_count": 14,
+     "provider_median_price": 0.4485
+    },
+    "2026-08-24": {
+     "max_price": 0.8657,
+     "median_price": 0.3827,
+     "min_price": 0.16,
+     "offering_count": 84,
+     "provider_count": 14,
+     "provider_median_price": 0.4237
+    },
+    "2026-08-31": {
+     "max_price": 0.8793,
+     "median_price": 0.3839,
+     "min_price": 0.16,
+     "offering_count": 85,
+     "provider_count": 15,
+     "provider_median_price": 0.42
+    },
+    "2026-09-07": {
+     "max_price": 0.9333,
+     "median_price": 0.4005,
+     "min_price": 0.234,
+     "offering_count": 72,
+     "provider_count": 17,
+     "provider_median_price": 0.437
+    },
+    "2026-09-14": {
+     "max_price": 2.22,
+     "median_price": 0.4802,
+     "min_price": 0.2956,
+     "offering_count": 76,
+     "provider_count": 17,
+     "provider_median_price": 0.4506
+    },
+    "2026-09-21": {
+     "max_price": 2.22,
+     "median_price": 0.4837,
+     "min_price": 0.33,
+     "offering_count": 84,
+     "provider_count": 16,
+     "provider_median_price": 0.455
+    },
+    "2026-09-28": {
+     "max_price": 2.22,
+     "median_price": 0.4556,
+     "min_price": 0.3115,
+     "offering_count": 99,
+     "provider_count": 16,
+     "provider_median_price": 0.47
+    },
+    "2026-10-05": {
+     "max_price": 2.22,
+     "median_price": 0.4491,
+     "min_price": 0.33,
+     "offering_count": 90,
+     "provider_count": 14,
+     "provider_median_price": 0.44
+    },
+    "2026-10-12": {
+     "max_price": 2.22,
+     "median_price": 0.48,
+     "min_price": 0.33,
+     "offering_count": 29,
+     "provider_count": 15,
+     "provider_median_price": 0.47
+    },
+    "2026-10-19": {
+     "max_price": 2.22,
+     "median_price": 0.475,
+     "min_price": 0.33,
+     "offering_count": 20,
+     "provider_count": 12,
+     "provider_median_price": 0.458
+    },
+    "2026-10-26": {
+     "max_price": 2.22,
+     "median_price": 0.6,
+     "min_price": 0.325,
+     "offering_count": 26,
+     "provider_count": 12,
+     "provider_median_price": 0.47
+    }
+   }
+  },
+  "rtx5090-32": {
+   "latest_week": "2026-10-26",
+   "source_name": "nvidia-rtx-5090",
+   "weeks": {
+    "2025-10-27": {
+     "max_price": 0.9,
+     "median_price": 0.88,
+     "min_price": 0.27,
+     "offering_count": 9,
+     "provider_count": 6,
+     "provider_median_price": 0.595
+    },
+    "2025-11-03": {
+     "max_price": 0.9,
+     "median_price": 0.88,
+     "min_price": 0.27,
+     "offering_count": 9,
+     "provider_count": 6,
+     "provider_median_price": 0.595
+    },
+    "2025-11-10": {
+     "max_price": 0.9,
+     "median_price": 0.88,
+     "min_price": 0.27,
+     "offering_count": 11,
+     "provider_count": 6,
+     "provider_median_price": 0.645
+    },
+    "2025-11-17": {
+     "max_price": 0.9,
+     "median_price": 0.5669,
+     "min_price": 0.16,
+     "offering_count": 20,
+     "provider_count": 7,
+     "provider_median_price": 0.5
+    },
+    "2025-11-24": {
+     "max_price": 0.9,
+     "median_price": 0.6,
+     "min_price": 0.16,
+     "offering_count": 27,
+     "provider_count": 7,
+     "provider_median_price": 0.5288
+    },
+    "2025-12-01": {
+     "max_price": 0.9,
+     "median_price": 0.6,
+     "min_price": 0.16,
+     "offering_count": 27,
+     "provider_count": 7,
+     "provider_median_price": 0.5288
+    },
+    "2025-12-08": {
+     "max_price": 0.9,
+     "median_price": 0.6133,
+     "min_price": 0.16,
+     "offering_count": 31,
+     "provider_count": 7,
+     "provider_median_price": 0.5244
+    },
+    "2025-12-15": {
+     "max_price": 0.9,
+     "median_price": 0.5933,
+     "min_price": 0.16,
+     "offering_count": 32,
+     "provider_count": 7,
+     "provider_median_price": 0.5
+    },
+    "2025-12-22": {
+     "max_price": 0.9,
+     "median_price": 0.5933,
+     "min_price": 0.16,
+     "offering_count": 32,
+     "provider_count": 7,
+     "provider_median_price": 0.5
+    },
+    "2025-12-29": {
+     "max_price": 0.9,
+     "median_price": 0.69,
+     "min_price": 0.16,
+     "offering_count": 33,
+     "provider_count": 7,
+     "provider_median_price": 0.69
+    },
+    "2026-01-05": {
+     "max_price": 0.9,
+     "median_price": 0.69,
+     "min_price": 0.16,
+     "offering_count": 33,
+     "provider_count": 7,
+     "provider_median_price": 0.69
+    },
+    "2026-01-12": {
+     "max_price": 0.9,
+     "median_price": 0.5533,
+     "min_price": 0.16,
+     "offering_count": 33,
+     "provider_count": 7,
+     "provider_median_price": 0.5
+    },
+    "2026-01-19": {
+     "max_price": 0.9,
+     "median_price": 0.63,
+     "min_price": 0.16,
+     "offering_count": 33,
+     "provider_count": 7,
+     "provider_median_price": 0.63
+    },
+    "2026-01-26": {
+     "max_price": 0.9,
+     "median_price": 0.69,
+     "min_price": 0.16,
+     "offering_count": 33,
+     "provider_count": 7,
+     "provider_median_price": 0.63
+    },
+    "2026-02-02": {
+     "max_price": 0.77,
+     "median_price": 0.63,
+     "min_price": 0.27,
+     "offering_count": 12,
+     "provider_count": 6,
+     "provider_median_price": 0.5275
+    },
+    "2026-02-09": {
+     "max_price": 0.7425,
+     "median_price": 0.63,
+     "min_price": 0.27,
+     "offering_count": 16,
+     "provider_count": 6,
+     "provider_median_price": 0.5475
+    },
+    "2026-02-16": {
+     "max_price": 0.7425,
+     "median_price": 0.63,
+     "min_price": 0.27,
+     "offering_count": 16,
+     "provider_count": 6,
+     "provider_median_price": 0.5475
+    },
+    "2026-02-23": {
+     "max_price": 0.72,
+     "median_price": 0.6,
+     "min_price": 0.27,
+     "offering_count": 13,
+     "provider_count": 5,
+     "provider_median_price": 0.535
+    },
+    "2026-03-02": {
+     "max_price": 1.34,
+     "median_price": 0.495,
+     "min_price": 0.27,
+     "offering_count": 109,
+     "provider_count": 5,
+     "provider_median_price": 0.4869
+    },
+    "2026-03-09": {
+     "max_price": 1.34,
+     "median_price": 0.4688,
+     "min_price": 0.24,
+     "offering_count": 122,
+     "provider_count": 5,
+     "provider_median_price": 0.4675
+    },
+    "2026-03-16": {
+     "max_price": 0.7875,
+     "median_price": 0.4662,
+     "min_price": 0.27,
+     "offering_count": 119,
+     "provider_count": 5,
+     "provider_median_price": 0.465
+    },
+    "2026-03-23": {
+     "max_price": 0.77,
+     "median_price": 0.4,
+     "min_price": 0.2675,
+     "offering_count": 95,
+     "provider_count": 5,
+     "provider_median_price": 0.4
+    },
+    "2026-03-30": {
+     "max_price": 0.7875,
+     "median_price": 0.4463,
+     "min_price": 0.27,
+     "offering_count": 90,
+     "provider_count": 5,
+     "provider_median_price": 0.44
+    },
+    "2026-04-06": {
+     "max_price": 0.76,
+     "median_price": 0.4675,
+     "min_price": 0.2675,
+     "offering_count": 112,
+     "provider_count": 4,
+     "provider_median_price": 0.4238
+    },
+    "2026-04-13": {
+     "max_price": 1.0689,
+     "median_price": 0.4689,
+     "min_price": 0.27,
+     "offering_count": 103,
+     "provider_count": 5,
+     "provider_median_price": 0.4687
+    },
+    "2026-04-20": {
+     "max_price": 0.7356,
+     "median_price": 0.4698,
+     "min_price": 0.2693,
+     "offering_count": 123,
+     "provider_count": 7,
+     "provider_median_price": 0.65
+    },
+    "2026-04-27": {
+     "max_price": 0.77,
+     "median_price": 0.4329,
+     "min_price": 0.274,
+     "offering_count": 107,
+     "provider_count": 7,
+     "provider_median_price": 0.69
+    },
+    "2026-05-04": {
+     "max_price": 6.6711,
+     "median_price": 0.5336,
+     "min_price": 0.274,
+     "offering_count": 113,
+     "provider_count": 7,
+     "provider_median_price": 0.64
+    },
+    "2026-05-11": {
+     "max_price": 6.6689,
+     "median_price": 0.69,
+     "min_price": 0.274,
+     "offering_count": 12,
+     "provider_count": 6,
+     "provider_median_price": 0.6735
+    },
+    "2026-05-18": {
+     "max_price": 2.0037,
+     "median_price": 0.69,
+     "min_price": 0.274,
+     "offering_count": 18,
+     "provider_count": 7,
+     "provider_median_price": 0.64
+    },
+    "2026-05-25": {
+     "max_price": 1.4592,
+     "median_price": 0.8719,
+     "min_price": 0.274,
+     "offering_count": 81,
+     "provider_count": 8,
+     "provider_median_price": 0.67
+    },
+    "2026-06-01": {
+     "max_price": 22.6677,
+     "median_price": 1.2022,
+     "min_price": 0.274,
+     "offering_count": 57,
+     "provider_count": 8,
+     "provider_median_price": 0.68
+    },
+    "2026-06-08": {
+     "max_price": 2.0086,
+     "median_price": 0.8013,
+     "min_price": 0.274,
+     "offering_count": 148,
+     "provider_count": 9,
+     "provider_median_price": 0.66
+    },
+    "2026-06-15": {
+     "max_price": 2.0011,
+     "median_price": 0.5869,
+     "min_price": 0.274,
+     "offering_count": 141,
+     "provider_count": 9,
+     "provider_median_price": 0.63
+    },
+    "2026-06-22": {
+     "max_price": 1.6704,
+     "median_price": 0.5074,
+     "min_price": 0.274,
+     "offering_count": 138,
+     "provider_count": 8,
+     "provider_median_price": 0.57
+    },
+    "2026-06-29": {
+     "max_price": 1.6704,
+     "median_price": 0.5339,
+     "min_price": 0.274,
+     "offering_count": 115,
+     "provider_count": 8,
+     "provider_median_price": 0.5668
+    },
+    "2026-07-06": {
+     "max_price": 0.99,
+     "median_price": 0.48,
+     "min_price": 0.274,
+     "offering_count": 25,
+     "provider_count": 7,
+     "provider_median_price": 0.48
+    },
+    "2026-07-13": {
+     "max_price": 1.05,
+     "median_price": 0.54,
+     "min_price": 0.274,
+     "offering_count": 25,
+     "provider_count": 9,
+     "provider_median_price": 0.56
+    },
+    "2026-07-20": {
+     "max_price": 0.99,
+     "median_price": 0.48,
+     "min_price": 0.274,
+     "offering_count": 29,
+     "provider_count": 8,
+     "provider_median_price": 0.52
+    },
+    "2026-07-27": {
+     "max_price": 0.99,
+     "median_price": 0.54,
+     "min_price": 0.2848,
+     "offering_count": 24,
+     "provider_count": 8,
+     "provider_median_price": 0.58
+    },
+    "2026-08-03": {
+     "max_price": 0.99,
+     "median_price": 0.54,
+     "min_price": 0.294,
+     "offering_count": 23,
+     "provider_count": 8,
+     "provider_median_price": 0.58
+    },
+    "2026-08-10": {
+     "max_price": 0.99,
+     "median_price": 0.4674,
+     "min_price": 0.294,
+     "offering_count": 29,
+     "provider_count": 9,
+     "provider_median_price": 0.53
+    },
+    "2026-08-17": {
+     "max_price": 0.99,
+     "median_price": 0.456,
+     "min_price": 0.2939,
+     "offering_count": 33,
+     "provider_count": 9,
+     "provider_median_price": 0.456
+    },
+    "2026-08-24": {
+     "max_price": 1.2704,
+     "median_price": 0.5344,
+     "min_price": 0.25,
+     "offering_count": 77,
+     "provider_count": 11,
+     "provider_median_price": 0.57
+    },
+    "2026-08-31": {
+     "max_price": 1.1993,
+     "median_price": 0.6111,
+     "min_price": 0.25,
+     "offering_count": 82,
+     "provider_count": 12,
+     "provider_median_price": 0.63
+    },
+    "2026-09-07": {
+     "max_price": 1.6139,
+     "median_price": 0.6726,
+     "min_price": 0.35,
+     "offering_count": 90,
+     "provider_count": 13,
+     "provider_median_price": 0.63
+    },
+    "2026-09-14": {
+     "max_price": 1.6689,
+     "median_price": 0.6674,
+     "min_price": 0.35,
+     "offering_count": 99,
+     "provider_count": 14,
+     "provider_median_price": 0.6668
+    },
+    "2026-09-21": {
+     "max_price": 2.52,
+     "median_price": 0.6808,
+     "min_price": 0.35,
+     "offering_count": 108,
+     "provider_count": 15,
+     "provider_median_price": 0.6821
+    },
+    "2026-09-28": {
+     "max_price": 2.52,
+     "median_price": 0.637,
+     "min_price": 0.35,
+     "offering_count": 107,
+     "provider_count": 15,
+     "provider_median_price": 0.66
+    },
+    "2026-10-05": {
+     "max_price": 2.52,
+     "median_price": 0.6536,
+     "min_price": 0.35,
+     "offering_count": 113,
+     "provider_count": 18,
+     "provider_median_price": 0.7025
+    },
+    "2026-10-12": {
+     "max_price": 2.52,
+     "median_price": 0.785,
+     "min_price": 0.35,
+     "offering_count": 37,
+     "provider_count": 16,
+     "provider_median_price": 0.72
+    },
+    "2026-10-19": {
+     "max_price": 2.52,
+     "median_price": 0.8867,
+     "min_price": 0.35,
+     "offering_count": 37,
+     "provider_count": 14,
+     "provider_median_price": 0.72
+    },
+    "2026-10-26": {
+     "max_price": 2.52,
+     "median_price": 0.865,
+     "min_price": 0.35,
+     "offering_count": 46,
+     "provider_count": 16,
+     "provider_median_price": 0.745
+    }
+   }
+  }
+ },
+ "corrections": [],
+ "dropped_rows_by_source_name": {
+  "amd-mi250": 14,
+  "amd-mi300x": 53,
+  "amd-mi325x": 40,
+  "amd-mi355x": 53,
+  "amd-radeon-pro-v520": 53,
+  "intel-gaudi2": 18,
+  "nvidia-a10": 53,
+  "nvidia-a100": 53,
+  "nvidia-a10g": 53,
+  "nvidia-a16": 53,
+  "nvidia-a2000": 50,
+  "nvidia-a30": 53,
+  "nvidia-a40": 53,
+  "nvidia-a4000": 53,
+  "nvidia-a4500": 53,
+  "nvidia-a5000": 53,
+  "nvidia-a6000": 53,
+  "nvidia-a800": 53,
+  "nvidia-b200": 53,
+  "nvidia-b300": 51,
+  "nvidia-gb200": 53,
+  "nvidia-gb300": 15,
+  "nvidia-gh200": 53,
+  "nvidia-gt710": 39,
+  "nvidia-gt730": 39,
+  "nvidia-gtx-1050-ti": 53,
+  "nvidia-gtx-1060": 53,
+  "nvidia-gtx-1070": 53,
+  "nvidia-gtx-1070-ti": 53,
+  "nvidia-gtx-1080": 53,
+  "nvidia-gtx-1080-ti": 53,
+  "nvidia-gtx-1650": 53,
+  "nvidia-gtx-1660": 53,
+  "nvidia-gtx-1660-super": 53,
+  "nvidia-h100": 53,
+  "nvidia-k620": 39,
+  "nvidia-k80": 53,
+  "nvidia-l4": 53,
+  "nvidia-l40": 53,
+  "nvidia-m4000": 53,
+  "nvidia-m60": 53,
+  "nvidia-p100": 53,
+  "nvidia-p1000": 14,
+  "nvidia-p2000": 4,
+  "nvidia-p4": 53,
+  "nvidia-p40": 53,
+  "nvidia-p4000": 53,
+  "nvidia-p5000": 53,
+  "nvidia-p600": 14,
+  "nvidia-p6000": 53,
+  "nvidia-p620": 39,
+  "nvidia-rtx-2000-ada": 15,
+  "nvidia-rtx-2060": 53,
+  "nvidia-rtx-2060-super": 38,
+  "nvidia-rtx-2070": 53,
+  "nvidia-rtx-2080": 53,
+  "nvidia-rtx-2080-ti": 53,
+  "nvidia-rtx-3050": 53,
+  "nvidia-rtx-3060": 53,
+  "nvidia-rtx-3060-ti": 53,
+  "nvidia-rtx-3070": 53,
+  "nvidia-rtx-3070-ti": 53,
+  "nvidia-rtx-3080": 53,
+  "nvidia-rtx-3080-ti": 53,
+  "nvidia-rtx-3090-ti": 53,
+  "nvidia-rtx-4000": 10,
+  "nvidia-rtx-4000-ada": 53,
+  "nvidia-rtx-4000-sff-ada": 10,
+  "nvidia-rtx-4060": 51,
+  "nvidia-rtx-4060-ti": 53,
+  "nvidia-rtx-4070": 53,
+  "nvidia-rtx-4070-ti": 53,
+  "nvidia-rtx-4070-ti-super": 53,
+  "nvidia-rtx-4080": 53,
+  "nvidia-rtx-4500-ada": 20,
+  "nvidia-rtx-5000": 53,
+  "nvidia-rtx-5000-ada": 40,
+  "nvidia-rtx-5060": 53,
+  "nvidia-rtx-5060-ti": 53,
+  "nvidia-rtx-5070": 53,
+  "nvidia-rtx-5070-ti": 53,
+  "nvidia-rtx-5080": 53,
+  "nvidia-rtx-5880-ada": 36,
+  "nvidia-rtx-6000": 53,
+  "nvidia-rtx-6000-ada": 53,
+  "nvidia-rtx-pro-4000": 41,
+  "nvidia-rtx-pro-4500": 33,
+  "nvidia-rtx-pro-5000": 35,
+  "nvidia-rtx-pro-6000": 53,
+  "nvidia-rtx-pro-6000d": 19,
+  "nvidia-t1000": 14,
+  "nvidia-t4": 53,
+  "nvidia-t4g": 53,
+  "nvidia-v100": 53,
+  "nvidia-v100s": 53
+ },
+ "imports": [
+  {
+   "bytes": 4062677,
+   "retrieved_at": "2026-11-01T21:36:00Z",
+   "sha256": "20e445304c88a18750d6d831121317fea85135d56f5ea91a993580e93d26868a",
+   "source_last_snapshot": "2026-11-01",
+   "source_latest_week": "2026-10-26",
+   "url": "https://getdeploying.com/dataset/gpu-prices/weekly.json"
+  }
+ ],
+ "mapping": {
+  "nvidia-h200": "h200-sxm-141",
+  "nvidia-l40s": "l40s-48",
+  "nvidia-rtx-3090": "rtx3090-24",
+  "nvidia-rtx-4090": "rtx4090-24",
+  "nvidia-rtx-5090": "rtx5090-32"
+ },
+ "method": "reconstructed-v0-draft",
+ "method_url": "https://github.com/nnyycc77-ship-it/riggrade/blob/main/docs/index-reconstructed-method.md",
+ "note": "Information, not an offer, a rate or advice. Listed prices as a third party recorded them, mapped to peer classes; never joined to the live series.",
+ "series": "reconstructed",
+ "source": {
+  "attribution": "GetDeploying, https://getdeploying.com/gpus, CC BY 4.0. Figures changed: mapped to RigGrade peer classes and re-published per class; on-demand billing rows only; the source's own medians, not re-aggregated.",
+  "basis": "median_price and provider_median_price as the source states them per week (USD per GPU per hour, on-demand). Weekly stays weekly.",
+  "disclaimer": "Prices are estimates for information only and not an offer to sell compute; providers set the final cost at the moment of provisioning, so verify before relying on any figure.",
+  "home": "https://getdeploying.com/gpus",
+  "licence": "CC BY 4.0",
+  "licence_url": "https://creativecommons.org/licenses/by/4.0/",
+  "name": "getdeploying",
+  "title": "GetDeploying GPU price history (weekly)",
+  "url": "https://getdeploying.com/dataset/gpu-prices/weekly.json"
+ }
+}

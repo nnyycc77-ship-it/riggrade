@@ -1,0 +1,38 @@
+# Weekly import of the reconstructed listed-price series
+# (docs/index-reconstructed-method.md) from GetDeploying's CC BY 4.0 dataset
+# files, mapped to peer classes and committed to riggrade/index/. History is
+# append-only: a changed past value is recorded as a correction, never
+# overwritten. The commit carries [skip ci]; the service refreshes its copy
+# from the published file within the hour, so no deploy is needed.
+name: index
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '13 4 * * 2'
+permissions:
+  contents: write
+jobs:
+  reconstructed:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Import the weekly file (stops loudly on any shape or licence surprise)
+        run: |
+          set -euo pipefail
+          python3 -m pricewatch.reconstructed \
+            --out riggrade/index/reconstructed-getdeploying.json \
+            --csv riggrade/index/reconstructed-getdeploying.csv | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 -m unittest tests.test_index -q
+      - name: Commit the series
+        run: |
+          set -euo pipefail
+          git config user.name "riggrade index"
+          git config user.email "index@riggrade.invalid"
+          git add riggrade/index/
+          git commit -m "index: reconstructed series import $(date -u +%Y-%m-%d) [skip ci]" || { echo "nothing to commit"; exit 0; }
+          git push origin HEAD:main
