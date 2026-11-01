@@ -4,7 +4,6 @@ own signature check. Standard library only; every value is escaped."""
 
 import datetime as dt
 import html
-import json
 
 CSS = ("body{font:15px/1.45 system-ui,sans-serif;max-width:52rem;margin:2rem auto;padding:0 1rem;color:#182848}"
        "h1{font-size:1.5rem;margin:0 0 .25rem}h2{font-size:1.1rem;margin:1.5rem 0 .5rem}"
