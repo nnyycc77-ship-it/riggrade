@@ -2,4 +2,3 @@ __pycache__/
 *.pyc
 smoke-report.json
 preflight-report.json
-deploy/screen/

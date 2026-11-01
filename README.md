@@ -34,12 +34,16 @@ With `pip install git+https://github.com/nnyycc77-ship-it/riggrade` the commands
 
 ## Running a graded session
 
+The grading server is deployed from a separate private operations
+repository; the code it runs is this one at `main`.
+
+
 The benchmark container is public: `ghcr.io/nnyycc77-ship-it/riggrade-bench`,
-pinned by digest in `deploy/bench-image.env`. The server accepts result
+pinned by digest in `container/bench-image.env`. The server accepts result
 bundles only from a listed digest, so run it by digest, never by tag:
 
 ```bash
-. deploy/bench-image.env
+. container/bench-image.env
 docker run --rm --gpus all -e RIGGRADE_IMAGE_DIGEST=$RIGGRADE_IMAGE_DIGESTS \
   -e RIGGRADE_ENDPOINT=https://riggrade-674098696181.us-central1.run.app/riggrade/v1 \
   $BENCH_IMAGE --help

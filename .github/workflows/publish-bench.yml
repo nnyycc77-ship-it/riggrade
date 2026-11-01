@@ -2,7 +2,7 @@
 # registry as ghcr.io/<owner>/riggrade-bench. Runs only when started by hand
 # on main. The image carries the runner and spec only, never the grading
 # server. Buyers run it by digest, so record the digest this prints in
-# deploy/bench-image.env before the server accepts its bundles.
+# container/bench-image.env before the server accepts its bundles.
 name: publish-bench
 on:
   workflow_dispatch:
@@ -46,5 +46,5 @@ jobs:
           case "$DIGEST" in sha256:*) ;; *) echo "no digest" >&2; exit 1;; esac
           {
             echo "Image: $IMAGE@$DIGEST"
-            echo "Record in deploy/bench-image.env: RIGGRADE_IMAGE_DIGESTS=$DIGEST"
+            echo "Record in container/bench-image.env: RIGGRADE_IMAGE_DIGESTS=$DIGEST"
           } | tee -a "$GITHUB_STEP_SUMMARY"
