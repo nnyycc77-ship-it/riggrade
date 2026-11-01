@@ -99,5 +99,5 @@ list is clean. Rebuild the list whenever OFAC publishes an update.
   build environment, so the `/verify` and `/settle` shapes are unverified.
   They follow the x402 v1 facilitator specification.
 - **Build the blocked-address list** from a current SDN_ADVANCED.XML (built 1 Nov 2026: 127 addresses).
-- **Owner decisions:** the sale switch, the base image pin, the container
+- **Operator decisions:** the sale switch, the base image pin, the container
   licence, and the trademark search.

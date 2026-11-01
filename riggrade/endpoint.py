@@ -51,7 +51,7 @@ MAX_BODY = 4 * 1024 * 1024
 USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 # Decided prices (plan Revision 5, decided items 1), USDC atomic units.
 POINT_PRICE_ATOMIC = {DATA_CENTRE: 5_000_000, "consumer": 3_000_000}
-# Products beyond the point grade (owner decision 1 Nov 2026; each is on
+# Products beyond the point grade (decided 1 Nov 2026; each is on
 # sale only when RIGGRADE_PRODUCTS names it). USDC atomic units.
 PRODUCT_PRICE_ATOMIC = {"fixit": 2_000_000, "cluster": 25_000_000}
 PRODUCT_NOTES = {
@@ -295,7 +295,7 @@ class GradingApp:
             return _json(start_response, "422 Unprocessable Entity",
                          {"error": "nothing gradable in this session",
                           "preview": prev, "charged": False})
-        # Owner decision (1 Nov 2026): while a class is still building its
+        # Decided 1 Nov 2026: while a class is still building its
         # reference, each rig's first session in it is free and sets the bar.
         # A rig's repeat session in such a class cannot be speed graded, so it
         # is not sold. Only workloads with a reference are charged.
@@ -625,7 +625,7 @@ class GradingApp:
 def bazaar_extension(resource="grade"):
     """x402 Bazaar discovery metadata for a stable paid resource. A
     catalogue indexes it only after a paid call settles and echoes it, so
-    shipping it lists nothing by itself; listing stays an owner decision."""
+    shipping it lists nothing by itself; listing stays an operator decision."""
     shapes = {
         "grade": ({"session_id": "rg_s_..."},
                   {"session_id": {"type": "string",

@@ -1,4 +1,4 @@
-"""Paid cluster acceptance certificate (owner decision, 1 Nov 2026).
+"""Paid cluster acceptance certificate (decided 1 Nov 2026).
 
 The renter runs runner.cluster on the rented nodes and submits the
 evidence pack it wrote (acceptance.json). The server recomputes every

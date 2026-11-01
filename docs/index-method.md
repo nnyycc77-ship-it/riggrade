@@ -1,6 +1,6 @@
 # RigGrade GPU index: method, v0 (draft)
 
-Status: draft, revised 31 Oct 2026 after Coordinator review (Message 159).
+Status: draft, revised 31 Oct 2026 after review.
 No index values are published yet. This method is published
 before any number so that the rules cannot be fitted to the data.
 

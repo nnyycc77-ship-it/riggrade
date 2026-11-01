@@ -1,6 +1,6 @@
 # Products beyond the point grade
 
-Owner decision, 1 November 2026: two paid products built on data the free
+Decided 1 November 2026: two paid products built on data the free
 tools already collect. Each is on sale only when the service's
 `RIGGRADE_PRODUCTS` setting names it; the descriptor at `/riggrade/v1`
 shows `products` with `on_sale` per product. Prices are USDC on Base,

@@ -1,7 +1,7 @@
 # RigGrade benchmark container (spec sections 3 and 14).
 #
 # The base image carries the driver-facing stack (CUDA, torch, vLLM,
-# transformers). Owner decision (1 Nov 2026): the official vLLM image,
+# transformers). Decided 1 Nov 2026: the official vLLM image,
 # pinned to an exact release by digest. v0.32.0 is the version all three
 # free T4 test runs passed on (31 Oct and 1 Nov 2026). The index digest
 # below was read from registry-1.docker.io on 1 Nov 2026. A different base

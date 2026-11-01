@@ -1,6 +1,6 @@
 # RigGrade grading spec, v0.1
 
-Status: v0.1. It folds in the coordinator's review of v0 (board Messages 143b and 146) and the corrections found while building the engine. It implements Revision 5 of the GPU quality grading plan (31 October 2026). Where this spec has to choose something the plan left open, the choice is marked **[proposed]** and listed again in section 15, so the reviewer can accept or change it in one place. Numbers marked **[proposed]** are design choices, not measured facts.
+Status: v0.1. It folds in the review of v0 and the corrections found while building the engine. It implements Revision 5 of the GPU quality grading plan (31 October 2026). Where this spec has to choose something the plan left open, the choice is marked **[proposed]** and listed again in section 15, so the reviewer can accept or change it in one place. Numbers marked **[proposed]** are design choices, not measured facts.
 
 Nothing here switches a sale on. The endpoint ships with the sale off, and going live is an owner-gated step.
 
@@ -106,7 +106,7 @@ Where a marketplace exposes availability data through an interface, it is record
 
 ### 5.4 Minimum evidence
 
-- **Point grade.** One session holding at least 3 timed passes of the ruler, plus the 60-minute sustained run. The CV is computed across those passes. The label carries `"evidence_basis": "single session"`, and the badge reads "point grade, single session". The plan's '3 benchmark runs on separate days' rule applies to full grades only; this was accepted in review (Message 143b).
+- **Point grade.** One session holding at least 3 timed passes of the ruler, plus the 60-minute sustained run. The CV is computed across those passes. The label carries `"evidence_basis": "single session"`, and the badge reads "point grade, single session". The plan's '3 benchmark runs on separate days' rule applies to full grades only; this was accepted in review.
 - **Full grade.** At least 3 sessions on separate days within the trailing 7 days for speed and consistency. A heartbeat chain covering at least 25 of the trailing 30 days for reliability, with the not-yet-covered days counted as down. Below either minimum, that pillar prints Insufficient data.
 
 ### 5.5 Top-grade rule
@@ -232,13 +232,13 @@ Class references need runs, and the capital boundary rules out rentals ahead of 
 
 - **Scope, one wording.** "No reference yet" means: for that class and workload, fewer than 5 rigs stand behind the provisional median and no controlled run exists. The free-session rule, the preview and the endpoint descriptor all use this wording.
 - **Before payment.** While a class and workload has no reference yet, the preview tells the payer "reference-building session, speed not graded".
-- **Free reference-building sessions (owner decision, 1 Nov 2026; confirmed for the coordinator in board Message 180).** While a class and workload has no reference yet, each rig's first session there is free. That session is graded on the pillars it can measure and enters the provisional median on the same basis as a paid first session (one per rig identity; once 5 attested rigs exist, the median uses attested rigs only); speed is not graded. The rules:
+- **Free reference-building sessions (decided 1 Nov 2026).** While a class and workload has no reference yet, each rig's first session there is free. That session is graded on the pillars it can measure and enters the provisional median on the same basis as a paid first session (one per rig identity; once 5 attested rigs exist, the median uses attested rigs only); speed is not graded. The rules:
   - A repeat session from the same rig, while the reference is still building, cannot be speed graded, so it is not sold (422, nothing charged).
   - In a session that mixes classes, only workloads whose class has a reference are charged.
   - Once a reference exists, the decided prices apply unchanged: 3 USDC for consumer cards, 5 USDC for data-centre cards.
   - Free sessions are recorded in the sale log with an amount of 0.
   - Steering risk: a free first session makes it cheaper to submit a spoofed rig and nudge a provisional reference. The existing defences still apply: one first session per rig identity, attested rigs take priority once 5 exist, and controlled references replace provisional ones as soon as granted access exists.
-- **Operator concentration (board Message 179; numbers accepted as v0).** One session per rig counts rigs, not the people behind them, and attestation proves the rig, not who controls it. So each counted rig carries an *operator*: for a paid session, the payer, but only when the payer is the host or the declared runner of that rig (a buyer paying to look at someone else's host-run rig is not its operator); for a free reference session, the signer of a 0 USDC x402 authorisation to the payout address, which the facilitator verifies and never settles, and which is screened like a payer. A free session without that claim is not graded (the 402 names the claim, nothing is charged). The rules:
+- **Operator concentration (numbers accepted as v0).** One session per rig counts rigs, not the people behind them, and attestation proves the rig, not who controls it. So each counted rig carries an *operator*: for a paid session, the payer, but only when the payer is the host or the declared runner of that rig (a buyer paying to look at someone else's host-run rig is not its operator); for a free reference session, the signer of a 0 USDC x402 authorisation to the payout address, which the facilitator verifies and never settles, and which is screened like a payer. A free session without that claim is not graded (the 402 names the claim, nothing is charged). The rules:
   - At most 2 rigs from one operator count toward a class reference; later rigs from the same operator are recorded but not counted.
   - Speed is graded only once the counted rigs come from at least 3 distinct verified operators. Rigs with no verified operator (host-run, buyer-paid) count as rigs, never as operators, so an anonymous crowd cannot form the spread.
   - A payer who stands behind more than 40% of a class reference gets no speed grade from it: the session is graded on the other pillars and the evidence pack says why. Under the v0 numbers (cap 2, 5 rigs) no operator can exceed 40%, so this is a backstop that binds only if the cap is raised.
@@ -258,8 +258,8 @@ Every grade under provisional references carries the `provisional` tag. Referenc
 
 ## 15. Open items for review
 
-1. **Point-grade evidence.** Accepted in review (Message 143b).
-2. **Provisional references.** Accepted in review (Message 143b), with the disclosure, publication and steering conditions now written into section 13. This is an agreed amendment to plan discussion decision 11, for the next plan revision.
+1. **Point-grade evidence.** Accepted in review.
+2. **Provisional references.** Accepted in review, with the disclosure, publication and steering conditions now written into section 13. This is an agreed amendment to plan discussion decision 11, for the next plan revision.
 3. **v0 bars.** All values in section 5 are proposals: speed 0.95/0.92 and 0.85/0.82; CV 3%/7%; decay 5%/10%; p99/p50 2.0/3.0; isolation 5%/12%; downtime 3.6 h/14.4 h.
 4. **Rulers.** Qwen2.5-7B-Instruct on vLLM for inference, and GPT-2 124M on synthetic tokens for training (section 3). The inference gate's 20 GB free minimum leaves 16 GB cards unrated for inference in v0. (v0 said 24 GB free, which no 24 GB card can show after driver load; corrected while building the engine.)
 5. **Completion window.** 3 hours from nonce issue (section 6).
