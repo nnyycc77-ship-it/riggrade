@@ -1,7 +1,7 @@
 # RigGrade GPU index: reconstructed history, method v0 (draft)
 
-Status: draft. No reconstructed values exist yet. This method is written
-before any data is read, so the rules cannot be fitted to the data.
+Status: draft, first values published 1 Nov 2026 under this method as written
+(the mapping table in section 3.1 was fixed before the first file was read).
 
 ## 1. What it is, and what it is not
 
@@ -41,6 +41,43 @@ changed: mapped to peer classes and re-aggregated.
 - **Ambiguous names.** A name that could fit two classes (for example an
   "H100" with no form or memory stated) maps to neither and is dropped. It
   is never split or guessed.
+
+### 3.1 Published mapping table (GetDeploying, method reconstructed-v0-draft)
+
+The table lives in `pricewatch/reconstructed.py` (`MAPPING`) and is
+versioned with this method; the service and the published files carry it.
+
+| Source name | Peer class | Note |
+|---|---|---|
+| nvidia-h200 | h200-sxm-141 | one v0 class for the chip |
+| nvidia-l40s | l40s-48 | |
+| nvidia-rtx-5090 | rtx5090-32 | |
+| nvidia-rtx-4090 | rtx4090-24 | |
+| nvidia-rtx-3090 | rtx3090-24 | |
+| nvidia-h100 | dropped | form not stated: could be h100-sxm-80 or h100-pcie-80 |
+| nvidia-a100 | dropped | memory not stated: could be a100-sxm-80, a100-pcie-80 or a100-pcie-40 |
+
+Every other source name is dropped and counted (`dropped_rows_by_source_name`
+in the published file). Only `ON_DEMAND` billing rows are used; reservation,
+spot and custom rows are not.
+
+**Proposed amendment for review (not in force):** a chip-level series for
+H100 and A100, labelled by chip family rather than peer class, so the two
+most-rented data-centre chips are not absent. Under section 3 as written they
+are dropped. If accepted, it takes effect 14 days after the notice (section 5).
+
+### 3.2 Import record
+
+Each weekly import appends to `imports` in the published file: retrieval
+time, URL, byte count and SHA-256. The published files are
+`riggrade/index/reconstructed-getdeploying.json` (the series, the mapping,
+the corrections and every import record) and
+`riggrade/index/reconstructed-getdeploying.csv` (one row per class and week,
+attribution on every row). They are served free at `GET /riggrade/v1/index`
+(latest week per class) and by the MCP tool `gpu_price_index`, and are
+refreshed weekly by the `index` workflow (Tuesdays 04:13 UTC).
+
+First import: 2026-11-01T21:36:00Z, 4062677 bytes, SHA-256 20e445304c88a18750d6d831121317fea85135d56f5ea91a993580e93d26868a, source latest week 2026-10-26.
 
 ## 4. Figures
 

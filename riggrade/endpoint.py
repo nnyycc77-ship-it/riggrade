@@ -38,6 +38,7 @@ from . import salelog
 from . import discovery
 from . import fixit
 from . import acceptance
+from . import index as price_index
 
 PREFIX = "/riggrade/v1"
 X402_VERSION = 2
@@ -103,6 +104,8 @@ class Config:
         self.network = env.get("RIGGRADE_NETWORK", NETWORK_BASE)
         # Published in the OpenAPI info block only when set (owner's choice).
         self.contact_email = env.get("RIGGRADE_CONTACT_EMAIL", "").strip()
+        # The free price index refreshes from this URL (packaged copy otherwise).
+        self.index_url = env.get("RIGGRADE_INDEX_URL", "").strip() or None
         self.products = {p.strip() for p in env.get("RIGGRADE_PRODUCTS", "").split(",") if p.strip()}
 
     def reasons_off(self, adapter):
@@ -126,6 +129,7 @@ class GradingApp:
     def __init__(self, env, clock, adapter=None, store=None, references=None,
                  attestation_verifier=None, envelopes=None, secret=None):
         self.config = Config(env)
+        self.index = price_index.Index(url=self.config.index_url)
         self.clock = clock
         self.adapter = adapter
         self.store = store or MemoryStore()
@@ -165,6 +169,10 @@ class GradingApp:
         try:
             if rest == [""] and method == "GET":
                 return _json(start_response, "200 OK", self.descriptor())
+            if rest == ["index"] and method == "GET":
+                # Free: the reconstructed weekly listed-price series per class.
+                return _json(start_response, "200 OK", price_index.latest(self.index.current()),
+                             [("Cache-Control", "public, max-age=3600")])
             if method == "GET" and len(rest) == 3 and rest[:2] == ["cluster", "acceptance"]:
                 return self.certificate_lookup(start_response, rest[2])
             if method != "POST" and tuple(rest) in PAID_ROUTES:

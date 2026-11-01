@@ -84,6 +84,14 @@ TOOLS = [
                         "description": "The box is shared or sliced: skip the foreign-use checks."},
          },
          "additionalProperties": False}},
+    {"name": "gpu_price_index",
+     "description": "The going listed on-demand price per GPU peer class (USD per GPU-hour, "
+                    "latest week), from RigGrade's free index: a weekly series reconstructed "
+                    "from GetDeploying's CC BY 4.0 record. Information, not an offer. Reads the "
+                    "published copy; falls back to the copy shipped in this package.",
+     "inputSchema": {"type": "object", "properties": {
+         "class_id": {"type": "string", "description": "One peer class, e.g. rtx4090-24; all when omitted."}},
+         "additionalProperties": False}},
     {"name": "riggrade_service_info",
      "description": "How a RigGrade grade works and what it costs; the live service descriptor "
                     "when RIGGRADE_ENDPOINT is configured.",
@@ -128,10 +136,27 @@ def _service_info(fetch=None):
     return _text(text + "\n\nLive descriptor:\n" + json.dumps(descriptor, indent=1, sort_keys=True))
 
 
+def _price_index(args, fetch=None):
+    from riggrade import index as price_index
+    url = os.environ.get("RIGGRADE_INDEX_URL", price_index.DEFAULT_URL)
+    idx = price_index.Index(url=url, fetch=fetch)
+    doc = price_index.latest(idx.current())
+    if idx.last_error:
+        doc["refresh_note"] = "published copy unreachable (%s); packaged copy shown" % idx.last_error
+    wanted = args.get("class_id")
+    if wanted:
+        if wanted not in doc["classes"]:
+            return _text("unknown class %r; known: %s" % (wanted, ", ".join(sorted(doc["classes"]))), error=True)
+        doc["classes"] = {wanted: doc["classes"][wanted]}
+    return _text(json.dumps(doc, indent=1, sort_keys=True))
+
+
 def call_tool(name, args, probes=None, fetch=None):
     args = args if isinstance(args, dict) else {}
     if name == "gpu_preflight":
         return _preflight(args, probes)
+    if name == "gpu_price_index":
+        return _price_index(args, fetch)
     if name == "riggrade_service_info":
         return _service_info(fetch)
     raise ToolNotFound(name)
