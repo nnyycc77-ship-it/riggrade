@@ -12,6 +12,37 @@ from . import BENCH_VERSION
 FAVICON = base64.b64decode(
     "AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAQAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA3KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/8AAAAAAAAAAAAAAAA3KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/wAAAAAAAAAANykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/8AAAAAAAAAADcpH/83KR//Nykf/zcpH/+o017/qNNe/zcpH/83KR//Nykf/6jTXv+o017/Nykf/zcpH/83KR//AAAAAAAAAAA3KR//Nykf/zcpH/83KR//qNNe/6jTXv83KR//Nykf/6jTXv+o017/Nykf/zcpH/83KR//Nykf/wAAAAAAAAAANykf/zcpH/83KR//Nykf/6jTXv+o017/Nykf/6jTXv+o017/Nykf/zcpH/83KR//Nykf/zcpH/8AAAAAAAAAADcpH/83KR//Nykf/zcpH/+o017/qNNe/6jTXv+o017/Nykf/zcpH/83KR//Nykf/zcpH/83KR//AAAAAAAAAAA3KR//Nykf/zcpH/83KR//qNNe/6jTXv+o017/qNNe/6jTXv83KR//Nykf/zcpH/83KR//Nykf/wAAAAAAAAAANykf/zcpH/83KR//Nykf/6jTXv+o017/Nykf/zcpH/83KR//qNNe/zcpH/83KR//Nykf/zcpH/8AAAAAAAAAADcpH/83KR//Nykf/zcpH/+o017/qNNe/zcpH/83KR//Nykf/6jTXv83KR//Nykf/zcpH/83KR//AAAAAAAAAAA3KR//Nykf/zcpH/83KR//qNNe/6jTXv+o017/qNNe/6jTXv83KR//Nykf/zcpH/83KR//Nykf/wAAAAAAAAAANykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/8AAAAAAAAAADcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//AAAAAAAAAAAAAAAANykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==")
 
+
+
+def _png_16(rgb_rows):
+    """A 16x16 RGB PNG from 16 rows of 16 (r, g, b) tuples; stdlib only."""
+    import struct
+    import zlib
+
+    def chunk(tag, data):
+        return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+    raw = b"".join(b"\x00" + bytes(c for px in row for c in px) for row in rgb_rows)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 16, 16, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
+
+
+def _icon_rows():
+    """The same mark as the ICO: a dark square with a lighter inner bar."""
+    dark, light = (24, 40, 72), (120, 200, 255)
+    rows = []
+    for y in range(16):
+        rows.append([light if (3 <= x <= 12 and 6 <= y <= 9) else dark for x in range(16)])
+    return rows
+
+
+FAVICON_PNG = _png_16(_icon_rows())
+FAVICON_SVG = (b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">'
+               b'<rect width="16" height="16" fill="#182848"/>'
+               b'<rect x="3" y="6" width="10" height="4" fill="#78c8ff"/></svg>')
+ICONS = {"/favicon.ico": ("image/x-icon", FAVICON),
+         "/favicon.png": ("image/png", FAVICON_PNG),
+         "/favicon.svg": ("image/svg+xml", FAVICON_SVG)}
+
 REPO = "https://github.com/nnyycc77-ship-it/riggrade"
 BENCH_IMAGE = "ghcr.io/nnyycc77-ship-it/riggrade-bench"
 DESCRIPTION = ("Independent grading of rented or hosted GPU rigs. A free one-minute "
@@ -34,23 +65,29 @@ def agent_card(base, prefix, on_sale):
         "defaultOutputModes": ["application/json"],
         "skills": [
             {"id": "gpu_preflight", "name": "GPU preflight check",
-             "description": "Free. Run on the rented box itself: `python3 -m runner.preflight` "
+             "description": "Use when you have just rented a GPU box, or before listing your own, "
+                            "and want to know in a minute whether it behaves like the card it "
+                            "reports. Free. Run on the rented box itself: `python3 -m runner.preflight` "
                             "or the MCP tool gpu_preflight. Clocks under load, foreign use, "
                             "driver vs CUDA, PCIe link, download and disk speed.",
              "tags": ["gpu", "free", "preflight"]},
             {"id": "grade", "name": "Paid GPU rig grade",
-             "description": "Open a session, run the pinned benchmark container (%s), submit "
+             "description": "Use when a rented or hosted rig must be graded against published "
+                            "bars for its peer class. Open a session, run the pinned benchmark container (%s), submit "
                             "the bundle, then POST %s/grade and pay the x402 requirement "
                             "(3 USDC consumer card, 5 USDC data-centre card). A session that "
                             "is not gradable is never sold." % (BENCH_IMAGE, api),
              "tags": ["gpu", "benchmark", "x402", "usdc", "base"]},
             {"id": "fixit", "name": "Host fix-it report",
-             "description": "Paid (2 USDC, x402). POST %s/fixit with the preflight-report.json the "
+             "description": "Use when the free preflight reported a warn or fail. Paid (2 USDC, "
+                            "x402). POST %s/fixit with the preflight-report.json the "
                             "free check wrote: for every warn or fail finding, the likely cause, "
                             "the fix steps and who can act. Free preview first." % api,
              "tags": ["gpu", "diagnosis", "host", "x402"]},
             {"id": "cluster_acceptance", "name": "Cluster acceptance certificate",
-             "description": "Paid (25 USDC, x402). Run runner.cluster on the rented nodes, then "
+             "description": "Use when a rented multi-node cluster must pass an independent "
+                            "acceptance test before a long run, a handover or a dispute. Paid "
+                            "(25 USDC, x402). Run runner.cluster on the rented nodes, then "
                             "POST %s/cluster/acceptance with the evidence pack: the server recomputes "
                             "every check and issues a signed, stored certificate. The fetch URL "
                             "returns it with the service's own signature check (HMAC, not "
@@ -119,8 +156,15 @@ def openapi(base, prefix, contact_email=None):
         "workload_classes": {"type": "array", "items": {"type": "string", "enum": ["inference", "training"]}},
         "declared_runner": {"type": "string", "enum": ["buyer", "host"]}},
         "required": ["workload_classes", "declared_runner"]}
+    use_when = {"grade": "Use when a rented or hosted GPU rig must be graded against published bars "
+                         "for its peer class before you rely on it or list it.",
+                "fixit": "Use when the free RigGrade preflight reported a warn or fail and you need the "
+                         "cause, the fix steps and who can act.",
+                "cluster": "Use when a rented multi-node GPU cluster must pass an independent "
+                           "acceptance test before a long run, a handover or a dispute."}
     post = lambda summary, body=None, extra=None, paid=None: {"post": {  # noqa: E731
         "summary": summary,
+        **({"description": use_when[paid]} if paid else {}),
         # No API authentication on any operation (security []); a paid one
         # also declares x-payment-info and is challenged with 402 on a bare
         # request. A free one is then listed as unprotected, not probed.
