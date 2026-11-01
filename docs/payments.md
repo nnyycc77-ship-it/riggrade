@@ -65,9 +65,12 @@ other switch is set too. `GET /riggrade/v1` lists the reasons the sale is off.
 
 ## The payer screen list
 
-Build it from OFAC's SDN.CSV:
+Build it from OFAC's SDN_ADVANCED.XML, with SDN.CSV as a cross-check:
 
-    python3 -m riggrade.screenlist SDN.CSV --out blocked-addresses.txt
+    python3 -m riggrade.screenlist SDN_ADVANCED.XML SDN.CSV --out blocked-addresses.txt
+
+Use the XML. SDN.CSV truncates long remark fields: on the 28 Oct 2026
+publication it carried only 94 of the 127 0x-form addresses the XML lists.
 
 Every `0x` address listed as a "Digital Currency Address" is kept, whatever
 its ticker. The file starts with a provenance header: the source URL, the
@@ -81,6 +84,6 @@ list is clean. Rebuild the list whenever OFAC publishes an update.
   USDC on Base (`base`) with no key. Both hosts were unreachable from the
   build environment, so the `/verify` and `/settle` shapes are unverified.
   They follow the x402 v1 facilitator specification.
-- **Build the blocked-address list** from a current SDN.CSV. OFAC's host is unreachable from the build environment, so the file comes from the coordinator.
+- **Build the blocked-address list** from a current SDN_ADVANCED.XML (built 1 Nov 2026: 127 addresses).
 - **Owner decisions:** the sale switch, the base image pin, the container
   licence, and the trademark search.

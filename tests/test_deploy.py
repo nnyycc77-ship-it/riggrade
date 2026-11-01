@@ -29,7 +29,7 @@ class ScreenListTests(unittest.TestCase):
     def test_build_has_provenance_and_feeds_the_screen(self):
         text, count = screenlist.build(SDN.encode(), now=NOW)
         self.assertEqual(count, 2)
-        self.assertIn("# source: " + screenlist.SOURCE, text)
+        self.assertIn("# input: " + screenlist.SOURCE, text)
         self.assertIn("# built: 2026-11-01T02:00:00Z", text)
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "blocked.txt"
@@ -42,6 +42,36 @@ class ScreenListTests(unittest.TestCase):
     def test_refuses_a_file_with_no_addresses(self):
         with self.assertRaises(ValueError):
             screenlist.build(b'38,"NO CRYPTO","entity"\n')
+
+
+XML = ('<?xml version="1.0"?><Sanctions><ReferenceValueSets><FeatureTypeValues>'
+       '<FeatureType ID="344" FeatureTypeGroupID="1">Digital Currency Address - XBT</FeatureType>'
+       '<FeatureType ID="345" FeatureTypeGroupID="1">Digital Currency Address - ETH</FeatureType>'
+       '<FeatureType ID="364" FeatureTypeGroupID="1">D-U-N-S Number</FeatureType>'
+       '</FeatureTypeValues></ReferenceValueSets>'
+       '<Feature ID="1" FeatureTypeID="345"><FeatureVersion ID="2"><VersionDetail DetailTypeID="1432">'
+       + A1 + '</VersionDetail></FeatureVersion></Feature>'
+       '<Feature ID="3" FeatureTypeID="345"><FeatureVersion ID="4"><VersionDetail DetailTypeID="1432">'
+       '0x' + 'cc' * 20 + '</VersionDetail></FeatureVersion></Feature>'
+       '<Feature ID="5" FeatureTypeID="364"><FeatureVersion ID="6"><VersionDetail DetailTypeID="1432">'
+       '0x' + 'dd' * 20 + '</VersionDetail></FeatureVersion></Feature>'
+       '<Feature ID="7" FeatureTypeID="344"><FeatureVersion ID="8"><VersionDetail DetailTypeID="1432">'
+       '1BoatSLRHtKNngkdXEeobR76b53LETtpyT</VersionDetail></FeatureVersion></Feature>'
+       '</Sanctions>')
+
+
+class ScreenListXmlTests(unittest.TestCase):
+    def test_xml_reads_only_digital_currency_features(self):
+        found = screenlist.extract_xml(XML)
+        self.assertEqual(found, {A1: ["ETH"], "0x" + "cc" * 20: ["ETH"]})
+
+    def test_xml_and_csv_union_with_both_inputs_recorded(self):
+        text, count = screenlist.build(XML.encode(), now=NOW, more=[SDN.encode()])
+        # XML has A1 and cc..; the CSV adds A2, which the XML here lacks
+        self.assertEqual(count, 3)
+        self.assertIn("# input: " + screenlist.SOURCE_XML, text)
+        self.assertIn("# input: " + screenlist.SOURCE, text)
+        self.assertIn("ETH,USDC", text)  # A1 listed under ETH in XML and USDC in CSV
 
 
 class ServeTests(unittest.TestCase):
