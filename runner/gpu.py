@@ -47,11 +47,18 @@ def memory_integrity(device=0, fraction=0.9, chunk_gb=1.0):
     return ok and done > 0
 
 
+def native_bf16(capability):
+    """bfloat16 runs natively from compute capability 8.0 (Ampere) up.
+    Recent torch also reports bf16 as supported on older cards, by
+    emulation: on a T4 that ran GEMM at about 2.6 TFLOPS, and vLLM refuses
+    it outright. So the capability decides, not is_bf16_supported()."""
+    return tuple(capability)[0] >= 8
+
+
 def preferred_dtype(device=0):
-    """bfloat16 where the card supports it (graded runs), else float16.
-    Older cards such as the T4 have no bf16; the smoke test uses fp16 there."""
+    """bfloat16 where the card runs it natively (graded runs), else float16."""
     torch = _torch()
-    return "bfloat16" if torch.cuda.is_bf16_supported() else "float16"
+    return "bfloat16" if native_bf16(torch.cuda.get_device_capability(device)) else "float16"
 
 
 def gemm(device=0, n=8192, reps=20, dtype="bfloat16"):
