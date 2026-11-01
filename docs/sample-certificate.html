@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RigGrade cluster acceptance certificate rc_sample0000000000</title><link rel="icon" href="/favicon.ico"><style>body{font:15px/1.45 system-ui,sans-serif;max-width:52rem;margin:2rem auto;padding:0 1rem;color:#182848}h1{font-size:1.5rem;margin:0 0 .25rem}h2{font-size:1.1rem;margin:1.5rem 0 .5rem}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:.35rem .5rem;border-bottom:1px solid #ddd;vertical-align:top}.verdict{display:inline-block;padding:.2rem .6rem;border-radius:.3rem;font-weight:600}.accept{background:#d9f2e3}.exceptions{background:#fff1cc}.reject{background:#f8d7da}.ok{color:#1a7f3c}.bad{color:#a12622}code{font-size:.9em;word-break:break-all}.muted{color:#555}@media print{a[href]:after{content:' (' attr(href) ')'}}</style></head>
+<body>
+<h1>Cluster acceptance certificate</h1>
+<p class=muted>RigGrade &middot; certificate <code>rc_sample0000000000</code> &middot; issued 2026-11-02 00:00 UTC &middot; rules <code>cluster-acceptance-v0-draft</code></p>
+<p><span class="verdict exceptions">Verdict: accept with exceptions</span></p>
+<p>Signature check by this service: <span class=ok>valid: this service signed this certificate and it has not changed</span>.</p>
+<h2>What the provider claimed</h2>
+<table><tr><th>Claim</th><th>Value</th></tr>
+<tr><td><code>gpu_model</code></td><td>NVIDIA H100 80GB HBM3</td></tr>
+<tr><td><code>gpus_per_node</code></td><td>8</td></tr>
+<tr><td><code>inter_node_gbps_per_gpu</code></td><td>400</td></tr>
+<tr><td><code>nodes</code></td><td>2</td></tr>
+<tr><td><code>storage_read_gbs</code></td><td>10</td></tr>
+</table>
+<h2>What the cluster delivered</h2>
+<p class=muted>2 node(s) ran the pinned image(s) <code>sha256:abababababababababababababababababababababababababababababababab</code>. Each check is measured against the claim or against the cluster median; a check that could not run is shown as not measured, never as passed.</p>
+<table><tr><th>Check</th><th>Status</th><th>Detail</th><th>Numbers</th></tr>
+<tr><td><code>inventory</code></td><td>accept</td><td>2 nodes x 8 NVIDIA H100 80GB HBM3, as claimed</td><td class=muted></td></tr>
+<tr><td><code>image</code></td><td>accept</td><td>every node ran the same pinned image</td><td class=muted></td></tr>
+<tr><td><code>node_health</code></td><td>accept</td><td>preflight passed on every node</td><td class=muted></td></tr>
+<tr><td><code>straggler</code></td><td>accept</td><td>slowest node at 98% of the cluster median</td><td class=muted>min_ratio 0.98</td></tr>
+<tr><td><code>fabric</code></td><td>exception</td><td>all-reduce bus bandwidth 31.0 GB/s against 50 GB/s claimed (62%)</td><td class=muted>busbw_gbs 31.0, claimed_gbs 50.0, ratio 0.62</td></tr>
+<tr><td><code>storage</code></td><td>accept</td><td>aggregate read 9.1 GB/s against 10 GB/s claimed (91%)</td><td class=muted>ratio 0.91</td></tr>
+</table>
+<h2>Exceptions</h2><ul><li>fabric: 62% of the claimed inter-node link</li></ul>
+<h2>Evidence</h2>
+<p>Evidence pack SHA-256 <code>e3b0c442e3b0c442e3b0c442e3b0c442e3b0c442e3b0c442e3b0c442e3b0c442</code>. Anyone holding the pack can recompute every check with the open rules (<code>python3 -m runner.cluster evaluate</code>) and compare the hash.</p>
+<p class=muted>Measured, not promised. What this cluster delivered during the named test, against what its provider claimed; no promise about future delivery.</p>
+<p class=muted>Signature: HMAC by this service (not independently verifiable); the JSON form of this certificate is at <a href="https://riggrade-674098696181.us-central1.run.app/riggrade/v1/cluster/acceptance/rc_sample0000000000?format=json">https://riggrade-674098696181.us-central1.run.app/riggrade/v1/cluster/acceptance/rc_sample0000000000?format=json</a>. To keep a copy for a dispute, print this page to PDF.</p>
+</body></html>
