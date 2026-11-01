@@ -47,7 +47,8 @@ class ReferenceBookPersistenceTests(unittest.TestCase):
             path = Path(tmp) / "references.json"
             book = ReferenceBook(path)
             for n in range(5):
-                book.add("rtx4090", "inference", "rig%d" % n, 100.0 + n, attested=n == 0)
+                book.add("rtx4090", "inference", "rig%d" % n, 100.0 + n, attested=n == 0,
+                         operator="0xop%d" % (n % 3))
             book.add("rtx4090", "inference", "rig0", 999.0)  # repeat: ignored
             book.set_controlled("h100", "training", 42.0)
             again = ReferenceBook(path)
