@@ -139,6 +139,12 @@ class GradingApp:
     def __call__(self, environ, start_response):
         path = environ.get("PATH_INFO", "")
         method = environ.get("REQUEST_METHOD", "GET")
+        if method == "HEAD":
+            # Same status and headers as the GET (Content-Length included),
+            # no body: crawlers HEAD the favicon and documents.
+            for _chunk in self(dict(environ, REQUEST_METHOD="GET"), start_response):
+                pass
+            return []
         if method == "GET" and path in DISCOVERY_PATHS:
             return self.discovery(start_response, environ, path)
         if not path.startswith(PREFIX):
@@ -634,15 +640,46 @@ def bazaar_extension(resource="grade"):
                     ["gpu", "cluster", "acceptance", "verification"]),
     }
     example_in, props, example_out, tags = shapes[resource]
+    # "schema" is the JSON Schema of the "info" object (x402 bazaar extension):
+    # readers take input.properties.body as the request schema and
+    # output.properties.example as the response schema.
+    body_schema = {"type": "object", "properties": props, "required": list(props),
+                   "additionalProperties": False}
     return {
         "info": {"input": {"type": "http", "method": "POST", "bodyType": "json",
                            "body": example_in},
                  "output": {"type": "application/json", "example": example_out}},
-        "schema": {"type": "object", "properties": props,
-                   "required": list(props), "additionalProperties": False},
+        "schema": {"type": "object",
+                   "properties": {
+                       "input": {"type": "object",
+                                 "properties": {"type": {"const": "http"},
+                                                "method": {"const": "POST"},
+                                                "bodyType": {"const": "json"},
+                                                "body": body_schema},
+                                 "required": ["type", "method", "bodyType", "body"]},
+                       "output": {"type": "object",
+                                  "properties": {"type": {"const": "application/json"},
+                                                 "example": _schema_of(example_out)},
+                                  "required": ["type", "example"]}},
+                   "required": ["input", "output"]},
         "serviceName": "RigGrade",
         "tags": tags,
     }
+
+
+def _schema_of(example):
+    """A loose JSON Schema describing an example value's shape."""
+    if isinstance(example, dict):
+        return {"type": "object", "properties": {k: _schema_of(v) for k, v in example.items()}}
+    if isinstance(example, list):
+        return {"type": "array", **({"items": _schema_of(example[0])} if example else {})}
+    if isinstance(example, bool):
+        return {"type": "boolean"}
+    if isinstance(example, int):
+        return {"type": "integer"}
+    if isinstance(example, float):
+        return {"type": "number"}
+    return {"type": "string"}
 
 
 class BadRequest(ValueError):
