@@ -4,6 +4,7 @@ acceptance certificate (owner decision, 1 Nov 2026)."""
 import json
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 from riggrade import acceptance, cluster_rules, fixit, salelog
@@ -159,7 +160,7 @@ class ProductEndpointTests(unittest.TestCase):
         self.assertEqual((cert["verdict"], cert["nodes"], cert["paying_wallet"]),
                          (pack["verdict"], 2, PAYER))
         self.assertTrue(acceptance.verify(cert, b"s"))
-        self.assertTrue(doc["verify_url"].endswith("/riggrade/v1/cluster/acceptance/" + cert["certificate_id"]))
+        self.assertTrue(doc["lookup_url"].endswith("/riggrade/v1/cluster/acceptance/" + cert["certificate_id"]))
         status, _h, got = call(app, "GET", "/riggrade/v1/cluster/acceptance/" + cert["certificate_id"])
         self.assertEqual(status, "200 OK")
         self.assertTrue(got["signature_valid"])
@@ -169,6 +170,22 @@ class ProductEndpointTests(unittest.TestCase):
         (entry,) = salelog.read_chain(self.log)
         self.assertEqual((entry["product"], entry["amount_atomic"], entry["certificate_id"]),
                          ("riggrade_cluster_acceptance", "25000000", cert["certificate_id"]))
+
+    def test_delivery_failure_after_settle_is_recorded_not_served(self):
+        app = self.app()
+        pack = pack_for(CLAIMS, [node(0, fabric=45.0, storage=6.0), node(1, storage=6.0)])
+        broken = unittest.mock.patch.object(acceptance, "certificate",
+                                            side_effect=RuntimeError("store exploded"))
+        with broken:
+            status, _h, doc = call(app, "POST", "/riggrade/v1/cluster/acceptance",
+                                   {"evidence_pack": pack}, payment="pay")
+        self.assertEqual(status, "500 Internal Server Error")
+        self.assertEqual((doc["charged"], doc["tx"]), (True, "0x" + "ef" * 32))
+        self.assertNotIn("certificate", doc)
+        (entry,) = salelog.read_chain(self.log)
+        self.assertEqual((entry["product"], entry["status"], entry["charged"], entry["payer"]),
+                         ("riggrade_cluster_acceptance", "charged_without_delivery", True, PAYER))
+        self.assertIn("store exploded", entry["error"])
 
     def test_tampered_pack_is_refused_before_payment(self):
         app = self.app()

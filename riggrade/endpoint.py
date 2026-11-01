@@ -407,7 +407,18 @@ class GradingApp:
             return _json(start_response, "402 Payment Required",
                          {"error": result.get("error", "payment failed"),
                           "charged": result.get("charged", False)})
-        doc, extra = deliver(result)
+        try:
+            doc, extra = deliver(result)
+        except Exception as exc:  # noqa: BLE001 - a settled charge must never go unrecorded
+            salelog.append(self.config.sale_log,
+                           {"product": product, "status": "charged_without_delivery",
+                            "charged": True, "amount_atomic": requirement["maxAmountRequired"],
+                            "payer": result.get("payer"), "tx": result.get("tx"),
+                            "error": "delivery failed: %s: %s" % (type(exc).__name__, exc),
+                            "at": self.clock()})
+            return _json(start_response, "500 Internal Server Error",
+                         {"error": "charged but delivery failed; recorded for refund by hand",
+                          "charged": True, "tx": result.get("tx")})
         salelog.append(self.config.sale_log,
                        dict({"product": product, "amount_atomic": requirement["maxAmountRequired"],
                              "payer": result.get("payer"), "tx": result.get("tx"),
@@ -460,7 +471,7 @@ class GradingApp:
             cert["signature"] = acceptance.sign(cert, self.config.secret)
             self.store.put("cert:" + cert_id, cert)
             return ({"certificate": cert,
-                     "verify_url": _url(environ, PREFIX + "/cluster/acceptance/" + cert_id)},
+                     "lookup_url": _url(environ, PREFIX + "/cluster/acceptance/" + cert_id)},
                     {"certificate_id": cert_id, "verdict": result["verdict"]})
         return self._sell(start_response, environ, "cluster", PREFIX + "/cluster/acceptance",
                           description, prev, deliver)
@@ -572,7 +583,7 @@ def bazaar_extension(resource="grade"):
                                        "description": "The acceptance.json runner.cluster "
                                                       "evaluate wrote for the rented nodes."}},
                     {"certificate": {"certificate_id": "rc_...", "verdict": "accept",
-                                     "signature": "..."}, "verify_url": "..."},
+                                     "signature": "..."}, "lookup_url": "..."},
                     ["gpu", "cluster", "acceptance", "verification"]),
     }
     example_in, props, example_out, tags = shapes[resource]
