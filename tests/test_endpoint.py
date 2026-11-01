@@ -369,7 +369,14 @@ class FreeReferenceTests(Harness):
 
     def test_descriptor_states_the_rule(self):
         _s, _h, doc = call(self.app(), "GET", "/riggrade/v1")
-        self.assertIn("first session in it is free", doc["free_reference_sessions"])
+        note = doc["free_reference_sessions"]
+        self.assertIn("first session there is free", note)
+        # One scope wording (board Message 179, 3b): descriptor and spec agree.
+        self.assertIn("no reference", note)
+        self.assertIn("fewer than 5 rigs", note)
+        spec = (Path(__file__).resolve().parents[1] / "docs" / "grading-spec.md").read_text()
+        self.assertIn('"No reference yet" means', spec)
+        self.assertNotIn("first paid sessions", spec)
 
 
 if __name__ == "__main__":

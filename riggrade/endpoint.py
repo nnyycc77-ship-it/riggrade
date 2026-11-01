@@ -40,9 +40,10 @@ USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 # Decided prices (plan Revision 5, decided items 1), USDC atomic units.
 POINT_PRICE_ATOMIC = {DATA_CENTRE: 5_000_000, "consumer": 3_000_000}
 WALLET = re.compile(r"^0x[0-9a-fA-F]{40}$")
-FREE_REFERENCE_NOTE = ("Free reference-building session: while a class has fewer than 5 "
-                       "graded rigs, each rig's first session in it is free. Speed is "
-                       "not graded until the bar is set; this session helps set it.")
+FREE_REFERENCE_NOTE = ("Free reference-building session: while a GPU class has no reference "
+                       "yet for a workload (fewer than 5 rigs behind it and no controlled "
+                       "run), each rig's first session there is free. It counts toward the "
+                       "reference; speed is not graded until the reference exists.")
 # Plan Decision 15, restated for payers (spec section 10a).
 APPEALS = ("Appeals within 30 days of the grade, decided on the evidence already "
            "held, with no paid retest. A proven error is corrected by an appended "

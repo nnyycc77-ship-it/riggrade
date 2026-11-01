@@ -204,7 +204,8 @@ def identity_mismatch(class_id, measured, envelope):
 
 
 class ReferenceBook:
-    """Spec 13: provisional class references from the first paid sessions.
+    """Spec 13: provisional class references from each rig's first session,
+    free or paid.
 
     Only the first session per rig identity counts, so one host cannot steer
     a reference with repeat sessions. Attested sessions take priority: once
