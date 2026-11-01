@@ -34,6 +34,18 @@ jobs:
           workload_identity_provider: projects/${{ env.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github/providers/riggrade
           service_account: riggrade-deployer@${{ env.GCP_PROJECT }}.iam.gserviceaccount.com
       - uses: google-github-actions/setup-gcloud@v2
+      - name: Build the payer screen list
+        run: |
+          set -euo pipefail
+          mkdir -p deploy/screen /tmp/ofac
+          curl -fsS --retry 3 -o /tmp/ofac/SDN_ADVANCED.XML \
+            https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN_ADVANCED.XML
+          python3 -m riggrade.screenlist /tmp/ofac/SDN_ADVANCED.XML --out deploy/screen/blocked-addresses.txt
+          COUNT=$(grep -c '^0x' deploy/screen/blocked-addresses.txt || true)
+          echo "Blocked addresses: $COUNT" | tee -a "$GITHUB_STEP_SUMMARY"
+          # Fail loud: 127 on 1 Nov 2026. A short list means a bad download.
+          if [ "$COUNT" -lt 100 ]; then echo "screen list too short" >&2; exit 1; fi
+          grep '^#' deploy/screen/blocked-addresses.txt | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Build and push the server image
         run: |
           set -euo pipefail
@@ -51,7 +63,8 @@ jobs:
             --execution-environment gen2 --min-instances 0 --max-instances 1 \
             --memory 512Mi --cpu 1 --allow-unauthenticated \
             --add-volume "name=state,type=cloud-storage,bucket=$GCP_PROJECT-riggrade-state,mount-options=uid=10001;gid=10001" \
-            --add-volume-mount volume=state,mount-path=/state
+            --add-volume-mount volume=state,mount-path=/state \
+            --update-env-vars "^@^RIGGRADE_ENABLED=1@RIGGRADE_FACILITATORS=https://x402.dexter.cash,https://facilitator.payai.network@RIGGRADE_SCREEN_LIST=/opt/riggrade/screen/blocked-addresses.txt"
       - name: Check the live descriptor
         run: |
           set -euo pipefail
