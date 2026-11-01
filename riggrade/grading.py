@@ -34,7 +34,7 @@ RELIABILITY_MIN_COVERAGE_DAYS = 25
 
 # Spec 13: provisional references need this many distinct rigs.
 MIN_REFERENCE_RIGS = 5
-# Operator concentration (spec 13; board Message 179, numbers accepted as v0).
+# Operator concentration (spec 13; numbers accepted as v0).
 CAP_PER_OPERATOR = 2
 MIN_OPERATORS = 3
 MAX_OPERATOR_SHARE = 0.40
@@ -213,7 +213,7 @@ class ReferenceBook:
 
     Only the first session per rig identity counts, so one host cannot steer
     a reference with repeat sessions. Operator concentration (spec 13,
-    board Message 179): at most CAP_PER_OPERATOR rigs from one operator
+    spec 13): at most CAP_PER_OPERATOR rigs from one operator
     count toward a reference, and speed is not graded until the counted
     rigs come from at least MIN_OPERATORS distinct verified operators. Rigs
     with no verified operator count as rigs but never as operators, so an

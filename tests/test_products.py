@@ -1,5 +1,5 @@
 """Paid products beyond the grade: the host fix-it report and the cluster
-acceptance certificate (owner decision, 1 Nov 2026)."""
+acceptance certificate (decided 1 Nov 2026)."""
 
 import json
 import tempfile

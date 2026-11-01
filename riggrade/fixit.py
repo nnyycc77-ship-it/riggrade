@@ -1,5 +1,5 @@
 """Host fix-it report: the paid diagnosis after a preflight warning or fail
-(owner decision, 1 Nov 2026). Input is the preflight-report.json the free
+(decided 1 Nov 2026). Input is the preflight-report.json the free
 check writes; output names, for every warn or fail finding, the likely
 cause, the fix steps, who can act (host or renter) and which grade pillar
 it threatens. Pure: no I/O, no network. Prices live in riggrade.endpoint.

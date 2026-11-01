@@ -337,7 +337,7 @@ class SaleLogTests(unittest.TestCase):
 
 
 class FreeReferenceTests(Harness):
-    """Owner decision 1 Nov 2026: a rig's first session in a class that is
+    """Decided 1 Nov 2026: a rig's first session in a class that is
     still building its reference is free."""
 
     def test_first_session_per_rig_is_free_and_counts(self):
@@ -436,7 +436,7 @@ class FreeReferenceTests(Harness):
         _s, _h, doc = call(self.app(), "GET", "/riggrade/v1")
         note = doc["free_reference_sessions"]
         self.assertIn("first session there is free", note)
-        # One scope wording (board Message 179, 3b): descriptor and spec agree.
+        # One scope wording (spec 13): descriptor and spec agree.
         self.assertIn("no reference", note)
         self.assertIn("fewer than 5 rigs", note)
         spec = (Path(__file__).resolve().parents[1] / "docs" / "grading-spec.md").read_text()
@@ -449,7 +449,7 @@ if __name__ == "__main__":
 
 
 class OperatorRulesTests(Harness):
-    """Spec 13 operator concentration at the endpoint (board Message 179)."""
+    """Spec 13 operator concentration at the endpoint (spec 13)."""
 
     def seed(self, app):
         # Five claimed free sessions from three operators (cap 2 per operator).
