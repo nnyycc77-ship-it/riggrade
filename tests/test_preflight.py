@@ -119,6 +119,8 @@ class EvaluateTests(unittest.TestCase):
 
 
 class FakeProbes:
+    idle_interval = 0  # no real sleeping between idle samples in tests
+
     def __init__(self, fail_load=False):
         self.fail_load = fail_load
 

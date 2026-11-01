@@ -11,6 +11,9 @@ class FakeGpu:
     def __init__(self, fail_gemm=False):
         self.fail_gemm = fail_gemm
 
+    def release_memory(self):
+        return 14.2, 15.0
+
     def preferred_dtype(self):
         return "float16"
 
@@ -35,6 +38,7 @@ class FakeGpu:
 class FakeServer:
     def __init__(self, **kwargs):
         self.kwargs = kwargs
+        self.dtype = kwargs.get("dtype")
         self.stopped = False
 
     def __enter__(self):
@@ -83,6 +87,8 @@ class SmokeTests(unittest.TestCase):
                            out=io.StringIO())
         self.assertEqual(report["summary"]["failed"], [])
         self.assertEqual(report["dtype"], "float16")
+        self.assertEqual(report["free_memory_before_server_gb"], {"free": 14.2, "total": 15.0})
+        self.assertEqual(report["server_dtype"], "float16")
         self.assertEqual(rulers.servers[0].kwargs["model"], smoke.SMOKE_MODEL)
         self.assertEqual(rulers.servers[0].kwargs["dtype"], "float16")
         self.assertTrue(rulers.servers[0].stopped)
