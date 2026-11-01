@@ -140,6 +140,7 @@ class ProductEndpointTests(unittest.TestCase):
         (entry,) = salelog.read_chain(self.log)
         self.assertEqual((entry["product"], entry["amount_atomic"], entry["findings"]),
                          ("riggrade_fixit_report", "2000000", 3))
+        self.assertEqual(entry["facilitator"], "https://fac.example")  # which one settled it
 
     def test_fixit_nothing_to_fix_is_not_sold(self):
         app = self.app()

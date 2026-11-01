@@ -44,7 +44,7 @@ class FakeAdapter:
         if not self.ok:
             return {"ok": False, "error": "payer refused by screen", "charged": False}
         return {"ok": True, "payer": self.payer_for(header), "tx": "0x" + "ef" * 32,
-                "receipt_header": "eyJ0eCI6ICJvayJ9"}
+                "receipt_header": "eyJ0eCI6ICJvayJ9", "facilitator": "https://fac.example"}
 
 
 def call(app, method, path, body=None, payment=None):
