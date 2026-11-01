@@ -84,10 +84,15 @@ def run(gpu, rulers, identity_mod, minutes=2.0, inference=True, out=sys.stdout):
         passes = [rulers.training_pass(params, seconds=20, dtype=dtype) for _ in range(3)]
         metrics["training"] = {"throughput_passes": [round(p, 1) for p in passes]}
     if inference:
+        with Step(report, "gpu.release_memory"):
+            if hasattr(gpu, "release_memory"):
+                free, total = gpu.release_memory()
+                report["free_memory_before_server_gb"] = {"free": free, "total": total}
         with Step(report, "ruler.inference.server_start"):
             server = rulers.InferenceServer(model=SMOKE_MODEL, dtype=dtype,
                                             extra_args=["--max-model-len", "2048",
                                                         "--gpu-memory-utilization", "0.6"]).__enter__()
+            report["server_dtype"] = server.dtype
         if server is not None:
             with Step(report, "ruler.inference.passes"):
                 passes, gaps = [], []

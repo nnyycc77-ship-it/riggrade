@@ -112,6 +112,8 @@ class ServerStartTests(unittest.TestCase):
                                             popen=lambda *a, **k: FakeProc(None),
                                             health=lambda: True, sleep=lambda s: None)
             self.assertIs(server.__enter__(), server)
+            server.__exit__(None, None, None)
+            self.assertTrue(server._log.closed)
 
 
 class PreviewTests(unittest.TestCase):
@@ -125,3 +127,54 @@ class PreviewTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SecondRunTests(unittest.TestCase):
+    """What the second T4 run (1 Nov 2026) showed."""
+
+    def test_server_corrects_bf16_below_ampere(self):
+        s = rulers.InferenceServer(model="m", dtype="bfloat16", capability=lambda: (7, 5))
+        self.assertEqual((s.dtype, s.dtype_corrected), ("float16", True))
+        s = rulers.InferenceServer(model="m", dtype="bfloat16", capability=lambda: (8, 9))
+        self.assertEqual((s.dtype, s.dtype_corrected), ("bfloat16", False))
+        s = rulers.InferenceServer(model="m", dtype="bfloat16", capability=lambda: None)
+        self.assertEqual(s.dtype, "bfloat16")
+
+    def test_root_cause_line_is_found_above_the_tail(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log = os.path.join(tmp, "vllm.log")
+
+            def popen(cmd, stdout, stderr):
+                stdout.write("INFO starting\n")
+                stdout.write("ValueError: Free memory on device (5.1/14.6 GiB) on startup is "
+                             "less than desired GPU memory utilization (0.6, 8.8 GiB).\n")
+                stdout.write("".join("  frame %d\n" % k for k in range(40)))
+                stdout.write("RuntimeError: Engine core initialization failed. "
+                             "See root cause above. Failed core proc(s): {}\n")
+                stdout.flush()
+                return FakeProc(1)
+            server = rulers.InferenceServer(model="m", dtype="float16", log_path=log,
+                                            popen=popen, sleep=lambda s: None)
+            with self.assertRaises(RuntimeError) as ctx:
+                server.__enter__()
+            msg = str(ctx.exception)
+            self.assertIn("less than desired GPU memory utilization", msg)
+            self.assertIn("Error lines in the server log", msg)
+
+    def test_idle_state_is_the_median_of_several_samples(self):
+        busy = IDLE_ROW.replace("450.00, 0, 310,", "450.00, 35, 310,")
+
+        class Fading:
+            idle_interval = 0
+
+            def __init__(self):
+                self.calls = 0
+
+            def gpus(self):
+                self.calls += 1
+                return pf.parse_gpu_csv(busy if self.calls == 1 else IDLE_ROW)
+        probes = Fading()
+        (row,) = pf.idle_snapshot(probes, samples=5)
+        self.assertEqual(probes.calls, 5)
+        self.assertEqual(row["utilization.gpu"], 0)
+        self.assertEqual(row["idle_samples"], 5)

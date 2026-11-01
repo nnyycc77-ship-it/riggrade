@@ -47,6 +47,18 @@ def memory_integrity(device=0, fraction=0.9, chunk_gb=1.0):
     return ok and done > 0
 
 
+def release_memory():
+    """Return cached GPU memory to the driver. torch's caching allocator keeps
+    what earlier steps used (the training ruler holds gigabytes), and a server
+    started next in another process would see that memory as taken."""
+    import gc
+    torch = _torch()
+    gc.collect()
+    torch.cuda.empty_cache()
+    free, total = torch.cuda.mem_get_info()
+    return round(free / 2 ** 30, 2), round(total / 2 ** 30, 2)
+
+
 def native_bf16(capability):
     """bfloat16 runs natively from compute capability 8.0 (Ampere) up.
     Recent torch also reports bf16 as supported on older cards, by

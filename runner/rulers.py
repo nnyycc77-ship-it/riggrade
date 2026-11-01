@@ -9,6 +9,7 @@ synthetic random tokens, so nothing is downloaded but the inference model.
 
 import json
 import os
+import re
 import subprocess
 import tempfile
 import threading
@@ -17,6 +18,18 @@ import urllib.request
 
 INFERENCE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 SERVER_PORT = 8811
+ERROR_LINE = re.compile(r"\b\w*(Error|Exception)\b|CUDA out of memory|not supported|"
+                        r"less than desired GPU memory", re.IGNORECASE)
+
+
+def _capability(device=0):
+    try:
+        import torch
+        if torch.cuda.is_available():
+            return torch.cuda.get_device_capability(device)
+    except Exception:  # noqa: BLE001 - no torch or no GPU: nothing to correct
+        return None
+    return None
 
 
 class InferenceServer:
@@ -27,9 +40,18 @@ class InferenceServer:
 
     def __init__(self, model=INFERENCE_MODEL, port=SERVER_PORT, dtype="bfloat16",
                  extra_args=(), log_path=None, startup_timeout=900,
-                 popen=subprocess.Popen, health=None, sleep=time.sleep):
+                 popen=subprocess.Popen, health=None, sleep=time.sleep,
+                 capability=None):
         self.model, self.port, self.proc = model, port, None
         self.dtype, self.extra_args = dtype, list(extra_args)
+        self.dtype_corrected = False
+        # vLLM refuses bf16 below compute capability 8.0. Correct it here so no
+        # caller, graded or not, can start the server with it on such a card.
+        if dtype == "bfloat16":
+            cap = capability() if capability else _capability()
+            if cap is not None and tuple(cap)[0] < 8:
+                self.dtype, self.dtype_corrected = "float16", True
+        self._log = None
         self.log_path = log_path or os.path.join(tempfile.gettempdir(), "riggrade-vllm.log")
         self.startup_timeout = startup_timeout
         self._popen, self._sleep = popen, sleep
@@ -43,8 +65,28 @@ class InferenceServer:
         except OSError:
             return "(no server log)"
 
+    def log_errors(self, limit=8):
+        """Distinct error lines from the whole log. vLLM's last lines often say
+        only 'see root cause above', so the cause has to be found earlier."""
+        found = []
+        try:
+            with open(self.log_path, encoding="utf-8", errors="replace") as fh:
+                for line in fh:
+                    line = line.strip()
+                    if ERROR_LINE.search(line) and "See root cause above" not in line \
+                            and line not in found:
+                        found.append(line[:300])
+        except OSError:
+            return []
+        return found[:limit]
+
+    def _failure(self, head):
+        errors = self.log_errors()
+        return RuntimeError("%s\nError lines in the server log:\n%s\nLast log lines:\n%s"
+                            % (head, "\n".join(errors) or "(none found)", self.log_tail()))
+
     def __enter__(self):
-        log = open(self.log_path, "w", encoding="utf-8")
+        log = self._log = open(self.log_path, "w", encoding="utf-8")
         self.proc = self._popen(
             ["vllm", "serve", self.model, "--dtype", self.dtype,
              "--port", str(self.port), "--tensor-parallel-size", "1"] + self.extra_args,
@@ -54,8 +96,7 @@ class InferenceServer:
             code = self.proc.poll()
             if code is not None:
                 log.close()
-                raise RuntimeError("inference server exited during start-up (code %s). "
-                                   "Last log lines:\n%s" % (code, self.log_tail()))
+                raise self._failure("inference server exited during start-up (code %s)." % code)
             try:
                 self._health()
                 return self
@@ -63,13 +104,14 @@ class InferenceServer:
                 self._sleep(5)
         self.proc.terminate()
         log.close()
-        raise RuntimeError("inference server did not start within %d s. Last log lines:\n%s"
-                           % (self.startup_timeout, self.log_tail()))
+        raise self._failure("inference server did not start within %d s." % self.startup_timeout)
 
     def __exit__(self, *exc):
         if self.proc:
             self.proc.terminate()
             self.proc.wait(timeout=60)
+        if self._log and not self._log.closed:
+            self._log.close()
 
     def _stream_one(self, prompt_tokens, output_tokens):
         """One streamed request. Returns (output tokens, time to first token,

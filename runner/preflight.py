@@ -412,6 +412,27 @@ class Probes:
 
 # ---------------------------------------------------------------- run
 
+def idle_snapshot(probes, samples=5, interval=None, sleep=time.sleep):
+    """The idle state, as the median of several samples. A single sample can
+    still carry utilisation from work that ended a second earlier (seen on a
+    T4 right after another job: 35% busy with 0 GiB in use)."""
+    interval = getattr(probes, "idle_interval", 0.5) if interval is None else interval
+    snaps = []
+    for k in range(samples):
+        snaps.append(probes.gpus())
+        if k < samples - 1 and interval:
+            sleep(interval)
+    out = []
+    for i, gpu in enumerate(snaps[-1]):
+        row = dict(gpu)
+        for key in ("memory.used", "utilization.gpu"):
+            vals = [s[i].get(key) for s in snaps if i < len(s) and s[i].get(key) is not None]
+            row[key] = statistics.median(vals) if vals else None
+        row["idle_samples"] = len(snaps)
+        out.append(row)
+    return out
+
+
 def run(probes, seconds=30.0, url=DEFAULT_URL, download=True, directory=".",
         out=sys.stdout, shared=False):
     obs, errors = {}, {}
@@ -423,7 +444,7 @@ def run(probes, seconds=30.0, url=DEFAULT_URL, download=True, directory=".",
             errors[name] = "%s: %s" % (type(exc).__name__, exc)
             return None
 
-    obs["idle"] = attempt("gpus", probes.gpus) or []
+    obs["idle"] = attempt("gpus", lambda: idle_snapshot(probes)) or []
     if "gpus" in errors:
         obs["gpu_error"] = errors["gpus"]
     if shared:
