@@ -256,3 +256,25 @@ class CdpAuthTests(unittest.TestCase):
             # CDP alone with no key: no adapter, so the sale stays off.
             self.assertIsNone(pay.from_env({"RIGGRADE_FACILITATORS": pay.CDP_FACILITATOR,
                                             "RIGGRADE_SCREEN_LIST": str(screen)}))
+
+
+class DescriptorFacilitatorTests(unittest.TestCase):
+    def test_descriptor_names_the_facilitator_hosts_only(self):
+        import io
+        from riggrade.endpoint import GradingApp
+        with tempfile.TemporaryDirectory() as tmp:
+            screen = Path(tmp) / "blocked.txt"
+            screen.write_text("# none\n")
+            adapter = pay.from_env({"RIGGRADE_FACILITATORS": pay.CDP_FACILITATOR + "," + A,
+                                    "RIGGRADE_SCREEN_LIST": str(screen)})
+            app = GradingApp({"RIGGRADE_ENABLED": "1", "PAYOUT_WALLET_ADDRESS": PAY_TO,
+                              "RIGGRADE_SALE_LOG": tmp + "/sales.jsonl", "RIGGRADE_SECRET": "s",
+                              "RIGGRADE_IMAGE_DIGESTS": "sha256:" + "ab" * 32},
+                             lambda: 1_800_000_000, adapter=adapter)
+            environ = {"REQUEST_METHOD": "GET", "PATH_INFO": "/riggrade/v1", "CONTENT_LENGTH": "0",
+                       "wsgi.input": io.BytesIO(b"")}
+            out = b"".join(app(environ, lambda s, h: None))
+            doc = json.loads(out)
+            # No CDP key: the Coinbase entry was dropped; the host list says so.
+            self.assertEqual(doc["sale"]["facilitators"], ["a.example"])
+            self.assertNotIn("key", json.dumps(doc["sale"]).lower())
