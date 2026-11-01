@@ -116,6 +116,39 @@ echo "GCP_PROJECT=$PROJECT"; echo "GCP_PROJECT_NUMBER=$PROJECT_NUMBER"
 The owner can also start a deploy at any time: open the repository on
 GitHub, then **Actions → deploy → Run workflow** on `main`.
 
+## Part C. Turning the sale on
+
+The sale is on only when the server lists no reasons it is off. The
+deploy workflow sets the switch, the two payment services (Dexter, with
+PayAI as backup) and a blocked-address list. The list is built from OFAC's
+SDN_ADVANCED.XML on every deploy, and the deploy fails if the list looks
+short. A redeploy refreshes it.
+
+Two items stay out of the repository, so the owner sets them once on the
+service. Paste this block in Cloud Shell (after A1):
+
+**C1. Payout address and session secret:**
+
+```bash
+gcloud services enable secretmanager.googleapis.com
+openssl rand -hex 32 | tr -d '\n' | \
+  gcloud secrets create riggrade-secret --data-file=- --replication-policy=automatic
+gcloud secrets add-iam-policy-binding riggrade-secret \
+  --member=serviceAccount:$SERVER_SA --role=roles/secretmanager.secretAccessor
+gcloud run services update riggrade --region $REGION \
+  --update-env-vars PAYOUT_WALLET_ADDRESS=YOUR_PAYOUT_ADDRESS \
+  --update-secrets RIGGRADE_SECRET=riggrade-secret:latest
+```
+
+- The secret is made inside Google Cloud and is never shown to anyone.
+- Replace `YOUR_PAYOUT_ADDRESS` with the owner's payout address (0x...).
+  It is public, but it is kept out of the code.
+- Later deploys keep both settings.
+
+The last reason left is the pinned benchmark image
+(`RIGGRADE_IMAGE_DIGESTS`). It clears once the benchmark container is
+published and its digest is recorded, which is a separate step.
+
 ## If something fails
 
 - **Permission denied on `/state`.** The server runs as user 10001; the
@@ -154,6 +187,9 @@ web browser", not a token.
 gh auth login --hostname github.com --git-protocol https --web
 gh repo clone nnyycc77-ship-it/riggrade && cd riggrade
 gcloud services enable cloudbuild.googleapis.com
+mkdir -p deploy/screen && curl -fsS -o /tmp/SDN_ADVANCED.XML \
+  https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN_ADVANCED.XML
+python3 -m riggrade.screenlist /tmp/SDN_ADVANCED.XML --out deploy/screen/blocked-addresses.txt
 gcloud builds submit --config deploy/cloudbuild.yaml --substitutions=_REGION=$REGION .
 gcloud run deploy riggrade \
   --image $REGION-docker.pkg.dev/$PROJECT/riggrade/server:latest \

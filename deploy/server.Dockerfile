@@ -12,6 +12,9 @@ FROM python:3.12-slim
 WORKDIR /opt/riggrade
 COPY riggrade/ riggrade/
 COPY spec/ spec/
+# The payer screen list, built from OFAC's SDN_ADVANCED.XML just before the
+# image build (deploy workflow step "Build the payer screen list").
+COPY deploy/screen/blocked-addresses.txt screen/blocked-addresses.txt
 RUN useradd --system --uid 10001 riggrade
 USER riggrade
 
