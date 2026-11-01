@@ -13,6 +13,9 @@ dependencies = []
 keywords = ["gpu", "benchmark", "mcp", "x402", "agents"]
 classifiers = ["Programming Language :: Python :: 3", "Operating System :: OS Independent"]
 
+[project.optional-dependencies]
+cdp = ["cryptography>=42"]  # only the server needs it, for the Coinbase facilitator's JWT
+
 [project.urls]
 Homepage = "https://github.com/nnyycc77-ship-it/riggrade"
 Service = "https://riggrade-674098696181.us-central1.run.app/riggrade/v1"

@@ -147,3 +147,90 @@ class AdapterTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CdpAuthTests(unittest.TestCase):
+    """The Coinbase facilitator's bearer JWT, shaped as cdp-sdk signs it."""
+
+    def setUp(self):
+        try:
+            from cryptography.hazmat.primitives.asymmetric import ed25519
+            from cryptography.hazmat.primitives import serialization
+        except ImportError:  # pragma: no cover
+            self.skipTest("cryptography not installed")
+        self.ed25519, self.serialization = ed25519, serialization
+        key = ed25519.Ed25519PrivateKey.generate()
+        seed = key.private_bytes(serialization.Encoding.Raw, serialization.PrivateFormat.Raw,
+                                 serialization.NoEncryption())
+        pub = key.public_key().public_bytes(serialization.Encoding.Raw,
+                                            serialization.PublicFormat.Raw)
+        # The portal's secret: base64 of seed + public key (64 bytes).
+        self.secret = base64.b64encode(seed + pub).decode()
+        self.public = key.public_key()
+        self.key_id = "3cc94088-a825-422c-91a2-616893f23202"
+
+    def _decode(self, part):
+        return json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4)))
+
+    def test_token_shape_claims_and_signature(self):
+        auth = pay.CdpAuth(self.key_id, self.secret, now=lambda: 1_800_000_000)
+        token = auth.token("POST", "/platform/v2/x402/verify")
+        h, c, sig = token.split(".")
+        header, claims = self._decode(h), self._decode(c)
+        self.assertEqual((header["alg"], header["kid"], header["typ"]), ("EdDSA", self.key_id, "JWT"))
+        self.assertRegex(header["nonce"], r"^[0-9]{16}$")
+        self.assertEqual(claims["sub"], self.key_id)
+        self.assertEqual(claims["iss"], "cdp")
+        self.assertEqual((claims["nbf"], claims["exp"]), (1_800_000_000, 1_800_000_120))
+        self.assertEqual(claims["uris"], ["POST api.cdp.coinbase.com/platform/v2/x402/verify"])
+        self.assertNotIn("aud", claims)
+        raw_sig = base64.urlsafe_b64decode(sig + "=" * (-len(sig) % 4))
+        self.public.verify(raw_sig, (h + "." + c).encode())  # raises if wrong
+        # A fresh token differs (nonce), and a 32-byte seed secret is accepted too.
+        self.assertNotEqual(auth.token("POST", "/platform/v2/x402/verify"), token)
+        seed_only = base64.b64encode(base64.b64decode(self.secret)[:32]).decode()
+        pay.CdpAuth(self.key_id, seed_only)
+        with self.assertRaises(ValueError):
+            pay.CdpAuth(self.key_id, base64.b64encode(b"short").decode())
+
+    def test_adapter_signs_only_the_cdp_facilitator(self):
+        seen = []
+
+        def post(url, body, headers=None):
+            seen.append((url, headers))
+            if url.endswith("/verify"):
+                return OK_VERIFY
+            return OK_SETTLE
+        auth = pay.CdpAuth(self.key_id, self.secret)
+        cdp = pay.CDP_FACILITATOR
+        adapter = pay.FacilitatorAdapter([cdp, A], allow, post=post, auth={cdp: auth})
+        res = adapter.settle(header(), REQ)
+        self.assertTrue(res["ok"])
+        self.assertEqual([u for u, _ in seen], [cdp + "/verify", cdp + "/settle"])
+        for url, hdrs in seen:
+            self.assertTrue(hdrs["Authorization"].startswith("Bearer "))
+            claims = self._decode(hdrs["Authorization"].split(".")[1])
+            self.assertEqual(claims["uris"], ["POST " + url.split("https://", 1)[1]])
+        # The keyless facilitator gets no headers argument at all.
+        seen.clear()
+        adapter = pay.FacilitatorAdapter([A], allow, post=lambda url, body: OK_VERIFY if url.endswith("/verify") else OK_SETTLE, auth={cdp: auth})
+        self.assertTrue(adapter.settle(header(), REQ)["ok"])
+
+    def test_from_env_drops_the_cdp_facilitator_without_its_key(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            screen = Path(tmp) / "blocked.txt"
+            screen.write_text("# none\n")
+            env = {"RIGGRADE_FACILITATORS": pay.CDP_FACILITATOR + "," + A,
+                   "RIGGRADE_SCREEN_LIST": str(screen)}
+            adapter = pay.from_env(env)
+            self.assertEqual(adapter.facilitators, [A])
+            self.assertEqual(adapter.auth, {})
+            env.update({"RIGGRADE_CDP_KEY_ID": self.key_id, "RIGGRADE_CDP_KEY_SECRET": self.secret})
+            adapter = pay.from_env(env)
+            self.assertEqual(adapter.facilitators, [pay.CDP_FACILITATOR, A])
+            self.assertIn(pay.CDP_FACILITATOR, adapter.auth)
+            env["RIGGRADE_CDP_KEY_SECRET"] = "not base64!!"
+            self.assertEqual(pay.from_env(env).facilitators, [A])
+            # CDP alone with no key: no adapter, so the sale stays off.
+            self.assertIsNone(pay.from_env({"RIGGRADE_FACILITATORS": pay.CDP_FACILITATOR,
+                                            "RIGGRADE_SCREEN_LIST": str(screen)}))
