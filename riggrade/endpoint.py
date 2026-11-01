@@ -45,8 +45,8 @@ NETWORK_BASE = "eip155:8453"
 PAID_ROUTES = {("grade",): "grade", ("fixit",): "fixit", ("cluster", "acceptance"): "cluster"}
 V1_REFUSED = ("x402 v1 (X-PAYMENT) is not accepted; send PAYMENT-SIGNATURE with "
               "x402Version 2, as the PAYMENT-REQUIRED header of this answer describes")
-DISCOVERY_PATHS = ("/", "/favicon.ico", "/.well-known/agent.json", "/llms.txt", "/openapi.json",
-                   PREFIX + "/openapi.json")
+DISCOVERY_PATHS = ("/", "/favicon.ico", "/favicon.png", "/favicon.svg", "/.well-known/agent.json",
+                   "/llms.txt", "/openapi.json", PREFIX + "/openapi.json")
 MAX_BODY = 4 * 1024 * 1024
 USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 # Decided prices (plan Revision 5, decided items 1), USDC atomic units.
@@ -54,15 +54,26 @@ POINT_PRICE_ATOMIC = {DATA_CENTRE: 5_000_000, "consumer": 3_000_000}
 # Products beyond the point grade (decided 1 Nov 2026; each is on
 # sale only when RIGGRADE_PRODUCTS names it). USDC atomic units.
 PRODUCT_PRICE_ATOMIC = {"fixit": 2_000_000, "cluster": 25_000_000}
+# Every paid resource description opens with a "Use when" line: catalogues
+# show it as the one-line reason to call, and most listings lack one.
+USE_WHEN = {
+    "grade": "Use when a rented or hosted GPU rig must be graded against published bars for "
+             "its peer class before you rely on it or list it.",
+    "fixit": "Use when the free RigGrade preflight reported a warn or fail and you need the "
+             "cause, the fix steps and who can act (host or renter).",
+    "cluster": "Use when a rented multi-node GPU cluster must pass an independent acceptance "
+               "test before a long run, a handover or a dispute.",
+}
 PRODUCT_NOTES = {
-    "fixit": "Host fix-it report, 2 USDC: POST /riggrade/v1/fixit with {preflight_report}; for "
-             "every warn or fail finding, the likely cause, the fix steps and who can act. "
-             "Free preview first; nothing is sold when every finding passed.",
-    "cluster": "Cluster acceptance certificate, 25 USDC: POST /riggrade/v1/cluster/acceptance "
-               "with {evidence_pack} (the acceptance.json runner.cluster wrote); the server "
-               "recomputes every check, refuses a pack that does not recompute, and issues a "
-               "signed, stored certificate. GET /riggrade/v1/cluster/acceptance/{id} returns "
-               "it with the service's own signature check (HMAC: not independently verifiable).",
+    "fixit": USE_WHEN["fixit"] + " Host fix-it report, 2 USDC: POST /riggrade/v1/fixit with "
+             "{preflight_report}; for every warn or fail finding, the likely cause, the fix "
+             "steps and who can act. Free preview first; nothing is sold when every finding passed.",
+    "cluster": USE_WHEN["cluster"] + " Cluster acceptance certificate, 25 USDC: POST "
+               "/riggrade/v1/cluster/acceptance with {evidence_pack} (the acceptance.json "
+               "runner.cluster wrote); the server recomputes every check, refuses a pack that "
+               "does not recompute, and issues a signed, stored certificate. GET "
+               "/riggrade/v1/cluster/acceptance/{id} returns it with the service's own "
+               "signature check (HMAC: not independently verifiable).",
 }
 WALLET = re.compile(r"^0x[0-9a-fA-F]{40}$")
 OPERATOR_CLAIM_NOTE = ("A free reference session is claimed with a PAYMENT-SIGNATURE authorisation "
@@ -201,11 +212,13 @@ class GradingApp:
     def discovery(self, start_response, environ, path):
         """Read-only documents for agents and crawlers (riggrade.discovery)."""
         base = _url(environ, "")
-        if path == "/favicon.ico":
-            start_response("200 OK", [("Content-Type", "image/x-icon"),
-                                      ("Content-Length", str(len(discovery.FAVICON))),
+        if path in discovery.ICONS:
+            # Crawlers ask for .ico, .png and .svg in turn; a 404 on any of
+            # them is logged as a broken site by some directories.
+            ctype, data = discovery.ICONS[path]
+            start_response("200 OK", [("Content-Type", ctype), ("Content-Length", str(len(data))),
                                       ("Cache-Control", "public, max-age=86400")])
-            return [discovery.FAVICON]
+            return [data]
         if path == "/llms.txt":
             data = discovery.llms_txt(base, PREFIX, self.on_sale).encode()
             start_response("200 OK", [("Content-Type", "text/plain; charset=utf-8"),
@@ -376,10 +389,10 @@ class GradingApp:
                      extra)
 
     def discovery_402(self, start_response, environ):
-        description = ("RigGrade point grade: 3 USDC per workload class for consumer cards, "
-                       "5 USDC for data-centre cards. Open a session first (POST /session), run "
-                       "the pinned container, submit the bundle, then POST here with "
-                       "{session_id}; the 402 for that session states the exact amount.")
+        description = (USE_WHEN["grade"] + " RigGrade point grade: 3 USDC per workload class "
+                       "for consumer cards, 5 USDC for data-centre cards. Open a session first "
+                       "(POST /session), run the pinned container, submit the bundle, then POST "
+                       "here with {session_id}; the 402 for that session states the exact amount.")
         return self._payment_required(start_response, environ, PREFIX + "/grade",
                                       POINT_PRICE_ATOMIC["consumer"], description,
                                       bazaar=bazaar_extension(),

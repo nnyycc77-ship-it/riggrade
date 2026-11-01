@@ -39,6 +39,29 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(out[:4], b"\x00\x00\x01\x00")  # ICO header
         self.assertEqual(int(headers["Content-Length"]), len(out))
 
+    def test_png_and_svg_icons_are_served_too(self):
+        status, headers, out = get(self.app, "/favicon.png")
+        self.assertTrue(status.startswith("200"))
+        self.assertEqual(headers["Content-Type"], "image/png")
+        self.assertEqual(out[:8], b"\x89PNG\r\n\x1a\n")
+        self.assertEqual(int(headers["Content-Length"]), len(out))
+        status, headers, out = get(self.app, "/favicon.svg")
+        self.assertTrue(status.startswith("200"))
+        self.assertEqual(headers["Content-Type"], "image/svg+xml")
+        self.assertTrue(out.startswith(b"<svg"))
+
+    def test_every_paid_listing_opens_with_a_use_when_line(self):
+        from riggrade import discovery, endpoint
+
+        doc = discovery.openapi("https://grade.example", endpoint.PREFIX)
+        for path in ("/grade", "/fixit", "/cluster/acceptance"):
+            self.assertTrue(doc["paths"][path]["post"]["description"].startswith("Use when "), path)
+        card = discovery.agent_card("https://grade.example", endpoint.PREFIX, True)
+        for skill in card["skills"]:
+            self.assertTrue(skill["description"].startswith("Use when "), skill["id"])
+        for name, note in endpoint.PRODUCT_NOTES.items():
+            self.assertTrue(note.startswith("Use when "), name)
+
     def test_head_answers_like_get_without_a_body(self):
         for path, ctype in (("/favicon.ico", "image/x-icon"), ("/openapi.json", "application/json")):
             environ = {"REQUEST_METHOD": "HEAD", "PATH_INFO": path, "HTTP_HOST": "grade.example",
