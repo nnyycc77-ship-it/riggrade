@@ -50,13 +50,15 @@ def render(cert, signature_valid, lookup_url=""):
         lists += "<h2>Exceptions</h2><ul>%s</ul>" % "".join("<li>%s</li>" % _e(x) for x in exceptions)
     if rejections:
         lists += "<h2>Rejections</h2><ul>%s</ul>" % "".join("<li>%s</li>" % _e(x) for x in rejections)
-    sig = ("<span class=ok>valid: this service signed this certificate and it has not changed</span>"
+    sig = ("<span class=ok>valid by this service's own check (HMAC): the stored certificate is unchanged. "
+           "This is not an independent proof; the recomputation from the evidence pack is.</span>"
            if signature_valid else "<span class=bad>INVALID: the stored certificate does not match its signature</span>")
+    is_sample = str(cert.get("certificate_id", "")).startswith("rc_sample")
     return """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>RigGrade cluster acceptance certificate %(id)s</title><link rel="icon" href="/favicon.ico"><style>%(css)s</style></head>
 <body>
-<h1>Cluster acceptance certificate</h1>
+<h1>%(sample)sCluster acceptance certificate</h1>
 <p class=muted>RigGrade &middot; certificate <code>%(id)s</code> &middot; issued %(issued)s &middot; rules <code>%(rules)s</code></p>
 <p><span class="verdict %(cls)s">Verdict: %(verdict)s</span></p>
 <p>Signature check by this service: %(sig)s.</p>
@@ -65,7 +67,7 @@ def render(cert, signature_valid, lookup_url=""):
 %(claims)s
 </table>
 <h2>What the cluster delivered</h2>
-<p class=muted>%(nodes)s node(s) ran the pinned image(s) %(images)s. Each check is measured against the claim or against the cluster median; a check that could not run is shown as not measured, never as passed.</p>
+<p class=muted>%(nodes)s node(s) ran the pinned image(s) %(images)s. Each check is measured against the claim or against the cluster median. Fabric is NCCL all-reduce bus bandwidth in GB/s against the claimed link per GPU (400 Gb/s per GPU is 50 GB/s). A check that could not run is shown with status "not measured", never as passed.</p>
 <table><tr><th>Check</th><th>Status</th><th>Detail</th><th>Numbers</th></tr>
 %(checks)s
 </table>
@@ -75,7 +77,8 @@ def render(cert, signature_valid, lookup_url=""):
 <p class=muted>%(statement)s</p>
 <p class=muted>Signature: HMAC by this service (not independently verifiable); the JSON form of this certificate is at <a href="%(json)s">%(json)s</a>. To keep a copy for a dispute, print this page to PDF.</p>
 </body></html>
-""" % {"id": _e(cert.get("certificate_id", "")), "css": CSS, "issued": _when(cert.get("issued_at")),
+""" % {"sample": "SAMPLE (fictional values, for illustration): " if is_sample else "",
+       "id": _e(cert.get("certificate_id", "")), "css": CSS, "issued": _when(cert.get("issued_at")),
        "rules": _e(cert.get("rules", "")), "cls": css_class, "verdict": _e(verdict), "sig": sig,
        "claims": claim_rows, "nodes": _e(cert.get("nodes", "?")),
        "images": ", ".join("<code>%s</code>" % _e(i) for i in (cert.get("images") or [])) or "(unrecorded)",
@@ -96,8 +99,9 @@ def wants_html(environ):
 def sample():
     """A certificate-shaped example for the docs, with no real secret."""
     return {"product": "riggrade_cluster_acceptance", "certificate_id": "rc_sample0000000000",
-            "issued_at": 1_793_577_600, "method": "cluster-acceptance-v0-draft",
-            "rules": "cluster-acceptance-v0-draft", "pack_sha256": "e3b0c442" * 8,
+            "issued_at": 1_793_491_200, "method": "cluster-acceptance-v0-draft",
+            "rules": "cluster-acceptance-v0-draft",
+            "pack_sha256": "7c2a9e1f0b4d6a8c3e5f1a2b9d8c7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d",
             "claims": {"gpu_model": "NVIDIA H100 80GB HBM3", "gpus_per_node": 8, "nodes": 2,
                        "inter_node_gbps_per_gpu": 400, "storage_read_gbs": 10},
             "images": ["sha256:" + "ab" * 32], "nodes": 2,
@@ -109,10 +113,11 @@ def sample():
                  "min_ratio": 0.98},
                 {"check": "fabric", "status": "exception", "detail": "all-reduce bus bandwidth 31.0 GB/s against 50 GB/s claimed (62%)",
                  "busbw_gbs": 31.0, "claimed_gbs": 50.0, "ratio": 0.62},
-                {"check": "storage", "status": "accept", "detail": "aggregate read 9.1 GB/s against 10 GB/s claimed (91%)",
-                 "ratio": 0.91}],
+                {"check": "storage", "status": "not measured", "detail": "no shared storage path was given, so the 10 GB/s claim was not tested",
+                 "claimed_gbs": 10.0}],
             "verdict": "accept with exceptions",
-            "exceptions": ["fabric: 62% of the claimed inter-node link"], "rejections": [],
+            "exceptions": ["fabric: 62% of the claimed inter-node link",
+                           "storage: claimed but not measured"], "rejections": [],
             "statement": "Measured, not promised. What this cluster delivered during the named test, "
                          "against what its provider claimed; no promise about future delivery.",
             "signature": "0" * 64}
