@@ -13,7 +13,10 @@ ARG BASE_IMAGE=vllm/vllm-openai:v0.32.0@sha256:befccf0e7e4089aa23926bb6f887a85c0
 FROM ${BASE_IMAGE}
 
 WORKDIR /opt/riggrade
-COPY riggrade/ riggrade/
+# Only the version constant from the server package: the grading server,
+# payment code and screen list never ship in the benchmark image. (The
+# smoke test, which runs the server in-process, runs from source instead.)
+COPY riggrade/__init__.py riggrade/__init__.py
 COPY runner/ runner/
 COPY spec/ spec/
 
