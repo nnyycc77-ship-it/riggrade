@@ -93,7 +93,10 @@ def run(gpu, rulers, identity_mod, minutes=2.0, inference=True, out=sys.stdout):
                                             extra_args=["--max-model-len", "2048",
                                                         "--gpu-memory-utilization", "0.6"]).__enter__()
             report["server_dtype"] = server.dtype
+            report["server_dtype_corrected"] = getattr(server, "dtype_corrected", False)
         if server is not None:
+            with Step(report, "ruler.inference.warmup"):
+                report["inference_warmup_tokens_per_s"] = round(server.run_pass(params)[0], 1)
             with Step(report, "ruler.inference.passes"):
                 passes, gaps = [], []
                 for _ in range(3):

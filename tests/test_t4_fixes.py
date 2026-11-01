@@ -178,3 +178,32 @@ class SecondRunTests(unittest.TestCase):
         self.assertEqual(probes.calls, 5)
         self.assertEqual(row["utilization.gpu"], 0)
         self.assertEqual(row["idle_samples"], 5)
+
+
+class ThirdRunTests(unittest.TestCase):
+    """What the third T4 run (1 Nov 2026, 14 of 14 smoke steps) showed."""
+
+    def test_warmup_pass_is_kept_out_of_the_timed_passes(self):
+        from runner.main import measure
+        from tests.test_runner import FakeBackend, FakeClock
+
+        class ColdStart(FakeBackend):
+            calls = 0
+
+            def ruler_pass(self, workload, params):
+                self.calls += 1
+                # first pass after start-up runs at half speed, as on the T4
+                return (327.0 if self.calls == 1 else 650.0), [0.01, 0.011]
+        clock = FakeClock()
+        params = {"passes": 3, "pass_order": ["inference"], "inference": {"concurrency": 4}}
+        _gate, _micro, metrics, raw = measure(ColdStart(clock), params, ["inference"],
+                                              sustained_s=120, clock=clock)
+        self.assertEqual(metrics["inference"]["throughput_passes"], [650.0, 650.0, 650.0])
+        self.assertEqual(raw["warmup.inference"], {"throughput": 327.0})
+
+    def test_preview_for_undefined_class_shows_no_gate_list(self):
+        bundle = {"identity": {"device_name": "Tesla T4", "memory_gb": 15.0, "card_count": 1},
+                  "gate": {"inference": {"results": {}, "free_memory_gb": 14.5}}}
+        entry = preview(bundle, ["inference"])["classes"]["inference"]
+        self.assertEqual(entry, {"gate_passed": False,
+                                 "reason": "no v0 peer class for this device"})

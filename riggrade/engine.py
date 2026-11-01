@@ -40,7 +40,9 @@ def preview(bundle, workloads, references=None):
                  "gate_failed": failed,
                  "pillars_measured": 2 if passed else 0}
         if class_id is None:
-            entry["reason"] = "no v0 peer class for this device"
+            # Nothing is gradable without a class, so a gate list here would read
+            # as a capability failure. Show only the reason.
+            entry = {"gate_passed": False, "reason": "no v0 peer class for this device"}
         if class_id is not None and references is not None:
             entry["reference"] = references.basis(class_id, workload)
             if references.reference(class_id, workload)[0] is None:
