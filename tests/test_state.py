@@ -124,3 +124,25 @@ class DeployWorkflowTests(unittest.TestCase):
                 if line and not line.startswith("#")}
         self.assertEqual(keys, {"GCP_PROJECT", "GCP_PROJECT_NUMBER", "GCP_REGION"})
         self.assertIn("grep -q REPLACE_ME deploy/gcp.env", self.text)
+
+
+class PublishBenchWorkflowTests(unittest.TestCase):
+    def test_manual_main_only_and_bench_container_only(self):
+        text = (ROOT / ".github" / "workflows" / "publish-bench.yml").read_text()
+        on_block = text.split("on:", 1)[1].split("permissions:", 1)[0]
+        self.assertEqual(on_block.split(), ["workflow_dispatch:"])
+        self.assertIn("if: github.ref == 'refs/heads/main'", text)
+        self.assertIn("-f container/Dockerfile", text)
+        self.assertNotIn("server.Dockerfile", text)
+        docker = (ROOT / "container" / "Dockerfile").read_text()
+        self.assertIn("COPY riggrade/__init__.py riggrade/__init__.py", docker)
+        self.assertNotIn("COPY riggrade/ ", docker)
+
+    def test_runner_needs_only_the_version_from_riggrade(self):
+        import re
+        for path in (ROOT / "runner").glob("*.py"):
+            if path.name == "smoke.py":
+                continue  # runs from source, with the server in-process
+            for line in path.read_text().splitlines():
+                if re.match(r"\s*(from|import) riggrade", line):
+                    self.assertEqual(line.strip(), "from riggrade import BENCH_VERSION", path)
