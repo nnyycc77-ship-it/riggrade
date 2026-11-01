@@ -34,6 +34,10 @@ RELIABILITY_MIN_COVERAGE_DAYS = 25
 
 # Spec 13: provisional references need this many distinct rigs.
 MIN_REFERENCE_RIGS = 5
+# Operator concentration (spec 13; board Message 179, numbers accepted as v0).
+CAP_PER_OPERATOR = 2
+MIN_OPERATORS = 3
+MAX_OPERATOR_SHARE = 0.40
 
 # Spec 5.5: re-check matching tolerance on the speed ratio.
 RECHECK_SPEED_TOLERANCE = 0.03
@@ -208,9 +212,15 @@ class ReferenceBook:
     free or paid.
 
     Only the first session per rig identity counts, so one host cannot steer
-    a reference with repeat sessions. Attested sessions take priority: once
-    5 attested rigs exist, the median uses them alone. Controlled reference
-    runs, once they exist, replace the provisional median.
+    a reference with repeat sessions. Operator concentration (spec 13,
+    board Message 179): at most CAP_PER_OPERATOR rigs from one operator
+    count toward a reference, and speed is not graded until the counted
+    rigs come from at least MIN_OPERATORS distinct verified operators. Rigs
+    with no verified operator count as rigs but never as operators, so an
+    anonymous crowd cannot form the spread. Attested sessions take
+    priority: once 5 attested rigs exist, the median uses them alone.
+    Controlled reference runs, once they exist, replace the provisional
+    median.
     """
 
     def __init__(self, path=None):
@@ -221,26 +231,30 @@ class ReferenceBook:
         self.path = Path(path) if path else None
         if self.path is not None and self.path.exists():
             data = json.loads(self.path.read_text(encoding="utf-8"))
-            for c, w, rig, value, attested in data.get("samples", []):
-                self._samples.setdefault((c, w), {})[rig] = (value, bool(attested))
+            for row in data.get("samples", []):
+                c, w, rig, value, attested = row[:5]
+                operator = row[5] if len(row) > 5 else None
+                self._samples.setdefault((c, w), {})[rig] = (value, bool(attested), operator)
             for c, w, value in data.get("controlled", []):
                 self._controlled[(c, w)] = value
 
     def _save(self):
         if self.path is None:
             return
-        data = {"samples": [[c, w, rig, v, a]
+        data = {"samples": [[c, w, rig, v, a, op]
                             for (c, w), bucket in sorted(self._samples.items())
-                            for rig, (v, a) in sorted(bucket.items())],
+                            for rig, (v, a, op) in sorted(bucket.items())],
                 "controlled": [[c, w, v] for (c, w), v in sorted(self._controlled.items())]}
         tmp = self.path.with_suffix(".tmp")
         tmp.write_text(json.dumps(data, sort_keys=True), encoding="utf-8")
         os.replace(tmp, self.path)
 
-    def add(self, class_id, workload, rig_id, throughput, attested=False):
+    def add(self, class_id, workload, rig_id, throughput, attested=False, operator=None):
+        """Record a rig's first session. `operator` is the verified wallet
+        behind the rig (lower-cased), or None when unclaimed."""
         bucket = self._samples.setdefault((class_id, workload), {})
         if rig_id not in bucket:
-            bucket[rig_id] = (throughput, bool(attested))
+            bucket[rig_id] = (throughput, bool(attested), operator.lower() if operator else None)
             self._save()
 
     def has_rig(self, class_id, workload, rig_id):
@@ -251,21 +265,73 @@ class ReferenceBook:
         self._controlled[(class_id, workload)] = throughput
         self._save()
 
+    def _counted(self, class_id, workload):
+        """The rigs that count toward the reference, in arrival order: at
+        most CAP_PER_OPERATOR per verified operator; unclaimed rigs all
+        count. Returns [(rig_id, throughput, attested, operator)]."""
+        per_operator, out = {}, []
+        for rig, (v, a, op) in self._samples.get((class_id, workload), {}).items():
+            if op is not None:
+                if per_operator.get(op, 0) >= CAP_PER_OPERATOR:
+                    continue
+                per_operator[op] = per_operator.get(op, 0) + 1
+            out.append((rig, v, a, op))
+        return out
+
+    def concentration(self, class_id, workload):
+        """Operator counts for publication (spec 13)."""
+        counted = self._counted(class_id, workload)
+        by_op = {}
+        for _rig, _v, _a, op in counted:
+            if op is not None:
+                by_op[op] = by_op.get(op, 0) + 1
+        largest = max(by_op.values()) if by_op else 0
+        return {"rigs": len(counted),
+                "operators": len(by_op),
+                "unclaimed_rigs": sum(1 for r in counted if r[3] is None),
+                "largest_operator_share": (largest / len(counted)) if counted else 0.0,
+                "min_rigs": MIN_REFERENCE_RIGS, "min_operators": MIN_OPERATORS,
+                "cap_per_operator": CAP_PER_OPERATOR,
+                "max_payer_share": MAX_OPERATOR_SHARE}
+
+    def operator_share(self, class_id, workload, operator):
+        """Share of the counted rigs behind one operator (0 when unknown)."""
+        if not operator:
+            return 0.0
+        counted = self._counted(class_id, workload)
+        if not counted:
+            return 0.0
+        mine = sum(1 for r in counted if r[3] == operator.lower())
+        return mine / len(counted)
+
+    def _median_basis(self, class_id, workload):
+        """(median or None, basis text) from the counted rigs."""
+        counted = self._counted(class_id, workload)
+        operators = {r[3] for r in counted if r[3] is not None}
+        attested = [v for _r, v, a, _op in counted if a]
+        if len(counted) < MIN_REFERENCE_RIGS:
+            return None, "reference-building: speed not graded yet"
+        if len(operators) < MIN_OPERATORS:
+            return None, ("reference-building: needs rigs from %d operators (has %d)"
+                          % (MIN_OPERATORS, len(operators)))
+        if len(attested) >= MIN_REFERENCE_RIGS:
+            return (statistics.median(attested),
+                    "median of first sessions, attested rigs only, one per rig, "
+                    "at most %d per operator" % CAP_PER_OPERATOR)
+        return (statistics.median(v for _r, v, _a, _op in counted),
+                "median of first sessions, one per rig, at most %d per operator"
+                % CAP_PER_OPERATOR)
+
     def basis(self, class_id, workload):
         """What the reference rests on, for publication (spec 13)."""
         key = (class_id, workload)
         if key in self._controlled:
             return {"basis": "controlled reference run", "provisional": False}
-        bucket = self._samples.get(key, {})
-        attested = [v for v, a in bucket.values() if a]
-        info = {"provisional": True, "rigs": len(bucket),
-                "attested_rigs": len(attested), "min_rigs": MIN_REFERENCE_RIGS}
-        if len(attested) >= MIN_REFERENCE_RIGS:
-            info["basis"] = "median of first sessions, attested rigs only, one per rig"
-        elif len(bucket) >= MIN_REFERENCE_RIGS:
-            info["basis"] = "median of first sessions, one per rig"
-        else:
-            info["basis"] = "reference-building: speed not graded yet"
+        counted = self._counted(class_id, workload)
+        info = {"provisional": True,
+                "attested_rigs": sum(1 for r in counted if r[2])}
+        info.update(self.concentration(class_id, workload))
+        info["basis"] = self._median_basis(class_id, workload)[1]
         return info
 
     def reference(self, class_id, workload):
@@ -273,13 +339,7 @@ class ReferenceBook:
         key = (class_id, workload)
         if key in self._controlled:
             return self._controlled[key], False
-        bucket = self._samples.get(key, {})
-        attested = [v for v, a in bucket.values() if a]
-        if len(attested) >= MIN_REFERENCE_RIGS:
-            return statistics.median(attested), True
-        if len(bucket) < MIN_REFERENCE_RIGS:
-            return None, True
-        return statistics.median(v for v, _a in bucket.values()), True
+        return self._median_basis(class_id, workload)[0], True
 
 
 def promise_words_in(text):

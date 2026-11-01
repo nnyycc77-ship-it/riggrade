@@ -28,7 +28,7 @@ import secrets
 from . import BENCH_VERSION
 from .classes import DATA_CENTRE, PEER_CLASSES, WORKLOAD_CLASSES, price_tier
 from .engine import grade_session, preview
-from .grading import ReferenceBook
+from .grading import CAP_PER_OPERATOR, MAX_OPERATOR_SHARE, MIN_OPERATORS, ReferenceBook
 from .heartbeat import Heartbeats
 from .label import STATEMENT, badge_text, lint
 from .session import MemoryStore, SessionError, Sessions
@@ -43,6 +43,12 @@ USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 # Decided prices (plan Revision 5, decided items 1), USDC atomic units.
 POINT_PRICE_ATOMIC = {DATA_CENTRE: 5_000_000, "consumer": 3_000_000}
 WALLET = re.compile(r"^0x[0-9a-fA-F]{40}$")
+OPERATOR_CLAIM_NOTE = ("A free reference session is claimed with an X-PAYMENT authorisation "
+                       "of 0 USDC to the payout address (the 402 states it): the facilitator "
+                       "verifies the signature, nothing is settled, and the signer becomes "
+                       "the rig's operator. At most 2 rigs per operator count toward a class "
+                       "reference, speed is graded only once 3 operators stand behind it, and "
+                       "a payer behind more than 40% of a reference gets no speed grade from it.")
 FREE_REFERENCE_NOTE = ("Free reference-building session: while a GPU class has no reference "
                        "yet for a workload (fewer than 5 rigs behind it and no controlled "
                        "run), each rig's first session there is free. It counts toward the "
@@ -171,6 +177,10 @@ class GradingApp:
                 "spec": "docs/grading-spec.md", "statement": STATEMENT,
                 "point_grade_price_usdc": {"data_centre": "5", "consumer": "3"},
                 "free_reference_sessions": FREE_REFERENCE_NOTE,
+                "operator_rules": {"cap_per_operator": CAP_PER_OPERATOR,
+                                   "min_operators": MIN_OPERATORS,
+                                   "max_payer_share": MAX_OPERATOR_SHARE,
+                                   "free_session_claim": OPERATOR_CLAIM_NOTE},
                 "references": references,
                 "appeals": APPEALS,
                 "sale": sale}
@@ -244,7 +254,7 @@ class GradingApp:
                                    "session there is already used",
                           "preview": prev, "charged": False})
         if not payable:
-            return self._free_reference_grade(start_response, sid, session, free)
+            return self._free_reference_grade(start_response, sid, session, free, environ)
         tier = price_tier(class_id)
         amount = POINT_PRICE_ATOMIC[tier] * len(payable)
         requirement = {"scheme": "exact", "network": self.config.network,
@@ -282,10 +292,15 @@ class GradingApp:
         attested = bool(self.verify_attestation(session["bundle"]))
         host_paid = bool(session.get("host_wallet")) and \
             result.get("payer", "").lower() == session["host_wallet"].lower()
+        # Operator (spec 13): the payer counts as the rig's operator only when
+        # the payer is the host or the declared runner; a buyer paying to look
+        # at someone else's host-run rig is not its operator.
+        operator = result.get("payer") if (host_paid or session["declared_runner"] == "buyer") else None
         labels, pack = grade_session(session, self.references, self.envelopes,
                                      attested=attested, now=self.clock(),
-                                     host_paid=host_paid)
+                                     host_paid=host_paid, operator=operator)
         pack["paying_wallet"] = result.get("payer")
+        pack["operator"] = operator
         badges = [badge_text(lab, "") for lab in labels]
         if lint(badges):
             raise RuntimeError("promise words in badge text: %s" % lint(badges))
@@ -322,11 +337,50 @@ class GradingApp:
                       "error": "session_id is required; this 402 describes the price only",
                       "charged": False})
 
-    def _free_reference_grade(self, start_response, sid, session, free):
+    def _claim_requirement(self, environ, sid):
+        return {"scheme": "exact", "network": self.config.network,
+                "asset": USDC_BASE, "payTo": self.config.wallet,
+                "maxAmountRequired": "0",
+                "resource": _url(environ, PREFIX + "/session/%s/grade" % sid),
+                "description": "RigGrade free reference session: operator claim, 0 USDC. "
+                               "Verified, never settled; the signer becomes the rig's operator.",
+                "mimeType": "application/json", "maxTimeoutSeconds": 300,
+                "extra": {"name": "USD Coin", "version": "2"}}
+
+    def _operator_claim(self, environ, sid):
+        """Free-session operator claim: a zero-amount x402 authorisation in
+        X-PAYMENT, verified (never settled) by the facilitator and screened.
+        Returns (operator, None) or (None, refusal text)."""
+        header = environ.get("HTTP_X_PAYMENT")
+        if not header:
+            return None, "no claim attached"
+        verify = getattr(self.adapter, "verify_only", None)
+        if verify is None:
+            return None, "claims not supported"
+        result = verify(header, self._claim_requirement(environ, sid))
+        if not result.get("ok"):
+            return None, result.get("error", "claim refused")
+        return result["payer"], None
+
+    def _free_reference_grade(self, start_response, sid, session, free, environ):
+        # Spec 13: a free reference session is claimed with a 0 USDC x402
+        # authorisation, so every counted rig has a verified operator. The
+        # 402 below asks for exactly that; nothing is ever settled.
+        operator, refused = self._operator_claim(environ, sid)
+        if operator is None:
+            prev = preview(session["bundle"], session["workloads"], self.references)
+            return _json(start_response, "402 Payment Required",
+                         {"x402Version": 1,
+                          "accepts": [self._claim_requirement(environ, sid)],
+                          "free_reference_session": True,
+                          "error": refused, "charged": False,
+                          "note": OPERATOR_CLAIM_NOTE, "preview": prev})
         attested = bool(self.verify_attestation(session["bundle"]))
         labels, pack = grade_session(session, self.references, self.envelopes,
-                                     attested=attested, now=self.clock())
+                                     attested=attested, now=self.clock(),
+                                     operator=operator)
         pack["free_reference_session"] = True
+        pack["operator"] = operator
         badges = [badge_text(lab, "") for lab in labels]
         if lint(badges):
             raise RuntimeError("promise words in badge text: %s" % lint(badges))

@@ -53,12 +53,15 @@ def preview(bundle, workloads, references=None):
 
 def grade_session(session, references, envelopes=None, attested=False,
                   held=None, recheck=None, heartbeat=None, now=None,
-                  host_paid=False, record_reference=True):
+                  host_paid=False, record_reference=True, operator=None):
     """Grade every workload class in the session.
 
     references: grading.ReferenceBook. envelopes: {class_id: {measure: ref}}.
     attested: True only when the endpoint's attestation verifier accepted
-    the evidence. held: {workload: grade, or {"grade": g, "on_watch": bool}} the rig
+    the evidence. operator: the verified wallet behind this session's rig
+    (None when unclaimed); it is recorded with the rig, and a payer who
+    stands behind more than MAX_OPERATOR_SHARE of a class reference gets
+    no speed grade from it (spec 13). held: {workload: grade, or {"grade": g, "on_watch": bool}} the rig
     already holds. recheck:
     {workload: (speed_ratio, consistency_grade)} from our own re-check in
     the window. heartbeat: list of accepted heartbeat timestamps, for a full
@@ -104,6 +107,13 @@ def grade_session(session, references, envelopes=None, attested=False,
         measured = statistics.median(passes) if passes else None
         reference, provisional = references.reference(class_id, workload)
         ratio = (measured / reference) if (measured and reference) else None
+        share = references.operator_share(class_id, workload, operator)
+        speed_withheld = None
+        if ratio is not None and share > grading.MAX_OPERATOR_SHARE:
+            speed_withheld = ("payer stands behind %.0f%% of this reference (limit %.0f%%); "
+                              "speed not graded against it"
+                              % (share * 100, grading.MAX_OPERATOR_SHARE * 100))
+            ratio = None
         held_w = (held or {}).get(workload)
         if isinstance(held_w, dict):
             held_grade, was_on_watch = held_w.get("grade"), bool(held_w.get("on_watch"))
@@ -136,11 +146,14 @@ def grade_session(session, references, envelopes=None, attested=False,
                                   "reference": reference,
                                   "reference_basis": references.basis(class_id, workload),
                                   "speed_ratio": ratio,
+                                  "speed_withheld": speed_withheld,
+                                  "operator": operator,
                                   "consistency_measures": cmeasures,
                                   "downtime_hours": hours,
                                   "recheck_matched": matched}
         if record_reference and measured:
-            references.add(class_id, workload, rig_id, measured, attested)
+            references.add(class_id, workload, rig_id, measured, attested,
+                           operator=operator)
     return labels, _pack(session, class_id, pack_classes, attested, host_paid)
 
 

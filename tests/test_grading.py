@@ -138,16 +138,17 @@ class ReferenceTests(unittest.TestCase):
             book.add("rtx4090-24", "inference", "rig-a", 999.0)
         self.assertEqual(book.reference("rtx4090-24", "inference"), (None, True))
         for i, v in enumerate([100, 110, 120, 130]):
-            book.add("rtx4090-24", "inference", "rig-%d" % i, v)
+            book.add("rtx4090-24", "inference", "rig-%d" % i, v, operator="0xop%d" % i)
         self.assertEqual(book.reference("rtx4090-24", "inference"), (120, True))
 
     def test_attested_rigs_take_priority(self):
         book = g.ReferenceBook()
         for i in range(5):
-            book.add("h100-sxm-80", "inference", "un-%d" % i, 50.0)
+            book.add("h100-sxm-80", "inference", "un-%d" % i, 50.0, operator="0xu%d" % (i // 2))
         self.assertEqual(book.reference("h100-sxm-80", "inference")[0], 50.0)
         for i in range(5):
-            book.add("h100-sxm-80", "inference", "at-%d" % i, 100.0, attested=True)
+            book.add("h100-sxm-80", "inference", "at-%d" % i, 100.0, attested=True,
+                     operator="0xa%d" % (i // 2))
         self.assertEqual(book.reference("h100-sxm-80", "inference")[0], 100.0)
         self.assertEqual(book.basis("h100-sxm-80", "inference")["attested_rigs"], 5)
         self.assertIn("attested rigs only", book.basis("h100-sxm-80", "inference")["basis"])
@@ -195,3 +196,52 @@ class LabelTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OperatorConcentrationTests(unittest.TestCase):
+    def filled(self, operators):
+        book = g.ReferenceBook()
+        for i, op in enumerate(operators):
+            book.add("rtx4090-24", "inference", "rig-%d" % i, 100.0 + i, operator=op)
+        return book
+
+    def test_five_rigs_from_one_operator_set_no_bar(self):
+        book = self.filled(["0xA"] * 5)
+        self.assertEqual(book.reference("rtx4090-24", "inference"), (None, True))
+        info = book.basis("rtx4090-24", "inference")
+        # Only 2 of the 5 count (cap per operator), so the rig count is short.
+        self.assertEqual((info["rigs"], info["operators"]), (2, 1))
+        self.assertIn("speed not graded yet", info["basis"])
+
+    def test_five_counted_rigs_from_two_operators_wait_for_a_third(self):
+        book = self.filled(["0xA", "0xA", "0xB", "0xB", None])
+        self.assertEqual(book.reference("rtx4090-24", "inference"), (None, True))
+        info = book.basis("rtx4090-24", "inference")
+        self.assertEqual((info["rigs"], info["operators"]), (5, 2))
+        self.assertIn("needs rigs from 3 operators (has 2)", info["basis"])
+
+    def test_unclaimed_rigs_count_as_rigs_but_not_as_operators(self):
+        book = self.filled([None] * 5)
+        self.assertEqual(book.reference("rtx4090-24", "inference"), (None, True))
+        info = book.basis("rtx4090-24", "inference")
+        self.assertEqual((info["rigs"], info["operators"], info["unclaimed_rigs"]), (5, 0, 5))
+
+    def test_three_operators_within_the_cap_set_the_bar_and_print_the_share(self):
+        book = self.filled(["0xA", "0xA", "0xB", "0xB", "0xC", "0xA"])
+        # The third 0xA rig is over the cap and does not count.
+        self.assertEqual(book.reference("rtx4090-24", "inference")[0], 102.0)
+        info = book.basis("rtx4090-24", "inference")
+        self.assertEqual((info["rigs"], info["operators"]), (5, 3))
+        self.assertAlmostEqual(info["largest_operator_share"], 0.4)
+        self.assertAlmostEqual(book.operator_share("rtx4090-24", "inference", "0xa"), 0.4)
+        self.assertEqual(book.operator_share("rtx4090-24", "inference", None), 0.0)
+
+    def test_operator_survives_a_reload(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "r.json"
+            book = g.ReferenceBook(path)
+            book.add("rtx4090-24", "inference", "rig-0", 100.0, operator="0xA")
+            again = g.ReferenceBook(path)
+            self.assertAlmostEqual(again.operator_share("rtx4090-24", "inference", "0xa"), 1.0)

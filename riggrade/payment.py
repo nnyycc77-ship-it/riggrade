@@ -45,7 +45,7 @@ def http_post(url, body, timeout=20):
     data = json.dumps(body).encode()
     req = urllib.request.Request(url, data=data, method="POST",
                                  headers={"Content-Type": "application/json",
-                                          "User-Agent": "riggrade"})
+                                          "User-Agent": "riggrade/0.1 (+https://github.com/nnyycc77-ship-it/riggrade)"})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return json.loads(resp.read().decode())
@@ -130,6 +130,36 @@ class FacilitatorAdapter:
     @staticmethod
     def _refuse(error, charged=False, **extra):
         return dict({"ok": False, "error": error, "charged": charged}, **extra)
+
+    def verify_only(self, header, requirement):
+        """Verify a signed authorisation without settling it: used for the
+        zero-amount operator claim on a free reference session (spec 13).
+        Returns {"ok": True, "payer": addr} or a refusal. No money moves."""
+        try:
+            payload = decode_payment(header)
+        except ValueError as exc:
+            return self._refuse(str(exc))
+        payer, reason = local_check(payload, requirement)
+        if reason:
+            return self._refuse(reason)
+        allowed, reason = self.screen(payer)
+        if not allowed:
+            return self._refuse(reason)
+        body = {"x402Version": payload.get("x402Version", 1),
+                "paymentPayload": payload, "paymentRequirements": requirement}
+        tried = []
+        for base in self.facilitators:
+            try:
+                verdict = self.post(base + "/verify", body)
+            except Unreachable as exc:
+                tried.append("%s: %s" % (base, exc))
+                continue
+            if not verdict.get("isValid"):
+                return self._refuse("claim invalid: %s"
+                                    % verdict.get("invalidReason", "no reason given"),
+                                    facilitator=base)
+            return {"ok": True, "payer": payer, "charged": False, "facilitator": base}
+        return self._refuse("no facilitator reachable: " + "; ".join(tried))
 
     def settle(self, header, requirement):
         try:

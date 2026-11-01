@@ -11,6 +11,8 @@ from riggrade.session import draw, sha256_hex, load_distribution
 IMAGE = "sha256:" + "ab" * 32
 WALLET = "0x" + "12" * 20
 PAYER = "0x" + "34" * 20
+# Five distinct operator wallets for reference-building tests.
+OPS = ["0x" + ("%02x" % (0x40 + k)) * 20 for k in range(5)]
 
 
 class Clock:
@@ -26,11 +28,22 @@ class FakeAdapter:
         self.ok = ok
         self.calls = []
 
+    @staticmethod
+    def payer_for(header):
+        # "pay" -> the default payer; "pay:0x..." -> that address.
+        return header[4:] if header.startswith("pay:") else PAYER
+
+    def verify_only(self, header, requirement):
+        self.calls.append(("verify", header, requirement))
+        if not self.ok:
+            return {"ok": False, "error": "payer refused by screen", "charged": False}
+        return {"ok": True, "payer": self.payer_for(header), "charged": False}
+
     def settle(self, header, requirement):
         self.calls.append((header, requirement))
         if not self.ok:
             return {"ok": False, "error": "payer refused by screen", "charged": False}
-        return {"ok": True, "payer": PAYER, "tx": "0x" + "ef" * 32,
+        return {"ok": True, "payer": self.payer_for(header), "tx": "0x" + "ef" * 32,
                 "receipt_header": "eyJ0eCI6ICJvayJ9"}
 
 
@@ -306,12 +319,23 @@ class FreeReferenceTests(Harness):
         sid, _st, b = self.run_session(app)
         self.assertEqual(b["preview"]["classes"]["inference"]["notice"],
                          "reference-building session, speed not graded")
+        # Without the 0 USDC claim the free session is not graded yet: the 402
+        # names the claim, charges nothing, and no adapter call is made.
         status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
+        self.assertEqual(status, "402 Payment Required")
+        self.assertEqual(doc["accepts"][0]["maxAmountRequired"], "0")
+        self.assertEqual(self.adapter.calls, [])
+        self.assertEqual(app.references.basis("rtx4090-24", "inference")["rigs"], 0)
+        status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid,
+                               payment="pay:" + OPS[0])
         self.assertEqual(status, "200 OK")
         self.assertTrue(doc["free_reference_session"])
         self.assertFalse(doc["charged"])
-        self.assertEqual(self.adapter.calls, [])
+        # Verified, never settled.
+        self.assertEqual([c[0] for c in self.adapter.calls], ["verify"])
+        self.assertEqual(doc["evidence_pack"]["operator"], OPS[0])
         self.assertEqual(app.references.basis("rtx4090-24", "inference")["rigs"], 1)
+        self.assertEqual(app.references.basis("rtx4090-24", "inference")["operators"], 1)
         (entry,) = salelog.read_chain(self.log)
         self.assertEqual((entry["status"], entry["amount_atomic"]),
                          ("free_reference_session", "0"))
@@ -319,20 +343,29 @@ class FreeReferenceTests(Harness):
     def test_repeat_session_from_same_rig_is_not_sold(self):
         app = self.app()
         sid, _st, _b = self.run_session(app, rig_id="rig-x")
-        call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
+        call(app, "POST", "/riggrade/v1/session/%s/grade" % sid, payment="pay:" + OPS[0])
         sid2, _st, _b = self.run_session(app, rig_id="rig-x")
         status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid2,
                                payment="pay")
         self.assertEqual(status, "422 Unprocessable Entity")
         self.assertFalse(doc["charged"])
-        self.assertEqual(self.adapter.calls, [])
+        # The only adapter call was the free session's claim verification; no settle.
+        self.assertEqual([c for c in self.adapter.calls if c[0] != "verify"], [])
 
     def test_free_until_five_rigs_then_paid(self):
         app = self.app()
         for k in range(5):
             sid, _st, _b = self.run_session(app, rig_id="rig-%d" % k)
-            _s, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
+            # No claim: the 402 asks for the 0 USDC operator claim, nothing settles.
+            status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
+            self.assertEqual(status, "402 Payment Required")
+            self.assertEqual(doc["accepts"][0]["maxAmountRequired"], "0")
             self.assertTrue(doc["free_reference_session"])
+            _s, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid,
+                               payment="pay:" + OPS[k])
+            self.assertTrue(doc["free_reference_session"])
+            self.assertEqual(doc["evidence_pack"]["operator"], OPS[k])
+        self.assertEqual([c[0] for c in self.adapter.calls].count("verify"), 5)
         sid, _st, _b = self.run_session(app, rig_id="rig-new")
         status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
         self.assertEqual(status, "402 Payment Required")
@@ -349,7 +382,7 @@ class FreeReferenceTests(Harness):
         for i in range(5):
             sid, _st, _b = self.run_session(app, rig_id="rig-%d" % i)
             status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid,
-                                   payment="pay")
+                                   payment="pay:" + OPS[i])
             self.assertEqual(status, "200 OK")
             self.assertEqual(doc["labels"][0]["grade"], "insufficient")
         sid, _st, _b = self.run_session(app, rig_id="rig-new")
@@ -366,6 +399,8 @@ class FreeReferenceTests(Harness):
         self.assertEqual(doc["evidence_pack"]["paying_wallet"], PAYER)
         basis = doc["evidence_pack"]["classes"]["inference"]["reference_basis"]
         self.assertEqual(basis["rigs"], 5)
+        self.assertEqual(basis["operators"], 5)
+        self.assertEqual(doc["evidence_pack"]["operator"], PAYER)
         self.assertIn("single session", doc["badges"][0])
         sales = salelog.read_chain(self.log)
         self.assertEqual(len(sales), 6)
@@ -385,3 +420,96 @@ class FreeReferenceTests(Harness):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OperatorRulesTests(Harness):
+    """Spec 13 operator concentration at the endpoint (board Message 179)."""
+
+    def seed(self, app):
+        # Five claimed free sessions from three operators (cap 2 per operator).
+        for k, op in enumerate([OPS[0], OPS[0], OPS[1], OPS[1], OPS[2]]):
+            sid, _st, _b = self.run_session(app, rig_id="seed-%d" % k)
+            status, _h, _d = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid,
+                                  payment="pay:" + op)
+            self.assertEqual(status, "200 OK")
+        basis = app.references.basis("rtx4090-24", "inference")
+        self.assertEqual((basis["rigs"], basis["operators"]), (5, 3))
+        return basis
+
+    def test_claim_refused_by_screen_is_a_402_with_the_reason(self):
+        app = self.app(adapter=FakeAdapter(ok=False))
+        sid, _st, _b = self.run_session(app, rig_id="rig-s")
+        status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid,
+                               payment="pay:" + OPS[0])
+        self.assertEqual(status, "402 Payment Required")
+        self.assertIn("refused by screen", doc["error"])
+        self.assertFalse(doc["charged"])
+        self.assertEqual(app.references.basis("rtx4090-24", "inference")["rigs"], 0)
+
+    def test_buyer_paying_for_a_host_run_rig_is_not_its_operator(self):
+        app = self.app()
+        self.seed(app)
+        host = "0x" + "55" * 20
+        _s, _h, sess = call(app, "POST", "/riggrade/v1/session",
+                            {"workload_classes": ["inference"], "declared_runner": "host",
+                             "host_wallet": host})
+        _s, _h, st = call(app, "POST", "/riggrade/v1/session/%s/start" % sess["session_id"])
+        call(app, "POST", "/riggrade/v1/session/%s/bundle" % sess["session_id"],
+             bundle_for(sess["session_id"], sess["nonce"], st["params"], rig_id="host-rig"))
+        status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sess["session_id"],
+                               payment="pay")  # PAYER is not the host
+        self.assertEqual(status, "200 OK")
+        self.assertIsNone(doc["evidence_pack"]["operator"])
+        self.assertEqual(doc["evidence_pack"]["paying_wallet"], PAYER)
+        # The host-run rig counts as a rig, not as an operator.
+        basis = app.references.basis("rtx4090-24", "inference")
+        self.assertEqual((basis["rigs"], basis["operators"], basis["unclaimed_rigs"]), (6, 3, 1))
+
+    def test_host_paying_for_its_own_rig_is_the_operator(self):
+        app = self.app()
+        self.seed(app)
+        _s, _h, sess = call(app, "POST", "/riggrade/v1/session",
+                            {"workload_classes": ["inference"], "declared_runner": "host",
+                             "host_wallet": PAYER})
+        _s, _h, st = call(app, "POST", "/riggrade/v1/session/%s/start" % sess["session_id"])
+        call(app, "POST", "/riggrade/v1/session/%s/bundle" % sess["session_id"],
+             bundle_for(sess["session_id"], sess["nonce"], st["params"], rig_id="host-rig"))
+        _s, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sess["session_id"],
+                           payment="pay")
+        self.assertEqual(doc["evidence_pack"]["operator"], PAYER)
+        self.assertTrue(doc["evidence_pack"]["host_paid"])
+
+    def test_payer_behind_too_much_of_the_reference_gets_no_speed_grade(self):
+        from riggrade import grading
+        app = self.app()
+        self.seed(app)
+        # Under the v0 numbers (cap 2, 5 rigs) no operator can exceed 40%, so the
+        # rule is a backstop; lower the limit to exercise it.
+        saved = grading.MAX_OPERATOR_SHARE
+        grading.MAX_OPERATOR_SHARE = 0.3
+        try:
+            sid, _st, _b = self.run_session(app, rig_id="rig-op0")
+            _s, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid,
+                               payment="pay:" + OPS[0])  # OPS[0] stands behind 40%
+            entry = doc["evidence_pack"]["classes"]["inference"]
+            self.assertIn("40%", entry["speed_withheld"])
+            self.assertIsNone(entry["speed_ratio"])
+            self.assertEqual(doc["labels"][0]["pillars"]["speed"], "insufficient")
+            sid, _st, _b = self.run_session(app, rig_id="rig-op3")
+            _s, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid,
+                               payment="pay:" + OPS[3])
+            self.assertIsNone(doc["evidence_pack"]["classes"]["inference"]["speed_withheld"])
+            self.assertIsNotNone(doc["evidence_pack"]["classes"]["inference"]["speed_ratio"])
+        finally:
+            grading.MAX_OPERATOR_SHARE = saved
+
+    def test_descriptor_prints_the_operator_rules_and_counts(self):
+        app = self.app()
+        self.seed(app)
+        _s, _h, doc = call(app, "GET", "/riggrade/v1")
+        rules = doc["operator_rules"]
+        self.assertEqual((rules["cap_per_operator"], rules["min_operators"],
+                          rules["max_payer_share"]), (2, 3, 0.4))
+        ref = doc["references"]["rtx4090-24"]["inference"]
+        self.assertEqual((ref["rigs"], ref["operators"]), (5, 3))
+        self.assertAlmostEqual(ref["largest_operator_share"], 0.4)
