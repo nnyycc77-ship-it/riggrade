@@ -65,7 +65,7 @@ def llms_txt(base, prefix, on_sale):
         "- Repository (Apache-2.0): " + REPO,
         "- Grading spec: " + REPO + "/blob/main/docs/grading-spec.md",
         "- Payments: " + REPO + "/blob/main/docs/payments.md",
-        "- Benchmark container: " + BENCH_IMAGE + " (run by digest; see deploy/bench-image.env)",
+        "- Benchmark container: " + BENCH_IMAGE + " (run by digest; see container/bench-image.env)",
         "- MCP server (stdio): python3 -m riggrade.mcp, tools gpu_preflight and riggrade_service_info",
         "",
     ])
