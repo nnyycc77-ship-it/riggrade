@@ -1,9 +1,10 @@
 # Cluster acceptance certificate: the offer in one page
 
 **For:** anyone about to pay for a rented GPU cluster of 2 to 64 nodes and
-wanting proof it delivers what was promised before the first invoice, a long
-run or a handover; and hosts who want a third-party record on their side of a
-dispute.
+wanting a record of what it delivered in a ten-minute test, measured against
+the provider's claims, before the first invoice, a long run or a handover; and
+hosts who want a recomputable record from a party that is neither of them on
+their side of a dispute.
 
 **What you get:** a signed certificate, as JSON and as a printable page, that
 states what the provider claimed, what the cluster delivered during a named
@@ -15,8 +16,9 @@ See `docs/sample-certificate.html` for what a certificate looks like.
 **What it checks:** inventory against the claim (nodes, GPUs, model); that
 every node ran the same pinned image; node health (the free preflight on
 every node); stragglers against the cluster median; inter-node fabric
-(NCCL all-reduce bus bandwidth against the claimed link per GPU); shared
-storage read rate against the claim. A claim not made is not tested and is
+(NCCL all-reduce bus bandwidth, in GB/s, against the claimed link per GPU:
+400 Gb/s per GPU is 50 GB/s, and the accept bar is 80% of that); shared
+storage read rate against the claim. The bars are in docs/cluster-acceptance.md. A claim not made is not tested and is
 shown as "no claim", never as met.
 
 **How it runs:** about ten minutes on the cluster.
@@ -27,10 +29,12 @@ shown as "no claim", never as met.
    wallet (USDC on Base, no account, no signup); receive the certificate
    and its lookup URL.
 
-**Price:** 25 USDC per certificate as listed by the service (the operator
-sets it; the descriptor at `/riggrade/v1` is authoritative). Nothing is
-charged for a pack that does not recompute, and a free preview states the
-verdict before payment.
+**Price:** 25 USDC per certificate, fixed per product; the 402 you receive
+states the exact amount and it does not change between the free preview and
+the payment. Nothing is charged for a pack that does not recompute, and the
+free preview states the verdict before payment. If a payment settles and the
+certificate is not delivered (a service fault), the charge is logged as
+"charged without delivery" and refunded by hand (docs/payments.md).
 
 **For a dispute:** open the lookup URL in a browser and print it to PDF. The
 page carries the verdict, every check with its numbers, the evidence-pack

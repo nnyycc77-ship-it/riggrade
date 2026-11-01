@@ -14,7 +14,9 @@ class RenderTests(unittest.TestCase):
         self.assertIn("NVIDIA H100 80GB HBM3", html)
         self.assertIn("<code>fabric</code>", html)
         self.assertIn("fabric: 62% of the claimed inter-node link", html)
-        self.assertIn("valid: this service signed", html)
+        self.assertIn("valid by this service's own check (HMAC)", html)
+        self.assertIn("SAMPLE (fictional values", html)
+        self.assertIn("not measured", html)
         self.assertIn('href="https://x/json"', html)
 
     def test_every_value_is_escaped(self):
@@ -57,7 +59,7 @@ class RouteTests(unittest.TestCase):
             self.assertTrue(status[0].startswith("200"), (accept, query))
             self.assertEqual(dict(headers)["Content-Type"], ctype, (accept, query))
             if ctype.startswith("text/html"):
-                self.assertIn(b"valid: this service signed", out)
+                self.assertIn(b"valid by this service's own check (HMAC)", out)
                 self.assertIn(b"?format=json", out)
             else:
                 self.assertTrue(json.loads(out)["signature_valid"])

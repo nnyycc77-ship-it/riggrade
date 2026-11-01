@@ -1,8 +1,9 @@
 # Cluster acceptance test: spec v0 (draft)
 
-Status: draft. Built and tested on the CPU suite only. It has not yet been
-run on a real cluster, and it is not on sale. Its price is an owner
-decision.
+Status: v0 draft rules, on sale since 1 Nov 2026 as the cluster acceptance
+certificate (25 USDC; see docs/offer-cluster-acceptance.md). Built and tested
+on the CPU suite; the first run on a real cluster is still to come, so the
+bars below are draft and versioned.
 
 ## Why
 

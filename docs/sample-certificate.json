@@ -32,9 +32,9 @@
   },
   {
    "check": "storage",
-   "detail": "aggregate read 9.1 GB/s against 10 GB/s claimed (91%)",
-   "ratio": 0.91,
-   "status": "accept"
+   "claimed_gbs": 10.0,
+   "detail": "no shared storage path was given, so the 10 GB/s claim was not tested",
+   "status": "not measured"
   }
  ],
  "claims": {
@@ -45,15 +45,16 @@
   "storage_read_gbs": 10
  },
  "exceptions": [
-  "fabric: 62% of the claimed inter-node link"
+  "fabric: 62% of the claimed inter-node link",
+  "storage: claimed but not measured"
  ],
  "images": [
   "sha256:abababababababababababababababababababababababababababababababab"
  ],
- "issued_at": 1793577600,
+ "issued_at": 1793491200,
  "method": "cluster-acceptance-v0-draft",
  "nodes": 2,
- "pack_sha256": "e3b0c442e3b0c442e3b0c442e3b0c442e3b0c442e3b0c442e3b0c442e3b0c442",
+ "pack_sha256": "7c2a9e1f0b4d6a8c3e5f1a2b9d8c7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d",
  "product": "riggrade_cluster_acceptance",
  "rejections": [],
  "rules": "cluster-acceptance-v0-draft",
