@@ -1,0 +1,62 @@
+# Deploys the grading server to Cloud Run. Runs only when started by hand
+# (Actions tab -> deploy -> Run workflow) on main; it never runs on a push.
+# Sign-in is keyless: GitHub's OIDC token is exchanged through Workload
+# Identity Federation, which accepts only this repo's main branch. No key
+# or secret is stored anywhere. The sale stays off unless the service's
+# own settings turn it on.
+name: deploy
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+jobs:
+  cloudrun:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read settings
+        run: |
+          set -euo pipefail
+          grep -E '^GCP_[A-Z_]+=' deploy/gcp.env >> "$GITHUB_ENV"
+          if grep -q REPLACE_ME deploy/gcp.env; then
+            echo "deploy/gcp.env is not filled in yet" >&2; exit 1
+          fi
+      - name: Run the tests first
+        run: python3 -m unittest discover -s tests -t . -q
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/${{ env.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github/providers/riggrade
+          service_account: riggrade-deployer@${{ env.GCP_PROJECT }}.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Build and push the server image
+        run: |
+          set -euo pipefail
+          IMAGE="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT/riggrade/server:${GITHUB_SHA}"
+          gcloud auth configure-docker "$GCP_REGION-docker.pkg.dev" --quiet
+          docker build -f deploy/server.Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+      - name: Deploy
+        run: |
+          set -euo pipefail
+          gcloud run deploy riggrade --project "$GCP_PROJECT" --region "$GCP_REGION" \
+            --image "$IMAGE" \
+            --service-account "riggrade-server@$GCP_PROJECT.iam.gserviceaccount.com" \
+            --execution-environment gen2 --min-instances 0 --max-instances 1 \
+            --memory 512Mi --cpu 1 --allow-unauthenticated \
+            --add-volume "name=state,type=cloud-storage,bucket=$GCP_PROJECT-riggrade-state,mount-options=uid=10001;gid=10001" \
+            --add-volume-mount volume=state,mount-path=/state
+      - name: Check the live descriptor
+        run: |
+          set -euo pipefail
+          URL=$(gcloud run services describe riggrade --project "$GCP_PROJECT" \
+                --region "$GCP_REGION" --format='value(status.url)')
+          echo "Service: $URL/riggrade/v1" | tee -a "$GITHUB_STEP_SUMMARY"
+          curl -fsS --retry 3 "$URL/riggrade/v1" | python3 -m json.tool | tee descriptor.json
+          python3 -c "import json; s=json.load(open('descriptor.json'))['sale']; print('on_sale:', s['on_sale'], '| reasons off:', '; '.join(s.get('reasons_off', [])))" | tee -a "$GITHUB_STEP_SUMMARY"
