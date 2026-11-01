@@ -26,8 +26,8 @@ first use.
 
 | Source | Granularity | Licence / terms | Status |
 |---|---|---|---|
-| GetDeploying GPU price history | weekly, per GPU model, across providers | CC BY 4.0, as described on its page; not yet read in full | not yet read: host blocked from the build environment |
-| Vast.ai public pricing feed | daily median per model, about 90 days | not yet read | not yet read: host blocked |
+| GetDeploying GPU price history | weekly, per GPU model and billing type, across providers | checked 1 Nov 2026: the published dataset files (`/dataset/gpu-prices/weekly.csv`, `weekly.json`, and each model's `history.csv` or `history.json`) are licensed CC BY 4.0, under section 8 of their terms. The licence covers those files only, not the site, its HTML or its API. Section 5 bars scraping the site, so only the published files are downloaded, never site pages | permitted: download the published files only, with attribution |
+| Vast.ai public pricing feed | daily median per model, about 90 days | checked 1 Nov 2026: **not permitted**. The feed is free for display and citation, but "use in any index, benchmark, or derivative product requires a data license" | not used |
 
 **Attribution.** Every view of a series built from a CC BY 4.0 source names
 the source, links to it and to the licence, and says the figures were

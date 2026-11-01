@@ -31,7 +31,10 @@ So is whether the source's listed total includes storage or bandwidth charges.
 
 | Source | Status | Terms verified | Format verified | Total includes storage or bandwidth |
 |---|---|---|---|---|
-| Vast.ai public offers | adapter built, not yet run | not yet: host blocked from the build environment | not yet | not yet known |
+| Vast.ai public offers | not used; the recorder refuses it | checked 1 Nov 2026: **not permitted**. Vast's terms forbid using its data "to construct, publish, or maintain any index, benchmark, pricing-comparison service, market-data product" without a separate written agreement, and its pricing feed says index use "requires a data license" | not checked: not needed unless a licence is agreed | not applicable |
+
+No live source has cleared both checks yet, so no live value is recorded.
+A licence from Vast would mean approaching Vast, which is the owner's decision.
 
 No host, machine or offer identifier is stored. Each run keeps only the
 aggregates in section 3. Raw listings are read, aggregated in memory and

@@ -19,6 +19,10 @@ def snapshot(source_objs, now=None):
     now = now or dt.datetime.now(dt.timezone.utc)
     per_summary, per_pairs, failed = {}, {}, {}
     for src in source_objs:
+        if getattr(src, "terms_ok", True) is not True:
+            # Method section 2: no run rests on a source whose terms do not allow it.
+            failed[src.name] = "refused: " + getattr(src, "terms_note", "terms not verified")
+            continue
         try:
             summary, pairs = aggregate.by_class(src.offers())
         except Exception as exc:  # noqa: BLE001 - recorded, not hidden
