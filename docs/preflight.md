@@ -44,11 +44,18 @@ checks still run.
 | PCIe link | generation and width during load against what the card supports | narrower or slower | |
 | Driver vs CUDA | driver's CUDA version against the CUDA build of installed torch | older minor | older major |
 | Download rate | MB/s pulling a public model file for up to 15 s | below 50 | below 10 |
-| Disk write | MB/s writing 1 GiB with fsync | below 200 | below 50 |
+| Disk write | MB/s writing 1 GiB with fsync, named with the filesystem and mount it ran on | below 200 | below 50 |
+| ECC errors | corrected and uncorrected ECC errors since boot, on cards with ECC enabled | 10 corrected | any uncorrected, or retired pages pending |
+| Host CPU load | 1-minute load average per CPU before the check's own load | 1.0 | 2.0 |
+| Host memory | MemAvailable as a share of RAM | below 20% | below 10% |
+| Host swap | swap in use, where swap exists | 10% | 50% |
+| CPU governor | the frequency governor of CPU 0 | powersave | |
+| Memory bandwidth | GB/s of device-to-device copies, a 3 s sample per GPU | below 100 | below 50 |
 
 A power cap during full load is normal on most cards. It is reported, and it
 does not fail the check. A check that cannot be measured is shown as skipped,
-never as passed.
+never as passed: ECC on a consumer card, a governor file the container
+cannot read, a bandwidth sample without torch.
 
 These failures are the ones renters most often report, and no marketplace
 listing shows them: a card that reads 99% busy while held to a fraction of

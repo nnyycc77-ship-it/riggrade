@@ -234,3 +234,133 @@ class RunTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DiagnosticsTests(unittest.TestCase):
+    """ECC counts, host starvation, mount type, memory bandwidth (1 Nov 2026)."""
+
+    def status(self, obs):
+        return {f["check"]: f["status"] for f in pf.evaluate(obs)}
+
+    def detail(self, obs, check):
+        return {f["check"]: f["detail"] for f in pf.evaluate(obs)}[check]
+
+    def test_ecc_parse_and_rules(self):
+        rows = ("0, Enabled, 3, 0, 120, 0, No\n"
+                "1, Enabled, 40, 1, 500, 2, Yes\n"
+                "2, [N/A], [N/A], [N/A], [N/A], [N/A], [N/A]\n"
+                "3, Disabled, 0, 0, 0, 0, No\n")
+        ecc = pf.parse_ecc_csv(rows)
+        self.assertEqual(ecc[0]["corrected_volatile"], 3)
+        self.assertTrue(ecc[1]["retired_pages_pending"])
+        self.assertIsNone(ecc[2]["mode"])
+        obs = healthy_obs()
+        obs["ecc"] = ecc
+        st = self.status(obs)
+        self.assertEqual(st["gpu0.ecc_errors"], pf.PASS)
+        self.assertEqual(st["gpu1.ecc_errors"], pf.FAIL)
+        self.assertEqual(st["gpu2.ecc_errors"], "skipped")
+        self.assertEqual(st["gpu3.ecc_errors"], "skipped")
+        self.assertIn("1 uncorrected", self.detail(obs, "gpu1.ecc_errors"))
+        self.assertIn("retired pages pending", self.detail(obs, "gpu1.ecc_errors"))
+        self.assertIn("consumer cards have none", self.detail(obs, "gpu2.ecc_errors"))
+        obs["ecc"] = {0: dict(ecc[0], corrected_volatile=50)}
+        self.assertEqual(self.status(obs)["gpu0.ecc_errors"], pf.WARN)
+
+    def test_host_parse_and_rules(self):
+        meminfo = "MemTotal:       65536000 kB\nMemAvailable:    5898240 kB\nSwapTotal:  8000000 kB\nSwapFree:   2000000 kB\n"
+        host = pf.parse_host("12.50 10.0 9.0 1/800 12345", meminfo, 8, "powersave\n")
+        self.assertEqual(host["load1_per_core"], 1.56)
+        self.assertEqual(host["mem_available_pct"], 9.0)
+        self.assertEqual(host["swap_used_pct"], 75.0)
+        self.assertEqual(host["governor"], "powersave")
+        obs = healthy_obs()
+        obs["host"] = host
+        st = self.status(obs)
+        self.assertEqual((st["host.cpu_load"], st["host.memory"], st["host.swap"], st["host.cpu_governor"]),
+                         (pf.WARN, pf.FAIL, pf.FAIL, pf.WARN))
+        self.assertIn("1.56 per core (8 CPUs)", self.detail(obs, "host.cpu_load"))
+        quiet = pf.parse_host("0.40 0.5 0.6 1/200 1", "MemTotal: 65536000 kB\nMemAvailable: 60000000 kB\n", 8, "")
+        obs["host"] = quiet
+        st = self.status(obs)
+        self.assertEqual((st["host.cpu_load"], st["host.memory"], st["host.swap"], st["host.cpu_governor"]),
+                         (pf.PASS, pf.PASS, pf.PASS, "skipped"))
+        self.assertEqual(self.detail(obs, "host.swap"), "no swap configured")
+        self.assertEqual(pf.parse_host("", "", None)["load1_per_core"], None)
+
+    def test_mount_type_names_the_filesystem(self):
+        mounts = ("overlay / overlay rw,relatime 0 0\n"
+                  "proc /proc proc rw 0 0\n"
+                  "/dev/nvme0n1p1 /workspace ext4 rw,relatime 0 0\n"
+                  "nfs.example:/data /workspace/data nfs4 rw 0 0\n"
+                  "tmpfs /mnt/with\\040space tmpfs rw 0 0\n")
+        self.assertEqual(pf.find_mount(mounts, "/workspace/ckpt"), ("/workspace", "ext4"))
+        self.assertEqual(pf.find_mount(mounts, "/workspace/data/x"), ("/workspace/data", "nfs4"))
+        self.assertEqual(pf.find_mount(mounts, "/root"), ("/", "overlay"))
+        self.assertEqual(pf.find_mount(mounts, "/mnt/with space/f"), ("/mnt/with space", "tmpfs"))
+        self.assertEqual(pf.find_mount("", "/x"), (None, None))
+        obs = healthy_obs()
+        obs["disk_write_mbs"] = 137
+        obs["disk_mount"] = {"fstype": "overlay", "mountpoint": "/"}
+        d = self.detail(obs, "disk_write")
+        self.assertIn("137 MB/s sequential write on overlay at / (network or layered storage)", d)
+        obs["disk_mount"] = {"fstype": "ext4", "mountpoint": "/workspace"}
+        self.assertNotIn("network or layered", self.detail(obs, "disk_write"))
+        self.assertIn("on ext4 at /workspace", self.detail(obs, "disk_write"))
+
+    def test_memory_bandwidth_rule(self):
+        obs = healthy_obs()
+        obs["mem_bw_gbs"] = {0: 820, 1: 60, 2: None}
+        st = self.status(obs)
+        self.assertEqual((st["gpu0.memory_bandwidth"], st["gpu1.memory_bandwidth"], st["gpu2.memory_bandwidth"]),
+                         (pf.PASS, pf.WARN, "skipped"))
+        self.assertIn("820 GB/s", self.detail(obs, "gpu0.memory_bandwidth"))
+
+    def test_run_uses_the_new_probes_when_present(self):
+        class Fake:
+            idle_interval = 0
+
+            def gpus(self):
+                return pf.parse_gpu_csv(IDLE_ROW)
+
+            def driver_cuda(self):
+                return (12, 4)
+
+            def software_cuda(self):
+                return (12, 1)
+
+            def load(self, seconds):
+                return pf.summarise_load([snap(), snap()]), {0: 150.0}
+
+            def download(self, url):
+                return 180.0
+
+            def disk(self, directory):
+                return 137
+
+            def ecc(self):
+                return pf.parse_ecc_csv("0, Enabled, 0, 0, 0, 0, No\n")
+
+            def host(self):
+                return pf.parse_host("0.5 0.5 0.5 1/1 1", "MemTotal: 100 kB\nMemAvailable: 90 kB\n", 4, "performance")
+
+            def mount(self, directory):
+                return {"fstype": "overlay", "mountpoint": "/"}
+
+            def bandwidth(self):
+                return {0: 900}
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = os.getcwd()
+            os.chdir(tmp)
+            try:
+                report = pf.run(Fake(), seconds=0, download=False, directory=tmp, out=io.StringIO())
+            finally:
+                os.chdir(cwd)
+        by = {f["check"]: f for f in report["findings"]}
+        self.assertEqual(by["gpu0.ecc_errors"]["status"], pf.PASS)
+        self.assertEqual(by["host.cpu_governor"]["status"], pf.PASS)
+        self.assertEqual(by["gpu0.memory_bandwidth"]["status"], pf.PASS)
+        self.assertEqual(by["disk_write"]["status"], pf.WARN)
+        self.assertIn("overlay", by["disk_write"]["detail"])
+        self.assertEqual(report["verdict"], pf.WARN)
+        self.assertEqual(lint([json_text for json_text in [str(report["findings"])]]), [])

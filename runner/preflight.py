@@ -11,7 +11,10 @@ most, none of which a marketplace listing shows:
 - a driver too old for the CUDA build your software was compiled against
 - a PCIe link running narrower or slower than the card supports
 - a download rate far below what the host advertises
-- slow local disk
+- slow local disk, and which filesystem it is on
+- ECC errors on cards that have ECC (uncorrected ones fail a training run)
+- a host starving the card: CPU load, little free RAM, swap, a powersave governor
+- device memory bandwidth, a short copy sample
 
 It is not a grade. No results are sent anywhere: every measurement stays
 on the box and in preflight-report.json. (The download check only reads a
@@ -71,7 +74,16 @@ LIMITS = {
     "temperature_c": (85, 90),              # warn, fail: peak under load
     "download_mbs": (50, 10),               # warn, fail: MB/s pulled from the test URL
     "disk_write_mbs": (200, 50),            # warn, fail: MB/s sequential write with fsync
+    "ecc_corrected_errors": (10, 1000),     # warn, fail: corrected ECC errors since boot (volatile)
+    "host_load_per_core": (1.0, 2.0),       # warn, fail: 1-minute load average per CPU, before our load
+    "host_memory_available_pct": (20, 10),  # warn, fail: MemAvailable as % of MemTotal
+    "host_swap_used_pct": (10, 50),         # warn, fail: swap in use as % of swap total
+    "mem_bw_gbs": (100, 50),                # warn, fail: device-to-device copy bandwidth
 }
+# Filesystems that are network or layered storage: slow disk writes there are
+# the mount, not the drive.
+SLOW_FS = {"nfs", "nfs4", "cifs", "smb3", "overlay", "9p", "virtiofs", "fuse", "fuse.sshfs",
+           "fuse.s3fs", "fuse.gcsfuse", "fuse.rclone", "ceph", "glusterfs", "lustre"}
 
 GPU_FIELDS = ["index", "name", "driver_version", "clocks.sm", "clocks.max.sm",
               "temperature.gpu", "power.draw", "power.limit", "utilization.gpu",
@@ -131,6 +143,63 @@ def parse_version(text):
 
 
 # ---------------------------------------------------------------- verdicts
+
+def parse_ecc_csv(csv_text):
+    """nvidia-smi ECC rows: index, mode, corrected volatile, uncorrected
+    volatile, corrected aggregate, uncorrected aggregate, retired pages
+    pending. {index: {...}}; [N/A] fields are None (consumer cards)."""
+    out = {}
+    for line in (csv_text or "").splitlines():
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) < 7 or _num(parts[0]) is None:
+            continue
+        out[int(_num(parts[0]))] = {
+            "mode": None if parts[1].startswith("[") else parts[1],
+            "corrected_volatile": _num(parts[2]), "uncorrected_volatile": _num(parts[3]),
+            "corrected_aggregate": _num(parts[4]), "uncorrected_aggregate": _num(parts[5]),
+            "retired_pages_pending": (None if parts[6].startswith("[")
+                                      else parts[6].lower() in ("yes", "true", "1"))}
+    return out
+
+
+def parse_host(loadavg_text, meminfo_text, cpus, governor=None):
+    """Host starvation signals from /proc/loadavg and /proc/meminfo."""
+    out = {"cpus": cpus, "governor": (governor or "").strip() or None}
+    try:
+        out["load1"] = float((loadavg_text or "").split()[0])
+    except (ValueError, IndexError):
+        out["load1"] = None
+    mem = {}
+    for line in (meminfo_text or "").splitlines():
+        if ":" in line:
+            key, _, rest = line.partition(":")
+            val = _num(rest.strip().split()[0]) if rest.strip() else None
+            mem[key.strip()] = val
+    total, avail = mem.get("MemTotal"), mem.get("MemAvailable")
+    out["mem_total_gb"] = None if total is None else round(total / 2 ** 20, 1)
+    out["mem_available_pct"] = (None if not total or avail is None
+                                else round(100.0 * avail / total, 1))
+    st, sf = mem.get("SwapTotal"), mem.get("SwapFree")
+    out["swap_used_pct"] = (None if not st else round(100.0 * (st - (sf or 0)) / st, 1))
+    out["load1_per_core"] = (None if out["load1"] is None or not cpus
+                             else round(out["load1"] / cpus, 2))
+    return out
+
+
+def find_mount(mounts_text, path):
+    """The mount point and filesystem type that hold `path` (longest
+    matching mount point in /proc/mounts), or (None, None)."""
+    best = (None, None)
+    for line in (mounts_text or "").splitlines():
+        parts = line.split()
+        if len(parts) < 3:
+            continue
+        point, fstype = parts[1].replace("\\040", " "), parts[2]
+        if path == point or path.startswith(point.rstrip("/") + "/") or point == "/":
+            if best[0] is None or len(point) > len(best[0]):
+                best = (point, fstype)
+    return best
+
 
 def _grade_high_bad(value, warn, fail):
     """Larger is worse."""
@@ -218,6 +287,48 @@ def evaluate(obs):
             add("gpu%s.pcie_link" % i, WARN if short else PASS,
                 "Gen%d x%d under load (card supports Gen%d x%d)" % (gen, width, gen_max, width_max))
 
+    for i, ecc in sorted((obs.get("ecc") or {}).items()):
+        unc, cor = ecc.get("uncorrected_volatile"), ecc.get("corrected_volatile")
+        if ecc.get("mode") not in ("Enabled",) or (unc is None and cor is None):
+            add("gpu%s.ecc_errors" % i, None,
+                "ECC %s on this card; consumer cards have none" % (
+                    "disabled" if ecc.get("mode") == "Disabled" else "not reported"))
+            continue
+        pending = ecc.get("retired_pages_pending")
+        status = _grade_high_bad(cor, *LIMITS["ecc_corrected_errors"])
+        if (unc or 0) > 0 or pending:
+            status = FAIL
+        add("gpu%s.ecc_errors" % i, status,
+            "ECC since boot: %s corrected, %s uncorrected (aggregate %s / %s)%s" % (
+                "?" if cor is None else "%d" % cor, "?" if unc is None else "%d" % unc,
+                "?" if ecc.get("corrected_aggregate") is None else "%d" % ecc["corrected_aggregate"],
+                "?" if ecc.get("uncorrected_aggregate") is None else "%d" % ecc["uncorrected_aggregate"],
+                "; retired pages pending a reset" if pending else ""))
+
+    host = obs.get("host")
+    if host:
+        lpc = host.get("load1_per_core")
+        add("host.cpu_load", _grade_high_bad(lpc, *LIMITS["host_load_per_core"]),
+            "unknown load" if lpc is None else "1-minute load %.2f per core (%s CPUs) before our load started"
+            % (lpc, host.get("cpus")))
+        avail = host.get("mem_available_pct")
+        add("host.memory", _grade_low_bad(avail, *LIMITS["host_memory_available_pct"]),
+            "unknown memory" if avail is None else "%.0f%% of %s GB RAM available" % (
+                avail, host.get("mem_total_gb")))
+        swap = host.get("swap_used_pct")
+        if swap is None:
+            add("host.swap", PASS, "no swap configured")
+        else:
+            add("host.swap", _grade_high_bad(swap, *LIMITS["host_swap_used_pct"]),
+                "%.0f%% of swap in use" % swap)
+        gov = host.get("governor")
+        add("host.cpu_governor", None if gov is None else (WARN if gov == "powersave" else PASS),
+            "governor not readable" if gov is None else "CPU frequency governor is %s" % gov)
+
+    for i, bw in sorted((obs.get("mem_bw_gbs") or {}).items()):
+        add("gpu%s.memory_bandwidth" % i, _grade_low_bad(bw, *LIMITS["mem_bw_gbs"]),
+            "not measured" if bw is None else "%.0f GB/s device-to-device copy" % bw)
+
     driver_cuda, built = obs.get("driver_cuda"), obs.get("software_cuda")
     if driver_cuda and built:
         status = (FAIL if driver_cuda[0] < built[0]
@@ -231,8 +342,14 @@ def evaluate(obs):
     add("download_rate", _grade_low_bad(dl, *LIMITS["download_mbs"]),
         "not measured" if dl is None else "%.1f MB/s from the test URL" % dl)
     disk = obs.get("disk_write_mbs")
+    mount = obs.get("disk_mount") or {}
+    where = ""
+    if mount.get("fstype"):
+        where = " on %s at %s" % (mount["fstype"], mount.get("mountpoint") or "?")
+        if mount["fstype"] in SLOW_FS or mount["fstype"].startswith("fuse"):
+            where += " (network or layered storage)"
     add("disk_write", _grade_low_bad(disk, *LIMITS["disk_write_mbs"]),
-        "not measured" if disk is None else "%.0f MB/s sequential write" % disk)
+        "not measured" if disk is None else "%.0f MB/s sequential write%s" % (disk, where))
     err = obs.get("compute_error")
     if err and err.startswith("ModuleNotFoundError"):
         add("compute", None, "load checks need torch with CUDA installed (%s)" % err)
@@ -352,6 +469,40 @@ def measure_download(url, seconds=15.0, max_bytes=500 * 2 ** 20, opener=urllib.r
     return round(got / elapsed / 1e6, 1) if elapsed > 0 and got else None
 
 
+def measure_bandwidth(seconds=3.0, mb=256):
+    """Device-to-device copy bandwidth per GPU in GB/s (counts bytes read
+    plus written), a short sample of the memory system."""
+    import torch
+    if not torch.cuda.is_available():
+        raise RuntimeError("CUDA is not available to this process")
+    out = {}
+    for dev in range(torch.cuda.device_count()):
+        src = torch.empty(mb << 20, dtype=torch.uint8, device=dev)
+        dst = torch.empty_like(src)
+        dst.copy_(src)
+        torch.cuda.synchronize(dev)
+        copies, t0 = 0, time.perf_counter()
+        while time.perf_counter() - t0 < seconds:
+            for _ in range(5):
+                dst.copy_(src)
+            torch.cuda.synchronize(dev)
+            copies += 5
+        out[dev] = round(2 * (mb << 20) * copies / (time.perf_counter() - t0) / 1e9)
+    return out
+
+
+def read_host(cpus=None):
+    """Host starvation signals; any file that cannot be read is left None."""
+    def read(path):
+        try:
+            return Path(path).read_text(encoding="utf-8")
+        except OSError:
+            return ""
+    return parse_host(read("/proc/loadavg"), read("/proc/meminfo"),
+                      cpus or os.cpu_count(),
+                      read("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"))
+
+
 def measure_disk(directory, mb=1024):
     block = os.urandom(1 << 20)
     fd, path = tempfile.mkstemp(dir=directory, prefix="riggrade-preflight-")
@@ -409,6 +560,28 @@ class Probes:
     def disk(self, directory):
         return measure_disk(directory)
 
+    def ecc(self):
+        out = subprocess.run(["nvidia-smi", "--query-gpu=index,ecc.mode.current,"
+                              "ecc.errors.corrected.volatile.total,ecc.errors.uncorrected.volatile.total,"
+                              "ecc.errors.corrected.aggregate.total,ecc.errors.uncorrected.aggregate.total,"
+                              "retired_pages.pending", "--format=csv,noheader,nounits"],
+                             capture_output=True, text=True, timeout=30)
+        return parse_ecc_csv(out.stdout) if out.returncode == 0 else {}
+
+    def host(self):
+        return read_host()
+
+    def mount(self, directory):
+        try:
+            mounts = Path("/proc/mounts").read_text(encoding="utf-8")
+        except OSError:
+            return {}
+        point, fstype = find_mount(mounts, os.path.realpath(directory))
+        return {"mountpoint": point, "fstype": fstype} if fstype else {}
+
+    def bandwidth(self):
+        return measure_bandwidth()
+
 
 # ---------------------------------------------------------------- run
 
@@ -453,6 +626,10 @@ def run(probes, seconds=30.0, url=DEFAULT_URL, download=True, directory=".",
         obs["shared"] = "MIG mode on"
     if getattr(probes, "power_limits", None):
         obs["power_limits"] = attempt("power_limits", probes.power_limits) or {}
+    if getattr(probes, "ecc", None):
+        obs["ecc"] = attempt("ecc", probes.ecc) or {}
+    if getattr(probes, "host", None):
+        obs["host"] = attempt("host", probes.host)
     obs["driver_cuda"] = attempt("driver_cuda", probes.driver_cuda)
     obs["software_cuda"] = attempt("software_cuda", probes.software_cuda)
     loaded = attempt("load", lambda: probes.load(seconds))
@@ -460,9 +637,13 @@ def run(probes, seconds=30.0, url=DEFAULT_URL, download=True, directory=".",
         obs["load"], obs["tflops"] = loaded
     elif "load" in errors:
         obs["compute_error"] = errors["load"]
+    if loaded and getattr(probes, "bandwidth", None):
+        obs["mem_bw_gbs"] = attempt("bandwidth", probes.bandwidth)
     if download:
         obs["download_mbs"] = attempt("download", lambda: probes.download(url))
     obs["disk_write_mbs"] = attempt("disk", lambda: probes.disk(directory))
+    if getattr(probes, "mount", None):
+        obs["disk_mount"] = attempt("mount", lambda: probes.mount(directory)) or {}
 
     findings = evaluate(obs)
     report = {"preflight": True,
