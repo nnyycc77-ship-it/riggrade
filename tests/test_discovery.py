@@ -55,7 +55,14 @@ class DiscoveryTests(unittest.TestCase):
                 self.assertIn("responses", op)
         self.assertEqual(doc["x-agentcash-guidance"], {"llmsTxtUrl": "https://grade.example/llms.txt"})
         self.assertIn("PAYMENT-REQUIRED", doc["info"]["x-guidance"])
-        self.assertNotIn("contact", doc["info"])  # the owner's choice, not ours
+        self.assertNotIn("contact", doc["info"])  # absent unless the owner sets one
+
+    def test_contact_email_is_published_only_when_configured(self):
+        app = serve.build({"RIGGRADE_CONTACT_EMAIL": "ops@example.org"})
+        _s, _h, out = get(app, "/openapi.json")
+        self.assertEqual(json.loads(out)["info"]["contact"], {"email": "ops@example.org"})
+        _s, _h, out = get(serve.build({"RIGGRADE_CONTACT_EMAIL": "  "}), "/openapi.json")
+        self.assertNotIn("contact", json.loads(out)["info"])
 
     def test_paid_operations_declare_x_payment_info_matching_the_atomic_prices(self):
         from riggrade import discovery, endpoint

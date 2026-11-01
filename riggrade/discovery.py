@@ -110,7 +110,10 @@ def payment_info(product):
     return {"protocols": PAYMENT_PROTOCOLS, "price": PRICES_USD[product]}
 
 
-def openapi(base, prefix):
+def openapi(base, prefix, contact_email=None):
+    """contact_email: published as info.contact.email when the service is
+    configured with one (RIGGRADE_CONTACT_EMAIL); registries use it for
+    ownership verification. Never defaulted to anything."""
     api = base + prefix
     sess = {"type": "object", "properties": {
         "workload_classes": {"type": "array", "items": {"type": "string", "enum": ["inference", "training"]}},
@@ -135,7 +138,8 @@ def openapi(base, prefix):
                                 "PaymentRequired is in the PAYMENT-REQUIRED header (USDC on Base, "
                                 "eip155:8453); retry with the signed PaymentPayload in "
                                 "PAYMENT-SIGNATURE. Free preflight and session steps need no "
-                                "payment. Measured, not promised.")},
+                                "payment. Measured, not promised."),
+                 **({"contact": {"email": contact_email}} if contact_email else {})},
         "servers": [{"url": api}],
         # Guidance for agents: short inline, and the llms.txt pointer the
         # discovery profile names (x-agentcash-guidance.llmsTxtUrl).
