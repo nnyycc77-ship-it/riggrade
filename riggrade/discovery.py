@@ -91,18 +91,38 @@ def llms_txt(base, prefix, on_sale):
     ])
 
 
+# Discovery profile read by x402scan (its parser is @agentcash/discovery;
+# docs/SPECIFICATION.md there): every operation declares security, and a
+# paid one is "security: []" plus x-payment-info with protocols and a USD
+# price. Payment is declared independently of API authentication, so no
+# security scheme is used for it. The runtime 402 stays authoritative. USD
+# strings here must equal the atomic prices in riggrade.endpoint (a test
+# holds them together). The legacy /.well-known/x402 file is not served:
+# the same parser no longer reads it and flags it as a migration warning.
+PAYMENT_PROTOCOLS = [{"x402": {}}]
+PRICES_USD = {"grade": {"mode": "dynamic", "currency": "USD", "min": "3.00", "max": "10.00"},
+              "fixit": {"mode": "fixed", "currency": "USD", "amount": "2.00"},
+              "cluster": {"mode": "fixed", "currency": "USD", "amount": "25.00"}}
+PAID_PATHS = {"grade": "/grade", "fixit": "/fixit", "cluster": "/cluster/acceptance"}
+
+
+def payment_info(product):
+    return {"protocols": PAYMENT_PROTOCOLS, "price": PRICES_USD[product]}
+
+
 def openapi(base, prefix):
     api = base + prefix
     sess = {"type": "object", "properties": {
         "workload_classes": {"type": "array", "items": {"type": "string", "enum": ["inference", "training"]}},
         "declared_runner": {"type": "string", "enum": ["buyer", "host"]}},
         "required": ["workload_classes", "declared_runner"]}
-    post = lambda summary, body=None, extra=None, paid=False: {"post": {  # noqa: E731
+    post = lambda summary, body=None, extra=None, paid=None: {"post": {  # noqa: E731
         "summary": summary,
-        # x402scan and similar probes: a paid operation is challenged with 402
-        # on a bare request; a free one carries an empty security list so it
-        # is not probed for a paywall.
-        "security": [{"x402": []}] if paid else [],
+        # No API authentication on any operation (security []); a paid one
+        # also declares x-payment-info and is challenged with 402 on a bare
+        # request. A free one is then listed as unprotected, not probed.
+        "security": [],
+        **({"x-payment-info": payment_info(paid)} if paid else {}),
         **({"requestBody": {"required": True, "content": {"application/json": {"schema": body}}}} if body else {}),
         "responses": {"200": {"description": "OK"}, "400": {"description": "bad request"},
                       "409": {"description": "session state does not allow this"},
@@ -110,13 +130,16 @@ def openapi(base, prefix):
     return {
         "openapi": "3.1.0",
         "info": {"title": "RigGrade grading API", "version": BENCH_VERSION,
-                 "description": DESCRIPTION, "license": {"name": "Apache-2.0"}},
+                 "description": DESCRIPTION, "license": {"name": "Apache-2.0"},
+                 "x-guidance": ("Paid operations answer a bare request with 402: the x402 v2 "
+                                "PaymentRequired is in the PAYMENT-REQUIRED header (USDC on Base, "
+                                "eip155:8453); retry with the signed PaymentPayload in "
+                                "PAYMENT-SIGNATURE. Free preflight and session steps need no "
+                                "payment. Measured, not promised.")},
         "servers": [{"url": api}],
-        "components": {"securitySchemes": {"x402": {
-            "type": "apiKey", "in": "header", "name": "PAYMENT-SIGNATURE",
-            "description": "x402 v2 payment: the 402 answer carries the PaymentRequired object "
-                           "in its PAYMENT-REQUIRED header (USDC on Base, eip155:8453); retry "
-                           "with the signed PaymentPayload in PAYMENT-SIGNATURE."}}},
+        # Guidance for agents: short inline, and the llms.txt pointer the
+        # discovery profile names (x-agentcash-guidance.llmsTxtUrl).
+        "x-agentcash-guidance": {"llmsTxtUrl": base + "/llms.txt"},
         "paths": {
             "/": {"get": {"summary": "Service descriptor: prices, references per class, sale state",
                           "security": [], "responses": {"200": {"description": "OK"}}}},
@@ -132,7 +155,7 @@ def openapi(base, prefix):
                             "required": ["session_id"]},
                            {"402": {"description": "x402 payment required (USDC on Base)"},
                             "422": {"description": "nothing gradable in this session"},
-                            "503": {"description": "sale off; nothing charged"}}, paid=True),
+                            "503": {"description": "sale off; nothing charged"}}, paid="grade"),
             "/heartbeat": post("Subscription heartbeat chain", {"type": "object"}),
             "/fixit": post("Host fix-it report (2 USDC): causes and fixes for every warn or fail "
                            "finding in a preflight report; answers 402 with the x402 requirement",
@@ -140,7 +163,7 @@ def openapi(base, prefix):
                             "required": ["preflight_report"]},
                            {"402": {"description": "x402 payment required (USDC on Base)"},
                             "422": {"description": "nothing to fix"},
-                            "503": {"description": "product off; nothing charged"}}, paid=True),
+                            "503": {"description": "product off; nothing charged"}}, paid="fixit"),
             "/cluster/acceptance": post("Cluster acceptance certificate (25 USDC): recomputes the "
                                         "evidence pack and issues a signed, stored certificate",
                                         {"type": "object",
@@ -148,7 +171,7 @@ def openapi(base, prefix):
                                          "required": ["evidence_pack"]},
                                         {"402": {"description": "x402 payment required (USDC on Base)"},
                                          "422": {"description": "evidence pack does not recompute"},
-                                         "503": {"description": "product off; nothing charged"}}, paid=True),
+                                         "503": {"description": "product off; nothing charged"}}, paid="cluster"),
             "/cluster/acceptance/{id}": {"get": {"summary": "Fetch an issued certificate; the service checks its signature",
                                                  "security": [], "responses": {"200": {"description": "OK"},
                                                                "404": {"description": "no such certificate"}}}},

@@ -39,20 +39,50 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(out[:4], b"\x00\x00\x01\x00")  # ICO header
         self.assertEqual(int(headers["Content-Length"]), len(out))
 
-    def test_openapi_marks_paid_and_free_operations_for_probes(self):
+    def test_openapi_declares_security_on_every_operation_and_payment_separately(self):
         status, _h, out = get(self.app, "/openapi.json")
         doc = json.loads(out)
-        scheme = doc["components"]["securitySchemes"]["x402"]
-        self.assertEqual((scheme["in"], scheme["name"]), ("header", "PAYMENT-SIGNATURE"))
+        # Discovery profile: payment is independent of API authentication, so
+        # every operation carries security [] and only paid ones x-payment-info.
+        self.assertNotIn("components", doc)
         paid = {p for p, ops in doc["paths"].items()
-                for op in ops.values() if op.get("security") == [{"x402": []}]}
-        free = {p for p, ops in doc["paths"].items()
-                for op in ops.values() if op.get("security") == []}
+                for op in ops.values() if "x-payment-info" in op}
         self.assertEqual(paid, {"/grade", "/fixit", "/cluster/acceptance"})
-        self.assertEqual(free, set(doc["paths"]) - paid)
         for ops in doc["paths"].values():
             for op in ops.values():
-                self.assertIn("security", op)
+                self.assertEqual(op["security"], [])
+                self.assertTrue(op.get("summary") or op.get("description"))
+                self.assertIn("responses", op)
+        self.assertEqual(doc["x-agentcash-guidance"], {"llmsTxtUrl": "https://grade.example/llms.txt"})
+        self.assertIn("PAYMENT-REQUIRED", doc["info"]["x-guidance"])
+        self.assertNotIn("contact", doc["info"])  # the owner's choice, not ours
+
+    def test_paid_operations_declare_x_payment_info_matching_the_atomic_prices(self):
+        from riggrade import discovery, endpoint
+        _s, _h, out = get(self.app, "/openapi.json")
+        doc = json.loads(out)
+        info = {p: doc["paths"][p]["post"]["x-payment-info"] for p in ("/grade", "/fixit", "/cluster/acceptance")}
+        for p, block in info.items():
+            self.assertEqual(block["protocols"], discovery.PAYMENT_PROTOCOLS)
+            self.assertIn("x402", block["protocols"][0])
+            self.assertIn("402", doc["paths"][p]["post"]["responses"])
+        self.assertEqual(info["/fixit"]["price"]["amount"], "2.00")
+        self.assertEqual(info["/cluster/acceptance"]["price"]["amount"], "25.00")
+        self.assertEqual((info["/grade"]["price"]["mode"], info["/grade"]["price"]["min"],
+                          info["/grade"]["price"]["max"]), ("dynamic", "3.00", "10.00"))
+        usd = lambda atomic: "%.2f" % (atomic / 1e6)  # noqa: E731
+        self.assertEqual(usd(endpoint.PRODUCT_PRICE_ATOMIC["fixit"]), info["/fixit"]["price"]["amount"])
+        self.assertEqual(usd(endpoint.PRODUCT_PRICE_ATOMIC["cluster"]), info["/cluster/acceptance"]["price"]["amount"])
+        self.assertEqual(usd(min(endpoint.POINT_PRICE_ATOMIC.values())), info["/grade"]["price"]["min"])
+        self.assertEqual(usd(max(endpoint.POINT_PRICE_ATOMIC.values()) * 2), info["/grade"]["price"]["max"])
+        for p, ops in doc["paths"].items():
+            if p not in info:
+                self.assertNotIn("x-payment-info", ops.get("post", ops.get("get")))
+
+    def test_legacy_well_known_x402_is_not_served(self):
+        for path in ("/.well-known/x402", "/.well-known/x402.json"):
+            status, _h, _out = get(self.app, path)
+            self.assertTrue(status.startswith("404"), path)
 
     def test_llms_txt_is_plain_text_with_the_descriptor(self):
         status, headers, out = get(self.app, "/llms.txt")
