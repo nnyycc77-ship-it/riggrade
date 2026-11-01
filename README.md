@@ -10,6 +10,7 @@ Status (1 Nov 2026): live at https://riggrade-674098696181.us-central1.run.app/r
 - [GPU index method, v0 draft](docs/index-method.md): daily listed price per GPU-hour by peer class, and price per unit of measured work once graded rigs exist. Method published before any value. Recorder: `python3 -m pricewatch.record --out PATH`.
 - [Cluster acceptance test, spec v0 draft](docs/cluster-acceptance.md): checks a rented multi-node cluster against its provider's own claims (inventory, node health, stragglers, inter-node fabric, storage) and writes an evidence pack. Not on sale.
 - MCP server for agents: `python3 -m riggrade.mcp` exposes `gpu_preflight` and `riggrade_service_info` over stdio.
+- [Products](docs/products.md): the host fix-it report (2 USDC) and the cluster acceptance certificate (25 USDC), each on sale only when the service names it.
 - [Payments](docs/payments.md): x402 through keyless public facilitators with an automatic backup; payer screened before settle. The sale is off.
 - [Reconstructed price history method, v0 draft](docs/index-reconstructed-method.md): a separate, labelled series from third-party records, never joined to the live index; no reconstructed grades.
 - [Smoke test from Google Drive](notebooks/smoke_test_drive.ipynb): the same free GPU test, reading the code from Drive after checking it against a manifest (`scripts/stage_for_drive.py`) and writing both reports back to Drive.

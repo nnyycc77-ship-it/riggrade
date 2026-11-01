@@ -38,6 +38,17 @@ def agent_card(base, prefix, on_sale):
                             "(3 USDC consumer card, 5 USDC data-centre card). A session that "
                             "is not gradable is never sold." % (BENCH_IMAGE, api),
              "tags": ["gpu", "benchmark", "x402", "usdc", "base"]},
+            {"id": "fixit", "name": "Host fix-it report",
+             "description": "Paid (2 USDC, x402). POST %s/fixit with the preflight-report.json the "
+                            "free check wrote: for every warn or fail finding, the likely cause, "
+                            "the fix steps and who can act. Free preview first." % api,
+             "tags": ["gpu", "diagnosis", "host", "x402"]},
+            {"id": "cluster_acceptance", "name": "Cluster acceptance certificate",
+             "description": "Paid (25 USDC, x402). Run runner.cluster on the rented nodes, then "
+                            "POST %s/cluster/acceptance with the evidence pack: the server recomputes "
+                            "every check and issues a signed, stored certificate with a public "
+                            "verify URL." % api,
+             "tags": ["gpu", "cluster", "acceptance", "x402"]},
         ],
         "payments": {"protocol": "x402", "network": "base", "asset": "USDC",
                      "on_sale": bool(on_sale), "descriptor": api},
@@ -57,7 +68,9 @@ def llms_txt(base, prefix, on_sale):
         "session there is free." % ("on" if on_sale else "off"),
         "",
         "## Endpoints",
-        "- Service descriptor (JSON, includes reasons the sale is off): " + api,
+        "- Service descriptor (JSON, includes reasons the sale is off and which products are on): " + api,
+        "- Host fix-it report, 2 USDC: POST " + api + "/fixit with {preflight_report}",
+        "- Cluster acceptance certificate, 25 USDC: POST " + api + "/cluster/acceptance with {evidence_pack}",
         "- OpenAPI: " + api + "/openapi.json",
         "- Agent card: " + base + "/.well-known/agent.json",
         "",
@@ -105,5 +118,23 @@ def openapi(base, prefix):
                             "422": {"description": "nothing gradable in this session"},
                             "503": {"description": "sale off; nothing charged"}}),
             "/heartbeat": post("Subscription heartbeat chain", {"type": "object"}),
+            "/fixit": post("Host fix-it report (2 USDC): causes and fixes for every warn or fail "
+                           "finding in a preflight report; answers 402 with the x402 requirement",
+                           {"type": "object", "properties": {"preflight_report": {"type": "object"}},
+                            "required": ["preflight_report"]},
+                           {"402": {"description": "x402 payment required (USDC on Base)"},
+                            "422": {"description": "nothing to fix"},
+                            "503": {"description": "product off; nothing charged"}}),
+            "/cluster/acceptance": post("Cluster acceptance certificate (25 USDC): recomputes the "
+                                        "evidence pack and issues a signed, stored certificate",
+                                        {"type": "object",
+                                         "properties": {"evidence_pack": {"type": "object"}},
+                                         "required": ["evidence_pack"]},
+                                        {"402": {"description": "x402 payment required (USDC on Base)"},
+                                         "422": {"description": "evidence pack does not recompute"},
+                                         "503": {"description": "product off; nothing charged"}}),
+            "/cluster/acceptance/{id}": {"get": {"summary": "Fetch and verify an issued certificate",
+                                                 "responses": {"200": {"description": "OK"},
+                                                               "404": {"description": "no such certificate"}}}},
         },
     }
