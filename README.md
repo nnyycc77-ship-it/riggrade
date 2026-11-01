@@ -2,7 +2,7 @@
 
 RigGrade is an independent GPU rig grading service. Whoever holds access to a rig runs an open, pinned benchmark container on it. The grading endpoint grades the result against fixed, published bars for the rig's peer class and workload class, and returns a label and an evidence pack. Grades are labels of measured quality, not promises.
 
-Status: step 1 (spec, sample grades, container and endpoint, built and tested with the sale switched off). Nothing here is live.
+Status (1 Nov 2026): live at https://riggrade-674098696181.us-central1.run.app/riggrade/v1 with the sale on. Agents can read `/.well-known/agent.json`, `/llms.txt` and `/riggrade/v1/openapi.json` on that host. Prices: 3 USDC per workload class for consumer cards, 5 USDC for data-centre cards, paid by x402 (USDC on Base). While a GPU class has no reference yet, each rig's first session there is free.
 
 - [Grading spec, v0.1](docs/grading-spec.md)
 - [Sample grading of three fictional rigs](docs/sample-grading.md)
@@ -14,6 +14,23 @@ Status: step 1 (spec, sample grades, container and endpoint, built and tested wi
 - [Reconstructed price history method, v0 draft](docs/index-reconstructed-method.md): a separate, labelled series from third-party records, never joined to the live index; no reconstructed grades.
 - [Smoke test from Google Drive](notebooks/smoke_test_drive.ipynb): the same free GPU test, reading the code from Drive after checking it against a manifest (`scripts/stage_for_drive.py`) and writing both reports back to Drive.
 - [Smoke test notebook](notebooks/smoke_test.ipynb): checks the GPU code paths on a free Colab or Kaggle GPU. Not a grade: small model, short run, local endpoint with the sale off. Command: `python3 -m runner.smoke --minutes 2`.
+
+## Use the MCP server
+
+Standard library only, stdio, no secrets. Two tools: `gpu_preflight` (free, runs
+on the box the server runs on) and `riggrade_service_info`.
+
+Claude Desktop or Claude Code (`claude mcp add riggrade -- python3 -m riggrade.mcp`),
+or in any MCP client config:
+
+```json
+{"mcpServers": {"riggrade": {
+  "command": "python3", "args": ["-m", "riggrade.mcp"],
+  "env": {"RIGGRADE_ENDPOINT": "https://riggrade-674098696181.us-central1.run.app/riggrade/v1"}}}}
+```
+
+With `pip install git+https://github.com/nnyycc77-ship-it/riggrade` the commands
+`riggrade-mcp` and `riggrade-preflight` are on the path.
 
 ## Running a graded session
 

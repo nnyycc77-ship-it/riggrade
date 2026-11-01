@@ -33,8 +33,10 @@ from .heartbeat import Heartbeats
 from .label import STATEMENT, badge_text, lint
 from .session import MemoryStore, SessionError, Sessions
 from . import salelog
+from . import discovery
 
 PREFIX = "/riggrade/v1"
+DISCOVERY_PATHS = ("/", "/.well-known/agent.json", "/llms.txt", PREFIX + "/openapi.json")
 MAX_BODY = 4 * 1024 * 1024
 USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 # Decided prices (plan Revision 5, decided items 1), USDC atomic units.
@@ -99,6 +101,8 @@ class GradingApp:
     def __call__(self, environ, start_response):
         path = environ.get("PATH_INFO", "")
         method = environ.get("REQUEST_METHOD", "GET")
+        if method == "GET" and path in DISCOVERY_PATHS:
+            return self.discovery(start_response, environ, path)
         if not path.startswith(PREFIX):
             return _json(start_response, "404 Not Found", {"error": "not_found"})
         rest = path[len(PREFIX):].strip("/").split("/")
@@ -132,6 +136,23 @@ class GradingApp:
         except SessionError as exc:
             return _json(start_response, "409 Conflict", {"error": str(exc), "charged": False})
         return _json(start_response, "404 Not Found", {"error": "not_found"})
+
+    def discovery(self, start_response, environ, path):
+        """Read-only documents for agents and crawlers (riggrade.discovery)."""
+        base = _url(environ, "")
+        if path == "/llms.txt":
+            data = discovery.llms_txt(base, PREFIX, self.on_sale).encode()
+            start_response("200 OK", [("Content-Type", "text/plain; charset=utf-8"),
+                                      ("Content-Length", str(len(data)))])
+            return [data]
+        if path == "/.well-known/agent.json":
+            return _json(start_response, "200 OK", discovery.agent_card(base, PREFIX, self.on_sale))
+        if path == PREFIX + "/openapi.json":
+            return _json(start_response, "200 OK", discovery.openapi(base, PREFIX))
+        return _json(start_response, "200 OK",
+                     {"product": "RigGrade", "descriptor": base + PREFIX,
+                      "openapi": base + PREFIX + "/openapi.json",
+                      "agent_card": base + "/.well-known/agent.json", "llms": base + "/llms.txt"})
 
     def descriptor(self):
         sale = {"on_sale": self.on_sale}

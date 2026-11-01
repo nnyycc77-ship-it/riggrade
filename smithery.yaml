@@ -1,0 +1,17 @@
+# Smithery (smithery.ai) start command for the RigGrade MCP server.
+# Stdio, standard library only, no configuration and no secrets.
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      endpoint:
+        type: string
+        description: "Optional RigGrade endpoint base URL for live service info"
+        default: "https://riggrade-674098696181.us-central1.run.app/riggrade/v1"
+  commandFunction: |-
+    (config) => ({
+      command: "python3",
+      args: ["-m", "riggrade.mcp"],
+      env: { RIGGRADE_ENDPOINT: config.endpoint || "" }
+    })
