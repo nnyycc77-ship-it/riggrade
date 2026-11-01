@@ -9,9 +9,11 @@ requirement. A facilitator only checks the signed USDC authorisation and
 submits it on-chain; it never holds funds, and this module holds no key.
 
 Order, per the endpoint's adapter contract:
-1. Decode the X-PAYMENT header and check it locally against the requirement:
-   scheme, network, recipient, amount. A mismatch is refused before any
-   network call.
+1. Decode the PAYMENT-SIGNATURE header (x402 v2 PaymentPayload) and check
+   it locally against the requirement: version, scheme, network, recipient,
+   amount. A mismatch is refused before any network call. x402 v1 payloads
+   (X-PAYMENT) are refused: both facilitators advertise v2 exact on Base
+   (eip155:8453), and Dexter v2 only.
 2. Screen the payer against the blocked-address list. A blocked payer is
    refused before anything is verified or settled.
 3. Verify with the first facilitator that answers. Only a facilitator that
@@ -22,10 +24,10 @@ Order, per the endpoint's adapter contract:
    the authorisation may already be on-chain, and a second submission must
    never be risked.
 
-UNVERIFIED: both facilitator hosts were unreachable from the build
-environment. The /verify and /settle paths and body shape follow the x402
-v1 facilitator specification; a live check against each host's /supported
-endpoint comes before the sale switch.
+The /verify and /settle paths and body shape follow the x402 v2 facilitator
+specification ({x402Version, paymentPayload, paymentRequirements}). Both
+hosts' GET /supported were read on 1 Nov 2026: Dexter lists x402Version 2
+exact on eip155:8453; PayAI lists v1 "base" and v2 "eip155:8453".
 """
 
 import base64
@@ -59,22 +61,33 @@ def http_post(url, body, timeout=20):
         raise Unreachable(str(exc))
 
 
+X402_VERSION = 2
+
+
 def decode_payment(header):
     try:
         payload = json.loads(base64.b64decode(header, validate=True))
     except (ValueError, TypeError):
-        raise ValueError("X-PAYMENT is not base64 JSON")
+        raise ValueError("PAYMENT-SIGNATURE is not base64 JSON")
     if not isinstance(payload, dict):
-        raise ValueError("X-PAYMENT is not a JSON object")
+        raise ValueError("PAYMENT-SIGNATURE is not a JSON object")
+    if payload.get("x402Version") != X402_VERSION:
+        raise ValueError("unsupported x402 version %r: send x402Version 2"
+                         % payload.get("x402Version"))
     return payload
 
 
 def local_check(payload, requirement):
-    """Returns (payer, None) or (None, reason). No network."""
-    if payload.get("scheme") != requirement["scheme"]:
+    """Returns (payer, None) or (None, reason). No network. The payload's
+    "accepted" entry must be the requirement we issued; the signed
+    authorisation must pay our address at least the amount."""
+    accepted = payload.get("accepted") or {}
+    if accepted.get("scheme") != requirement["scheme"]:
         return None, "scheme mismatch"
-    if payload.get("network") != requirement["network"]:
+    if accepted.get("network") != requirement["network"]:
         return None, "network mismatch"
+    if (accepted.get("payTo") or "").lower() != requirement["payTo"].lower():
+        return None, "accepted requirement is not to the payout address"
     auth = (payload.get("payload") or {}).get("authorization") or {}
     payer, to = auth.get("from", ""), auth.get("to", "")
     if not WALLET.match(payer or ""):
@@ -85,7 +98,7 @@ def local_check(payload, requirement):
         value = int(auth.get("value", "0"))
     except (TypeError, ValueError):
         return None, "bad amount"
-    if value < int(requirement["maxAmountRequired"]):
+    if value < int(requirement["amount"]):
         return None, "amount below price"
     return payer, None
 
@@ -145,7 +158,7 @@ class FacilitatorAdapter:
         allowed, reason = self.screen(payer)
         if not allowed:
             return self._refuse(reason)
-        body = {"x402Version": payload.get("x402Version", 1),
+        body = {"x402Version": X402_VERSION,
                 "paymentPayload": payload, "paymentRequirements": requirement}
         tried = []
         for base in self.facilitators:
@@ -173,7 +186,7 @@ class FacilitatorAdapter:
         if not allowed:
             return self._refuse(reason)
 
-        body = {"x402Version": payload.get("x402Version", 1),
+        body = {"x402Version": X402_VERSION,
                 "paymentPayload": payload, "paymentRequirements": requirement}
         tried = []
         for base in self.facilitators:
@@ -191,6 +204,11 @@ class FacilitatorAdapter:
             except Unreachable as exc:
                 return self._refuse("settle got no answer: %s" % exc,
                                     charged="unknown", facilitator=base)
+            if result.get("errorReason") == "settlement_pending":
+                # v2: non-terminal; the transaction may land later. Never resubmit.
+                return self._refuse("settlement pending at the facilitator",
+                                    charged="unknown", tx=result.get("transaction"),
+                                    facilitator=base)
             if not result.get("success"):
                 return self._refuse("settle failed: %s"
                                     % result.get("errorReason", "no reason given"),

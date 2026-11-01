@@ -1,4 +1,4 @@
-"""Facilitator responses here are synthetic, shaped like the x402 v1
+"""Facilitator responses here are synthetic, shaped like the x402 v2
 facilitator specification; no real facilitator is called."""
 
 import base64
@@ -12,14 +12,18 @@ from riggrade import payment as pay
 PAY_TO = "0x" + "12" * 20
 PAYER = "0x" + "34" * 20
 BLOCKED = "0x" + "66" * 20
-REQ = {"scheme": "exact", "network": "base", "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-       "payTo": PAY_TO, "maxAmountRequired": "3000000", "resource": "/riggrade/v1/session/s/grade",
-       "description": "d", "mimeType": "application/json", "maxTimeoutSeconds": 300,
-       "extra": {"name": "USD Coin", "version": "2"}}
+NETWORK = "eip155:8453"
+REQ = {"scheme": "exact", "network": NETWORK, "amount": "3000000",
+       "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "payTo": PAY_TO,
+       "maxTimeoutSeconds": 300, "extra": {"name": "USD Coin", "version": "2"}}
 
 
-def header(frm=PAYER, to=PAY_TO, value="3000000", network="base", scheme="exact"):
-    body = {"x402Version": 1, "scheme": scheme, "network": network,
+def header(frm=PAYER, to=PAY_TO, value="3000000", network=NETWORK, scheme="exact", version=2,
+           accepted_to=PAY_TO):
+    body = {"x402Version": version,
+            "resource": {"url": "/riggrade/v1/session/s/grade", "description": "d",
+                         "mimeType": "application/json"},
+            "accepted": dict(REQ, scheme=scheme, network=network, payTo=accepted_to),
             "payload": {"signature": "0x" + "ab" * 65,
                         "authorization": {"from": frm, "to": to, "value": value,
                                           "validAfter": "0", "validBefore": "9999999999",
@@ -44,7 +48,7 @@ class Post:
 
 
 OK_VERIFY = {"isValid": True, "payer": PAYER}
-OK_SETTLE = {"success": True, "transaction": "0x" + "ef" * 32, "network": "base", "payer": PAYER}
+OK_SETTLE = {"success": True, "transaction": "0x" + "ef" * 32, "network": NETWORK, "payer": PAYER}
 A, B = "https://a.example", "https://b.example"
 
 
@@ -91,7 +95,7 @@ class AdapterTests(unittest.TestCase):
         ad = pay.FacilitatorAdapter([A], allow, post=post)
         cases = {"not to the payout address": header(to="0x" + "99" * 20),
                  "amount below price": header(value="2999999"),
-                 "network mismatch": header(network="base-sepolia"),
+                 "network mismatch": header(network="eip155:84532"),
                  "scheme mismatch": header(scheme="upto"),
                  "not base64": "%%%"}
         for expect, h in cases.items():

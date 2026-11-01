@@ -9,17 +9,29 @@ The paid resource is `POST /riggrade/v1/grade` with `{"session_id": ...}`, one
 stable URL for every session. The older per-session route
 `/riggrade/v1/session/{id}/grade` still works.
 
-1. A grade request without payment answers `402 Payment Required` with one
-   payment requirement:
-   - the price in USDC on Base, from the decided prices;
-   - the payout address;
-   - the USDC contract;
-   - a 300-second window.
+The protocol is **x402 version 2** (since 1 Nov 2026; the directories and
+both facilitators speak v2, and Dexter speaks only v2 on Base).
+
+1. A grade request without payment answers `402 Payment Required`. The
+   `PaymentRequired` object travels base64-encoded in the `PAYMENT-REQUIRED`
+   header, the canonical carrier, and is repeated as the JSON body for
+   people. It holds `x402Version: 2`, the `resource` (URL, description,
+   service name, tags) and one `accepts` entry:
+   - `scheme: exact`, `network: eip155:8453` (Base mainnet, CAIP-2);
+   - `amount` in atomic USDC, from the decided prices;
+   - the payout address (`payTo`) and the USDC contract (`asset`);
+   - a 300-second window and the USDC EIP-712 domain in `extra`.
+   A bare request to a paid route, any method, gets this challenge before
+   any validation, so a crawler's probe sees the paywall.
 2. The buyer signs a USDC transfer authorisation from their address to the
-   payout address and sends it in the `X-PAYMENT` header.
+   payout address and sends the `PaymentPayload` (`x402Version: 2`, the
+   `accepted` requirement, the signed `payload`) base64 in the
+   `PAYMENT-SIGNATURE` header. An x402 v1 `X-PAYMENT` header is refused
+   with a 402 that names the version; nothing is settled.
 3. `riggrade.payment.FacilitatorAdapter` then works through these steps, in
    order:
-   - **Check the payment locally:** scheme, network, recipient and amount.
+   - **Check the payment locally:** version, scheme, network, the accepted
+     requirement's recipient, and the authorisation's recipient and amount.
      A mismatch is refused before any network call.
    - **Screen the payer** against the blocked-address list. If the list is
      missing or unreadable, every payer is refused.
@@ -27,8 +39,10 @@ stable URL for every session. The older per-session route
      facilitator only when one cannot be reached. A payment one facilitator
      calls invalid is refused, not retried elsewhere.
    - **Settle with the facilitator that verified.** If the settle call gets no
-     answer, the charge is recorded as `unknown` and nothing is resubmitted.
-4. The grade is issued, and the sale is appended to the hash-chained sale log.
+     answer, or answers `settlement_pending`, the charge is recorded as
+     `unknown` and nothing is resubmitted.
+4. The grade is issued with the settlement in the `PAYMENT-RESPONSE` header,
+   and the sale is appended to the hash-chained sale log.
 
 Funds go straight from the payer to the payout address. A facilitator checks
 the signature and submits it on-chain. It never holds funds. Nothing in this

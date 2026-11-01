@@ -52,7 +52,7 @@ def call(app, method, path, body=None, payment=None):
     environ = {"REQUEST_METHOD": method, "PATH_INFO": path,
                "CONTENT_LENGTH": str(len(data)), "wsgi.input": io.BytesIO(data)}
     if payment:
-        environ["HTTP_X_PAYMENT"] = payment
+        environ["HTTP_PAYMENT_SIGNATURE"] = payment
     got = {}
 
     def start_response(status, headers):
@@ -199,7 +199,7 @@ class PaidTests(Harness):
         sid, _st, _b = self.run_session(app)
         status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
         self.assertEqual(status, "402 Payment Required")
-        self.assertEqual(doc["accepts"][0]["maxAmountRequired"], "3000000")
+        self.assertEqual(doc["accepts"][0]["amount"], "3000000")
         self.assertEqual(doc["accepts"][0]["payTo"], WALLET)
         self.assertNotIn("labels", doc)
         self.assertEqual(self.adapter.calls, [])
@@ -208,7 +208,7 @@ class PaidTests(Harness):
         app = self.app()
         sid, _st, _b = self.run_session(app, device="NVIDIA H100 80GB HBM3", memory=79.6)
         _s, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
-        self.assertEqual(doc["accepts"][0]["maxAmountRequired"], "5000000")
+        self.assertEqual(doc["accepts"][0]["amount"], "5000000")
 
 
     def test_refused_payment_charges_nothing_and_grades_nothing(self):
@@ -246,14 +246,34 @@ class PaidTests(Harness):
         sid, _st, _b = self.run_session(app)
         status, _h, doc = call(app, "POST", "/riggrade/v1/grade", {"session_id": sid})
         self.assertEqual(status, "402 Payment Required")
-        self.assertTrue(doc["accepts"][0]["resource"].endswith("/riggrade/v1/grade"))
+        self.assertTrue(doc["resource"]["url"].endswith("/riggrade/v1/grade"))
+        # The PAYMENT-REQUIRED header carries the same PaymentRequired object (x402 v2).
+        import base64
+        carried = json.loads(base64.b64decode(_h["PAYMENT-REQUIRED"]))
+        self.assertEqual(carried["x402Version"], 2)
+        self.assertEqual(carried["accepts"], doc["accepts"])
+        self.assertEqual(carried["resource"], doc["resource"])
+        self.assertNotIn("charged", carried)
+        self.assertEqual(set(doc["accepts"][0]), {"scheme", "network", "amount", "asset", "payTo",
+                                                   "maxTimeoutSeconds", "extra"})
         bazaar = doc["extensions"]["bazaar"]
         self.assertEqual(bazaar["schema"]["required"], ["session_id"])
         self.assertIn("gpu", bazaar["tags"])
+        # An x402 v1 header is refused with a 402 that names the version; no settle.
+        calls = len(self.adapter.calls)
+        environ_v1 = {"REQUEST_METHOD": "POST", "PATH_INFO": "/riggrade/v1/grade",
+                      "HTTP_X_PAYMENT": "pay"}
+        data = json.dumps({"session_id": sid}).encode()
+        environ_v1.update({"CONTENT_LENGTH": str(len(data)), "wsgi.input": io.BytesIO(data)})
+        got = {}
+        out = b"".join(app(environ_v1, lambda st, h: got.update(status=st)))
+        self.assertEqual(got["status"], "402 Payment Required")
+        self.assertIn("x402 v1", json.loads(out)["error"])
+        self.assertEqual(len(self.adapter.calls), calls)
         status, _h, doc = call(app, "POST", "/riggrade/v1/grade", {"session_id": sid},
                                payment="pay")
         self.assertEqual(status, "200 OK")
-        self.assertTrue(self.adapter.calls[-1][1]["resource"].endswith("/riggrade/v1/grade"))
+        self.assertEqual(self.adapter.calls[-1][1]["amount"], "3000000")
         # No session: the informational discovery 402 (price only), never a settle.
         calls = len(self.adapter.calls)
         status, _h, doc = call(app, "POST", "/riggrade/v1/grade", {})
@@ -323,7 +343,7 @@ class FreeReferenceTests(Harness):
         # names the claim, charges nothing, and no adapter call is made.
         status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
         self.assertEqual(status, "402 Payment Required")
-        self.assertEqual(doc["accepts"][0]["maxAmountRequired"], "0")
+        self.assertEqual(doc["accepts"][0]["amount"], "0")
         self.assertEqual(self.adapter.calls, [])
         self.assertEqual(app.references.basis("rtx4090-24", "inference")["rigs"], 0)
         status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid,
@@ -359,7 +379,7 @@ class FreeReferenceTests(Harness):
             # No claim: the 402 asks for the 0 USDC operator claim, nothing settles.
             status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
             self.assertEqual(status, "402 Payment Required")
-            self.assertEqual(doc["accepts"][0]["maxAmountRequired"], "0")
+            self.assertEqual(doc["accepts"][0]["amount"], "0")
             self.assertTrue(doc["free_reference_session"])
             _s, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid,
                                payment="pay:" + OPS[k])
@@ -369,7 +389,7 @@ class FreeReferenceTests(Harness):
         sid, _st, _b = self.run_session(app, rig_id="rig-new")
         status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
         self.assertEqual(status, "402 Payment Required")
-        self.assertEqual(doc["accepts"][0]["maxAmountRequired"], "3000000")
+        self.assertEqual(doc["accepts"][0]["amount"], "3000000")
 
     def test_descriptor_publishes_reference_basis_and_appeals(self):
         app = self.app()
@@ -395,7 +415,7 @@ class FreeReferenceTests(Harness):
         self.assertEqual(label["capped_by"], "evidence")
         self.assertIn("provisional", label["evidence_tag"])
         self.assertEqual(label["pillars"]["reliability"], "not measured (point grade)")
-        self.assertEqual(headers["X-PAYMENT-RESPONSE"], "eyJ0eCI6ICJvayJ9")
+        self.assertEqual(headers["PAYMENT-RESPONSE"], "eyJ0eCI6ICJvayJ9")
         self.assertEqual(doc["evidence_pack"]["paying_wallet"], PAYER)
         basis = doc["evidence_pack"]["classes"]["inference"]["reference_basis"]
         self.assertEqual(basis["rigs"], 5)

@@ -4,7 +4,13 @@ OpenAPI document at /riggrade/v1/openapi.json. Static apart from the
 base URL and the live sale state; nothing here changes a price or a rule.
 """
 
+import base64
+
 from . import BENCH_VERSION
+
+# 16x16 icon served at /favicon.ico (crawlers and directories ask for one).
+FAVICON = base64.b64decode(
+    "AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAQAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA3KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/8AAAAAAAAAAAAAAAA3KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/wAAAAAAAAAANykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/8AAAAAAAAAADcpH/83KR//Nykf/zcpH/+o017/qNNe/zcpH/83KR//Nykf/6jTXv+o017/Nykf/zcpH/83KR//AAAAAAAAAAA3KR//Nykf/zcpH/83KR//qNNe/6jTXv83KR//Nykf/6jTXv+o017/Nykf/zcpH/83KR//Nykf/wAAAAAAAAAANykf/zcpH/83KR//Nykf/6jTXv+o017/Nykf/6jTXv+o017/Nykf/zcpH/83KR//Nykf/zcpH/8AAAAAAAAAADcpH/83KR//Nykf/zcpH/+o017/qNNe/6jTXv+o017/Nykf/zcpH/83KR//Nykf/zcpH/83KR//AAAAAAAAAAA3KR//Nykf/zcpH/83KR//qNNe/6jTXv+o017/qNNe/6jTXv83KR//Nykf/zcpH/83KR//Nykf/wAAAAAAAAAANykf/zcpH/83KR//Nykf/6jTXv+o017/Nykf/zcpH/83KR//qNNe/zcpH/83KR//Nykf/zcpH/8AAAAAAAAAADcpH/83KR//Nykf/zcpH/+o017/qNNe/zcpH/83KR//Nykf/6jTXv83KR//Nykf/zcpH/83KR//AAAAAAAAAAA3KR//Nykf/zcpH/83KR//qNNe/6jTXv+o017/qNNe/6jTXv83KR//Nykf/zcpH/83KR//Nykf/wAAAAAAAAAANykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/8AAAAAAAAAADcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//AAAAAAAAAAAAAAAANykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//Nykf/zcpH/83KR//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==")
 
 REPO = "https://github.com/nnyycc77-ship-it/riggrade"
 BENCH_IMAGE = "ghcr.io/nnyycc77-ship-it/riggrade-bench"
@@ -51,7 +57,7 @@ def agent_card(base, prefix, on_sale):
                             "independently verifiable)." % api,
              "tags": ["gpu", "cluster", "acceptance", "x402"]},
         ],
-        "payments": {"protocol": "x402", "network": "base", "asset": "USDC",
+        "payments": {"protocol": "x402", "x402Version": 2, "network": "eip155:8453", "asset": "USDC",
                      "on_sale": bool(on_sale), "descriptor": api},
     }
 
@@ -91,8 +97,12 @@ def openapi(base, prefix):
         "workload_classes": {"type": "array", "items": {"type": "string", "enum": ["inference", "training"]}},
         "declared_runner": {"type": "string", "enum": ["buyer", "host"]}},
         "required": ["workload_classes", "declared_runner"]}
-    post = lambda summary, body=None, extra=None: {"post": {  # noqa: E731
+    post = lambda summary, body=None, extra=None, paid=False: {"post": {  # noqa: E731
         "summary": summary,
+        # x402scan and similar probes: a paid operation is challenged with 402
+        # on a bare request; a free one carries an empty security list so it
+        # is not probed for a paywall.
+        "security": [{"x402": []}] if paid else [],
         **({"requestBody": {"required": True, "content": {"application/json": {"schema": body}}}} if body else {}),
         "responses": {"200": {"description": "OK"}, "400": {"description": "bad request"},
                       "409": {"description": "session state does not allow this"},
@@ -102,22 +112,27 @@ def openapi(base, prefix):
         "info": {"title": "RigGrade grading API", "version": BENCH_VERSION,
                  "description": DESCRIPTION, "license": {"name": "Apache-2.0"}},
         "servers": [{"url": api}],
+        "components": {"securitySchemes": {"x402": {
+            "type": "apiKey", "in": "header", "name": "PAYMENT-SIGNATURE",
+            "description": "x402 v2 payment: the 402 answer carries the PaymentRequired object "
+                           "in its PAYMENT-REQUIRED header (USDC on Base, eip155:8453); retry "
+                           "with the signed PaymentPayload in PAYMENT-SIGNATURE."}}},
         "paths": {
             "/": {"get": {"summary": "Service descriptor: prices, references per class, sale state",
-                          "responses": {"200": {"description": "OK"}}}},
-            "/openapi.json": {"get": {"summary": "This document",
+                          "security": [], "responses": {"200": {"description": "OK"}}}},
+            "/openapi.json": {"get": {"summary": "This document", "security": [],
                                       "responses": {"200": {"description": "OK"}}}},
             "/session": post("Open a session", sess),
             "/session/{id}/start": post("Draw the run parameters (revealed only now)"),
             "/session/{id}/bundle": post("Submit the result bundle; a free preview says what is gradable",
                                          {"type": "object"}),
-            "/grade": post("Request the grade; answers 402 with an x402 payment requirement, "
-                           "then the grade on a paid retry with the X-PAYMENT header",
+            "/grade": post("Request the grade; answers 402 with an x402 v2 payment requirement, "
+                           "then the grade on a paid retry with the PAYMENT-SIGNATURE header",
                            {"type": "object", "properties": {"session_id": {"type": "string"}},
                             "required": ["session_id"]},
                            {"402": {"description": "x402 payment required (USDC on Base)"},
                             "422": {"description": "nothing gradable in this session"},
-                            "503": {"description": "sale off; nothing charged"}}),
+                            "503": {"description": "sale off; nothing charged"}}, paid=True),
             "/heartbeat": post("Subscription heartbeat chain", {"type": "object"}),
             "/fixit": post("Host fix-it report (2 USDC): causes and fixes for every warn or fail "
                            "finding in a preflight report; answers 402 with the x402 requirement",
@@ -125,7 +140,7 @@ def openapi(base, prefix):
                             "required": ["preflight_report"]},
                            {"402": {"description": "x402 payment required (USDC on Base)"},
                             "422": {"description": "nothing to fix"},
-                            "503": {"description": "product off; nothing charged"}}),
+                            "503": {"description": "product off; nothing charged"}}, paid=True),
             "/cluster/acceptance": post("Cluster acceptance certificate (25 USDC): recomputes the "
                                         "evidence pack and issues a signed, stored certificate",
                                         {"type": "object",
@@ -133,9 +148,9 @@ def openapi(base, prefix):
                                          "required": ["evidence_pack"]},
                                         {"402": {"description": "x402 payment required (USDC on Base)"},
                                          "422": {"description": "evidence pack does not recompute"},
-                                         "503": {"description": "product off; nothing charged"}}),
+                                         "503": {"description": "product off; nothing charged"}}, paid=True),
             "/cluster/acceptance/{id}": {"get": {"summary": "Fetch an issued certificate; the service checks its signature",
-                                                 "responses": {"200": {"description": "OK"},
+                                                 "security": [], "responses": {"200": {"description": "OK"},
                                                                "404": {"description": "no such certificate"}}}},
         },
     }
