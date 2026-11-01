@@ -54,8 +54,8 @@ PRODUCT_NOTES = {
     "cluster": "Cluster acceptance certificate, 25 USDC: POST /riggrade/v1/cluster/acceptance "
                "with {evidence_pack} (the acceptance.json runner.cluster wrote); the server "
                "recomputes every check, refuses a pack that does not recompute, and issues a "
-               "signed, stored certificate anyone can fetch at GET "
-               "/riggrade/v1/cluster/acceptance/{id}.",
+               "signed, stored certificate. GET /riggrade/v1/cluster/acceptance/{id} returns "
+               "it with the service's own signature check (HMAC: not independently verifiable).",
 }
 WALLET = re.compile(r"^0x[0-9a-fA-F]{40}$")
 OPERATOR_CLAIM_NOTE = ("A free reference session is claimed with an X-PAYMENT authorisation "

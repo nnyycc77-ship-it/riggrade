@@ -46,8 +46,9 @@ def agent_card(base, prefix, on_sale):
             {"id": "cluster_acceptance", "name": "Cluster acceptance certificate",
              "description": "Paid (25 USDC, x402). Run runner.cluster on the rented nodes, then "
                             "POST %s/cluster/acceptance with the evidence pack: the server recomputes "
-                            "every check and issues a signed, stored certificate with a public "
-                            "verify URL." % api,
+                            "every check and issues a signed, stored certificate. The fetch URL "
+                            "returns it with the service's own signature check (HMAC, not "
+                            "independently verifiable)." % api,
              "tags": ["gpu", "cluster", "acceptance", "x402"]},
         ],
         "payments": {"protocol": "x402", "network": "base", "asset": "USDC",
@@ -133,7 +134,7 @@ def openapi(base, prefix):
                                         {"402": {"description": "x402 payment required (USDC on Base)"},
                                          "422": {"description": "evidence pack does not recompute"},
                                          "503": {"description": "product off; nothing charged"}}),
-            "/cluster/acceptance/{id}": {"get": {"summary": "Fetch and verify an issued certificate",
+            "/cluster/acceptance/{id}": {"get": {"summary": "Fetch an issued certificate; the service checks its signature",
                                                  "responses": {"200": {"description": "OK"},
                                                                "404": {"description": "no such certificate"}}}},
         },

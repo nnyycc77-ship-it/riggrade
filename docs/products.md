@@ -39,8 +39,12 @@ not recompute is refused (422) and nothing is charged. The free answer is
 the recomputed verdict and check statuses. The paid answer is a
 certificate: the claims, the images every node ran, each check with its
 numbers, the verdict, the pack's SHA-256, and an HMAC signature by the
-server. The certificate is stored, and anyone can fetch and verify it at
-`GET /riggrade/v1/cluster/acceptance/{certificate_id}`. Measured, not
+server. The certificate is stored, and anyone holding its id can fetch it at
+`GET /riggrade/v1/cluster/acceptance/{certificate_id}`, where the service
+checks the signature against its own secret and stored record and answers
+`signature_valid`. That is verification by the service, not independent
+verification: the key is symmetric, so a copy of the certificate alone
+cannot be checked without asking the service. Measured, not
 promised: it states what the cluster delivered during that test against
 what its provider claimed.
 
