@@ -152,6 +152,18 @@ class ListingFilesTests(unittest.TestCase):
             self.assertIsNone(re.search(r"(?i)((secret|token|password|api_key)\s*[:=]\s*\S|0x[0-9a-fA-F]{40})", text))
 
 
+class PublishWorkflowTests(unittest.TestCase):
+    def test_pypi_publish_is_keyless_and_tests_first(self):
+        text = (ROOT / ".github" / "workflows" / "publish-pypi.yml").read_text()
+        self.assertIn("id-token: write", text)
+        self.assertIn("pypa/gh-action-pypi-publish", text)
+        self.assertIn("environment: pypi", text)
+        self.assertIn("python -m unittest discover", text)
+        for word in ("password", "secrets.", "PYPI_API_TOKEN", "TWINE"):
+            self.assertNotIn(word, text)
+        self.assertIsNone(re.search(r"pypi-[A-Za-z0-9_-]{20,}", text))
+
+
 class Discovery402Tests(unittest.TestCase):
     def probe(self, app, header=None):
         environ = {"REQUEST_METHOD": "POST", "PATH_INFO": "/riggrade/v1/grade",
