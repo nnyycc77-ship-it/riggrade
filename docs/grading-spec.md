@@ -232,7 +232,7 @@ Class references need runs, and the capital boundary rules out rentals ahead of 
 
 - **Scope, one wording.** "No reference yet" means: for that class and workload, fewer than 5 rigs stand behind the provisional median and no controlled run exists. The free-session rule, the preview and the endpoint descriptor all use this wording.
 - **Before payment.** While a class and workload has no reference yet, the preview tells the payer "reference-building session, speed not graded".
-- **Free reference-building sessions (owner decision, 1 Nov 2026; confirmed for the coordinator in board Message 180).** While a class and workload has no reference yet, each rig's first session there is free. That session is graded on the pillars it can measure and enters the provisional median on the same basis as a paid first session (one per rig identity, attested rigs preferred once 5 exist); speed is not graded. The rules:
+- **Free reference-building sessions (owner decision, 1 Nov 2026; confirmed for the coordinator in board Message 180).** While a class and workload has no reference yet, each rig's first session there is free. That session is graded on the pillars it can measure and enters the provisional median on the same basis as a paid first session (one per rig identity; once 5 attested rigs exist, the median uses attested rigs only); speed is not graded. The rules:
   - A repeat session from the same rig, while the reference is still building, cannot be speed graded, so it is not sold (422, nothing charged).
   - In a session that mixes classes, only workloads whose class has a reference are charged.
   - Once a reference exists, the decided prices apply unchanged: 3 USDC for consumer cards, 5 USDC for data-centre cards.
