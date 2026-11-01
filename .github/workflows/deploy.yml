@@ -38,9 +38,14 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p deploy/screen /tmp/ofac
-          curl -fsS --retry 3 -o /tmp/ofac/SDN_ADVANCED.XML \
+          curl -fsSL --retry 3 -A "riggrade-deploy/1 (+https://github.com/${{ github.repository }})" \
+            -o /tmp/ofac/SDN_ADVANCED.XML -w 'HTTP %{http_code}, %{content_type}, %{size_download} bytes, from %{url_effective}\n' \
             https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN_ADVANCED.XML
-          python3 -m riggrade.screenlist /tmp/ofac/SDN_ADVANCED.XML --out deploy/screen/blocked-addresses.txt
+          if ! python3 -m riggrade.screenlist /tmp/ofac/SDN_ADVANCED.XML --out deploy/screen/blocked-addresses.txt; then
+            echo "Download did not parse. First bytes:" >&2
+            head -c 600 /tmp/ofac/SDN_ADVANCED.XML >&2; echo >&2
+            exit 1
+          fi
           COUNT=$(grep -c '^0x' deploy/screen/blocked-addresses.txt || true)
           echo "Blocked addresses: $COUNT" | tee -a "$GITHUB_STEP_SUMMARY"
           # Fail loud: 127 on 1 Nov 2026. A short list means a bad download.
