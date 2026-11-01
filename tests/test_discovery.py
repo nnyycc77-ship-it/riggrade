@@ -152,6 +152,19 @@ class ListingFilesTests(unittest.TestCase):
             self.assertIsNone(re.search(r"(?i)((secret|token|password|api_key)\s*[:=]\s*\S|0x[0-9a-fA-F]{40})", text))
 
 
+class PackageLayoutTests(unittest.TestCase):
+    def test_parameter_distribution_ships_inside_the_package_and_draws(self):
+        from riggrade import session
+        self.assertEqual(session.DISTRIBUTION_FILE.parent.parent.name, "riggrade")
+        dist = session.load_distribution()
+        params = session.draw_parameters(b"s", "nonce", ["inference"], dist)
+        self.assertIn("inference", params)
+        self.assertIn(params["passes"], dist["passes"])
+        text = (ROOT / "pyproject.toml").read_text()
+        self.assertIn('riggrade = ["spec/*.json"]', text)
+        self.assertNotIn("../spec", text)
+
+
 class PublishWorkflowTests(unittest.TestCase):
     def test_pypi_publish_is_keyless_and_tests_first(self):
         text = (ROOT / ".github" / "workflows" / "publish-pypi.yml").read_text()

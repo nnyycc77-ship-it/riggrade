@@ -13,7 +13,7 @@ from . import BENCH_VERSION
 from .classes import WORKLOAD_CLASSES
 
 COMPLETION_WINDOW_S = 3 * 3600  # spec 6, [proposed]
-DISTRIBUTION_FILE = Path(__file__).resolve().parents[1] / "spec" / "param-distribution.json"
+DISTRIBUTION_FILE = Path(__file__).resolve().parent / "spec" / "param-distribution.json"
 RUNNERS = ("buyer", "host")
 
 

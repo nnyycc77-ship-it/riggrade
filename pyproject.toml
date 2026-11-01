@@ -26,4 +26,4 @@ packages = ["riggrade", "runner", "pricewatch"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-riggrade = ["../spec/*.json"]
+riggrade = ["spec/*.json"]
