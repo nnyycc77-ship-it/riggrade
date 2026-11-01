@@ -96,6 +96,7 @@ class PublishBenchWorkflowTests(unittest.TestCase):
         self.assertIn("-f container/Dockerfile", text)
         docker = (ROOT / "container" / "Dockerfile").read_text()
         self.assertIn("COPY riggrade/__init__.py riggrade/__init__.py", docker)
+        self.assertIn("COPY riggrade/cluster_rules.py riggrade/cluster_rules.py", docker)
         self.assertNotIn("COPY riggrade/ ", docker)
 
     def test_runner_needs_only_the_version_from_riggrade(self):
@@ -105,7 +106,9 @@ class PublishBenchWorkflowTests(unittest.TestCase):
                 continue  # runs from source, with the server in-process
             for line in path.read_text().splitlines():
                 if re.match(r"\s*(from|import) riggrade", line):
-                    self.assertEqual(line.strip(), "from riggrade import BENCH_VERSION", path)
+                    self.assertTrue(line.strip() == "from riggrade import BENCH_VERSION"
+                                    or line.strip().startswith("from riggrade.cluster_rules import"),
+                                    (path, line))
 class BenchDigestTests(unittest.TestCase):
     def test_digest_file_is_valid_and_wired_into_the_deploy(self):
         import re

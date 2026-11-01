@@ -28,7 +28,8 @@ class DiscoveryTests(unittest.TestCase):
         self.assertTrue(status.startswith("200"))
         card = json.loads(out)
         self.assertEqual(card["url"], "https://grade.example/riggrade/v1")
-        self.assertEqual({s["id"] for s in card["skills"]}, {"gpu_preflight", "grade"})
+        self.assertEqual({s["id"] for s in card["skills"]},
+                         {"gpu_preflight", "grade", "fixit", "cluster_acceptance"})
         self.assertFalse(card["payments"]["on_sale"])
 
     def test_llms_txt_is_plain_text_with_the_descriptor(self):

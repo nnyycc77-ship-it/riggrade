@@ -34,6 +34,8 @@ from .label import STATEMENT, badge_text, lint
 from .session import MemoryStore, SessionError, Sessions
 from . import salelog
 from . import discovery
+from . import fixit
+from . import acceptance
 
 PREFIX = "/riggrade/v1"
 DISCOVERY_PATHS = ("/", "/.well-known/agent.json", "/llms.txt", "/openapi.json",
@@ -42,6 +44,19 @@ MAX_BODY = 4 * 1024 * 1024
 USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 # Decided prices (plan Revision 5, decided items 1), USDC atomic units.
 POINT_PRICE_ATOMIC = {DATA_CENTRE: 5_000_000, "consumer": 3_000_000}
+# Products beyond the point grade (owner decision 1 Nov 2026; each is on
+# sale only when RIGGRADE_PRODUCTS names it). USDC atomic units.
+PRODUCT_PRICE_ATOMIC = {"fixit": 2_000_000, "cluster": 25_000_000}
+PRODUCT_NOTES = {
+    "fixit": "Host fix-it report, 2 USDC: POST /riggrade/v1/fixit with {preflight_report}; for "
+             "every warn or fail finding, the likely cause, the fix steps and who can act. "
+             "Free preview first; nothing is sold when every finding passed.",
+    "cluster": "Cluster acceptance certificate, 25 USDC: POST /riggrade/v1/cluster/acceptance "
+               "with {evidence_pack} (the acceptance.json runner.cluster wrote); the server "
+               "recomputes every check, refuses a pack that does not recompute, and issues a "
+               "signed, stored certificate anyone can fetch at GET "
+               "/riggrade/v1/cluster/acceptance/{id}.",
+}
 WALLET = re.compile(r"^0x[0-9a-fA-F]{40}$")
 OPERATOR_CLAIM_NOTE = ("A free reference session is claimed with an X-PAYMENT authorisation "
                        "of 0 USDC to the payout address (the 402 states it): the facilitator "
@@ -67,6 +82,7 @@ class Config:
         self.images = [d for d in env.get("RIGGRADE_IMAGE_DIGESTS", "").split(",") if d]
         self.enabled = env.get("RIGGRADE_ENABLED") == "1"
         self.network = env.get("RIGGRADE_NETWORK", "base")
+        self.products = {p.strip() for p in env.get("RIGGRADE_PRODUCTS", "").split(",") if p.strip()}
 
     def reasons_off(self, adapter):
         reasons = []
@@ -105,6 +121,12 @@ class GradingApp:
     def on_sale(self):
         return not self.config.reasons_off(self.adapter)
 
+    def product_reasons_off(self, name):
+        reasons = list(self.config.reasons_off(self.adapter))
+        if name not in self.config.products:
+            reasons.append("RIGGRADE_PRODUCTS does not include %s" % name)
+        return reasons
+
     def __call__(self, environ, start_response):
         path = environ.get("PATH_INFO", "")
         method = environ.get("REQUEST_METHOD", "GET")
@@ -116,6 +138,8 @@ class GradingApp:
         try:
             if rest == [""] and method == "GET":
                 return _json(start_response, "200 OK", self.descriptor())
+            if method == "GET" and len(rest) == 3 and rest[:2] == ["cluster", "acceptance"]:
+                return self.certificate_lookup(start_response, rest[2])
             if method != "POST":
                 return _json(start_response, "405 Method Not Allowed", {"error": "use POST"})
             body = _read(environ)
@@ -144,6 +168,10 @@ class GradingApp:
                                   resource_path=PREFIX + "/grade")
             if rest == ["heartbeat"]:
                 return self.heartbeat(start_response, body)
+            if rest == ["fixit"]:
+                return self.fixit_report(start_response, environ, body)
+            if rest == ["cluster", "acceptance"]:
+                return self.cluster_acceptance(start_response, environ, body)
         except BadRequest as exc:
             return _json(start_response, "400 Bad Request", {"error": str(exc), "charged": False})
         except SessionError as exc:
@@ -177,6 +205,10 @@ class GradingApp:
                 "spec": "docs/grading-spec.md", "statement": STATEMENT,
                 "point_grade_price_usdc": {"data_centre": "5", "consumer": "3"},
                 "free_reference_sessions": FREE_REFERENCE_NOTE,
+                "products": {name: {"price_usdc": str(PRODUCT_PRICE_ATOMIC[name] // 1_000_000),
+                                    "on_sale": not self.product_reasons_off(name),
+                                    "note": PRODUCT_NOTES[name]}
+                             for name in sorted(PRODUCT_PRICE_ATOMIC)},
                 "operator_rules": {"cap_per_operator": CAP_PER_OPERATOR,
                                    "min_operators": MIN_OPERATORS,
                                    "max_payer_share": MAX_OPERATOR_SHARE,
@@ -337,6 +369,110 @@ class GradingApp:
                       "error": "session_id is required; this 402 describes the price only",
                       "charged": False})
 
+    # ------------------------------------------------------------ products
+
+    def _requirement(self, environ, path, amount, description):
+        return {"scheme": "exact", "network": self.config.network,
+                "asset": USDC_BASE, "payTo": self.config.wallet,
+                "maxAmountRequired": str(amount), "resource": _url(environ, path),
+                "description": description, "mimeType": "application/json",
+                "maxTimeoutSeconds": 300, "extra": {"name": "USD Coin", "version": "2"}}
+
+    def _sell(self, start_response, environ, name, path, description, preview_doc, deliver):
+        """Shared paid path for a product: 503 with reasons while off, the
+        402 challenge without a payment header, settle through the adapter,
+        then deliver(result) -> (response doc, sale-log extra). A charge
+        without a delivery is logged for reconciliation, as for grades."""
+        off = self.product_reasons_off(name)
+        if off:
+            return _json(start_response, "503 Service Unavailable",
+                         {"charged": False, "preview": preview_doc, "reasons_off": off})
+        requirement = self._requirement(environ, path, PRODUCT_PRICE_ATOMIC[name], description)
+        header = environ.get("HTTP_X_PAYMENT")
+        if not header:
+            return _json(start_response, "402 Payment Required",
+                         {"x402Version": 1, "accepts": [requirement],
+                          "extensions": {"bazaar": bazaar_extension(name)},
+                          "preview": preview_doc, "charged": False})
+        result = self.adapter.settle(header, requirement)
+        product = {"fixit": fixit.PRODUCT, "cluster": acceptance.PRODUCT}[name]
+        if not result.get("ok") and result.get("charged") in (True, "unknown"):
+            salelog.append(self.config.sale_log,
+                           {"product": product, "status": "charged_without_delivery",
+                            "charged": result.get("charged"),
+                            "amount_atomic": requirement["maxAmountRequired"],
+                            "payer": result.get("payer"), "tx": result.get("tx"),
+                            "error": result.get("error"), "at": self.clock()})
+        if not result.get("ok"):
+            return _json(start_response, "402 Payment Required",
+                         {"error": result.get("error", "payment failed"),
+                          "charged": result.get("charged", False)})
+        doc, extra = deliver(result)
+        salelog.append(self.config.sale_log,
+                       dict({"product": product, "amount_atomic": requirement["maxAmountRequired"],
+                             "payer": result.get("payer"), "tx": result.get("tx"),
+                             "at": self.clock()}, **extra))
+        return _json(start_response, "200 OK", doc,
+                     [("X-PAYMENT-RESPONSE", result.get("receipt_header", ""))])
+
+    def fixit_report(self, start_response, environ, body):
+        report = body.get("preflight_report") if isinstance(body, dict) else None
+        if (not isinstance(report, dict) or report.get("preflight") is not True
+                or not isinstance(report.get("findings"), list)):
+            raise BadRequest("preflight_report (the preflight-report.json content) is required")
+        prev = fixit.preview(report)
+        if prev["fixable"] == 0 and not self.product_reasons_off("fixit"):
+            return _json(start_response, "422 Unprocessable Entity",
+                         {"error": "nothing to fix: no finding warned or failed",
+                          "preview": prev, "charged": False})
+        description = ("RigGrade host fix-it report: %d finding(s) with cause, fix and who can act"
+                       % prev["fixable"])
+
+        def deliver(result):
+            doc = fixit.diagnose(report)
+            doc["paying_wallet"] = result.get("payer")
+            return {"report": doc, "preview": prev}, {"findings": prev["fixable"]}
+        return self._sell(start_response, environ, "fixit", PREFIX + "/fixit", description,
+                          prev, deliver)
+
+    def cluster_acceptance(self, start_response, environ, body):
+        pack = body.get("evidence_pack") if isinstance(body, dict) else None
+        error = acceptance.validate(pack)
+        if error:
+            raise BadRequest(error)
+        checks, result = acceptance.recompute(pack)
+        if result["verdict"] != pack.get("verdict"):
+            return _json(start_response, "422 Unprocessable Entity",
+                         {"error": "evidence pack does not recompute: submitted verdict %r, "
+                                   "recomputed %r" % (pack.get("verdict"), result["verdict"]),
+                          "recomputed": result, "charged": False})
+        prev = dict(result, nodes=len(pack["nodes"]),
+                    images=sorted({n.get("image") or "unrecorded" for n in pack["nodes"]}),
+                    checks=[{"check": c["check"], "status": c["status"]} for c in checks])
+        description = ("RigGrade cluster acceptance certificate: %d node(s), verdict %s, signed and stored"
+                       % (len(pack["nodes"]), result["verdict"]))
+
+        def deliver(settled):
+            cert_id = "rc_" + secrets.token_hex(8)
+            cert = acceptance.certificate(pack, checks, result, self.config.secret,
+                                          self.clock(), cert_id)
+            cert["paying_wallet"] = settled.get("payer")
+            cert["signature"] = acceptance.sign(cert, self.config.secret)
+            self.store.put("cert:" + cert_id, cert)
+            return ({"certificate": cert,
+                     "verify_url": _url(environ, PREFIX + "/cluster/acceptance/" + cert_id)},
+                    {"certificate_id": cert_id, "verdict": result["verdict"]})
+        return self._sell(start_response, environ, "cluster", PREFIX + "/cluster/acceptance",
+                          description, prev, deliver)
+
+    def certificate_lookup(self, start_response, cert_id):
+        cert = self.store.get("cert:" + cert_id) if cert_id.startswith("rc_") else None
+        if cert is None:
+            return _json(start_response, "404 Not Found", {"error": "no such certificate"})
+        return _json(start_response, "200 OK",
+                     {"certificate": cert,
+                      "signature_valid": acceptance.verify(cert, self.config.secret)})
+
     def _claim_requirement(self, environ, sid):
         return {"scheme": "exact", "network": self.config.network,
                 "asset": USDC_BASE, "payTo": self.config.wallet,
@@ -408,34 +544,46 @@ class GradingApp:
                      self.heartbeats.beat(body["rig_id"], body.get("prev"), body.get("echo")))
 
 
-def bazaar_extension():
-    """x402 Bazaar discovery metadata for the stable grade resource. A
+def bazaar_extension(resource="grade"):
+    """x402 Bazaar discovery metadata for a stable paid resource. A
     catalogue indexes it only after a paid call settles and echoes it, so
     shipping it lists nothing by itself; listing stays an owner decision."""
+    shapes = {
+        "grade": ({"session_id": "rg_s_..."},
+                  {"session_id": {"type": "string",
+                                  "description": "A session whose result bundle was accepted: "
+                                                 "POST /riggrade/v1/session, run the open "
+                                                 "container, POST the bundle, then pay here."}},
+                  {"labels": [{"grade": 2, "peer_class": "rtx4090-24", "workload": "inference",
+                               "capped_by": "consistency"}],
+                   "badges": ["Grade 2 \u00b7 RTX 4090 class \u00b7 Inference \u00b7 ..."],
+                   "evidence_pack": {}},
+                  ["gpu", "benchmark", "verification", "grading"]),
+        "fixit": ({"preflight_report": {"preflight": True, "findings": ["..."]}},
+                  {"preflight_report": {"type": "object",
+                                        "description": "The preflight-report.json the free "
+                                                       "RigGrade preflight wrote on the box."}},
+                  {"report": {"items": [{"check": "gpu0.clocks_under_load", "cause": "...",
+                                         "fix": ["..."], "who": "host"}]}},
+                  ["gpu", "diagnosis", "host", "preflight"]),
+        "cluster": ({"evidence_pack": {"claims": {}, "nodes": ["..."], "checks": ["..."],
+                                       "verdict": "accept"}},
+                    {"evidence_pack": {"type": "object",
+                                       "description": "The acceptance.json runner.cluster "
+                                                      "evaluate wrote for the rented nodes."}},
+                    {"certificate": {"certificate_id": "rc_...", "verdict": "accept",
+                                     "signature": "..."}, "verify_url": "..."},
+                    ["gpu", "cluster", "acceptance", "verification"]),
+    }
+    example_in, props, example_out, tags = shapes[resource]
     return {
-        "info": {
-            "input": {"type": "http", "method": "POST", "bodyType": "json",
-                      "body": {"session_id": "rg_s_..."}},
-            "output": {"type": "application/json",
-                       "example": {"labels": [{"grade": 2, "peer_class": "rtx4090-24",
-                                               "workload": "inference",
-                                               "capped_by": "consistency"}],
-                                   "badges": ["Grade 2 · RTX 4090 class · Inference · ..."],
-                                   "evidence_pack": {}}},
-        },
-        "schema": {
-            "type": "object",
-            "properties": {
-                "session_id": {"type": "string",
-                               "description": "A session whose result bundle was accepted: "
-                                              "POST /riggrade/v1/session, run the open "
-                                              "container, POST the bundle, then pay here."},
-            },
-            "required": ["session_id"],
-            "additionalProperties": False,
-        },
+        "info": {"input": {"type": "http", "method": "POST", "bodyType": "json",
+                           "body": example_in},
+                 "output": {"type": "application/json", "example": example_out}},
+        "schema": {"type": "object", "properties": props,
+                   "required": list(props), "additionalProperties": False},
         "serviceName": "RigGrade",
-        "tags": ["gpu", "benchmark", "verification", "grading"],
+        "tags": tags,
     }
 
 

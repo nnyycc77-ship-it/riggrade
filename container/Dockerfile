@@ -17,6 +17,7 @@ WORKDIR /opt/riggrade
 # payment code and screen list never ship in the benchmark image. (The
 # smoke test, which runs the server in-process, runs from source instead.)
 COPY riggrade/__init__.py riggrade/__init__.py
+COPY riggrade/cluster_rules.py riggrade/cluster_rules.py
 COPY runner/ runner/
 COPY spec/ spec/
 
