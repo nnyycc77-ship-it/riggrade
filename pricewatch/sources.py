@@ -24,14 +24,19 @@ def _get_json(url, opener=urllib.request.urlopen, timeout=60):
 class VastOffers:
     """Vast.ai on-demand offers.
 
-    UNVERIFIED: the endpoint and field names below are taken from Vast's
-    public CLI and SDK documentation as seen through search results; the
-    build environment could not reach vast.ai. The first real run must
-    confirm them and the terms before any value is published (method
-    section 2). The required-field check enforces that.
+    TERMS DO NOT PERMIT USE (checked 1 Nov 2026). Vast's terms forbid using
+    its data or services "to construct, publish, or maintain any index,
+    benchmark, pricing-comparison service, market-data product" without a
+    separate written agreement, and its public pricing feed says index use
+    "requires a data license". So `terms_ok` is False and the recorder
+    refuses this source. Kept only so a future written licence needs no new
+    code; the field names below are still unverified.
     """
 
     name = "vast"
+    terms_ok = False
+    terms_note = ("Vast terms (checked 2026-11-01) forbid index or market-data use "
+                  "without a written agreement")
     URL = ("https://console.vast.ai/api/v0/bundles/?q=" +
            urllib.request.quote(json.dumps({"rentable": {"eq": True},
                                             "rented": {"eq": False},

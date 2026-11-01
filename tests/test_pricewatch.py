@@ -98,6 +98,15 @@ class RecordTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 salelog.read_chain(path)
 
+    def test_source_whose_terms_do_not_allow_use_is_refused(self):
+        from pricewatch.sources import VastOffers
+        called = []
+        vast = VastOffers(fetch=lambda: called.append(1) or {"offers": []})
+        snap = rec.snapshot([vast], now=NOW)
+        self.assertEqual(called, [])  # never even fetched
+        self.assertIn("refused", snap["failed_sources"]["vast"])
+        self.assertEqual(snap["sources"], {})
+
     def test_insufficient_source_is_left_out_of_combined(self):
         thin = Fake("a", [offer()] * 3)
         snap = rec.snapshot([thin], now=NOW)
