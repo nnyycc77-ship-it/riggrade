@@ -193,6 +193,28 @@ class CdpAuthTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             pay.CdpAuth(self.key_id, base64.b64encode(b"short").decode())
 
+    def test_portal_key_file_is_accepted_as_the_secret(self):
+        # The CDP portal downloads {"id": ..., "privateKey": ...}; uploading
+        # that file as the secret value works with no copying of the key.
+        keyfile = json.dumps({"id": self.key_id, "privateKey": self.secret, "name": "riggrade-cdp-facilitator"})
+        auth = pay.CdpAuth("", keyfile)
+        self.assertEqual(auth.key_id, self.key_id)
+        claims = self._decode(auth.token("POST", "/platform/v2/x402/settle").split(".")[1])
+        self.assertEqual(claims["sub"], self.key_id)
+        self.assertEqual(claims["uris"], ["POST api.cdp.coinbase.com/platform/v2/x402/settle"])
+        # An explicit key ID wins over the file's; a file without the key is refused.
+        self.assertEqual(pay.CdpAuth("other-id", keyfile).key_id, "other-id")
+        with self.assertRaises(ValueError):
+            pay.CdpAuth("", json.dumps({"id": self.key_id}))
+        with tempfile.TemporaryDirectory() as tmp:
+            screen = Path(tmp) / "blocked.txt"
+            screen.write_text("# none\n")
+            env = {"RIGGRADE_FACILITATORS": pay.CDP_FACILITATOR + "," + A,
+                   "RIGGRADE_SCREEN_LIST": str(screen), "RIGGRADE_CDP_KEY_SECRET": keyfile}
+            adapter = pay.from_env(env)  # no RIGGRADE_CDP_KEY_ID needed
+            self.assertEqual(adapter.facilitators, [pay.CDP_FACILITATOR, A])
+            self.assertEqual(adapter.auth[pay.CDP_FACILITATOR].key_id, self.key_id)
+
     def test_adapter_signs_only_the_cdp_facilitator(self):
         seen = []
 

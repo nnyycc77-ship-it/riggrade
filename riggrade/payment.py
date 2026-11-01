@@ -129,6 +129,7 @@ class CdpAuth:
 
     def __init__(self, key_id, key_secret, now=time.time):
         from cryptography.hazmat.primitives.asymmetric import ed25519
+        key_id, key_secret = self.unpack(key_id, key_secret)
         raw = base64.b64decode(key_secret.strip(), validate=True)
         if len(raw) == 64:
             raw = raw[:32]
@@ -137,6 +138,24 @@ class CdpAuth:
         self.key_id = key_id
         self._key = ed25519.Ed25519PrivateKey.from_private_bytes(raw)
         self._now = now
+
+    @staticmethod
+    def unpack(key_id, key_secret):
+        """The secret may be the key file the CDP portal downloads, as is:
+        JSON with "privateKey" (and "id"). Then the file's id is the key ID
+        unless one was given separately. Otherwise the secret is the bare
+        base64 key."""
+        text = (key_secret or "").strip()
+        if text.startswith("{"):
+            try:
+                doc = json.loads(text)
+            except ValueError:
+                raise ValueError("CDP key file is not valid JSON")
+            secret = doc.get("privateKey") or doc.get("secret") or ""
+            if not secret:
+                raise ValueError("CDP key file has no privateKey")
+            return (key_id or doc.get("id") or doc.get("name") or "").strip(), secret
+        return (key_id or "").strip(), text
 
     def token(self, method, path, host=CDP_HOST):
         now = int(self._now())
@@ -303,6 +322,7 @@ def from_env(env, post=http_post):
     if cdp:
         key_id, key_secret = env.get("RIGGRADE_CDP_KEY_ID", "").strip(), env.get("RIGGRADE_CDP_KEY_SECRET", "")
         try:
+            key_id, key_secret = CdpAuth.unpack(key_id, key_secret)
             signer = CdpAuth(key_id, key_secret) if key_id and key_secret else None
         except (ImportError, ValueError):
             signer = None
