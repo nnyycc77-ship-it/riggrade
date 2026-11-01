@@ -124,3 +124,29 @@ class DeployWorkflowTests(unittest.TestCase):
                 if line and not line.startswith("#")}
         self.assertEqual(keys, {"GCP_PROJECT", "GCP_PROJECT_NUMBER", "GCP_REGION"})
         self.assertIn("grep -q REPLACE_ME deploy/gcp.env", self.text)
+
+
+class SaleSwitchDeployTests(unittest.TestCase):
+    def setUp(self):
+        self.text = (ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+
+    def test_screen_list_is_built_fresh_and_guarded(self):
+        self.assertIn("exports/SDN_ADVANCED.XML", self.text)
+        self.assertIn('if [ "$COUNT" -lt 100 ]', self.text)
+        self.assertLess(self.text.index("Build the payer screen list"),
+                        self.text.index("Build and push the server image"))
+        docker = (ROOT / "deploy" / "server.Dockerfile").read_text()
+        self.assertIn("COPY deploy/screen/blocked-addresses.txt", docker)
+
+    def test_switch_and_adapter_env_but_no_wallet_or_secret_in_repo(self):
+        self.assertIn("RIGGRADE_ENABLED=1", self.text)
+        self.assertIn("RIGGRADE_FACILITATORS=https://x402.dexter.cash,"
+                      "https://facilitator.payai.network", self.text)
+        self.assertIn("--update-env-vars", self.text)
+        self.assertNotIn("--set-env-vars", self.text)  # would wipe owner-set values
+        self.assertNotIn("PAYOUT_WALLET_ADDRESS", self.text)
+        self.assertNotIn("RIGGRADE_SECRET", self.text)
+
+    def test_screen_path_matches_the_image(self):
+        self.assertIn("RIGGRADE_SCREEN_LIST=/opt/riggrade/screen/blocked-addresses.txt",
+                      self.text)
