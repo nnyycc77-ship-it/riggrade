@@ -23,6 +23,7 @@ and only then settle. Attestation is verified by attestation_verifier
 
 import base64
 import json
+from urllib.parse import urlsplit
 import re
 import secrets
 
@@ -224,6 +225,11 @@ class GradingApp:
         sale = {"on_sale": self.on_sale}
         if not self.on_sale:
             sale["reasons_off"] = self.config.reasons_off(self.adapter)
+        # Which facilitators the running service holds, hosts only, in call
+        # order, so a deploy can be verified from outside. Never any key.
+        bases = getattr(self.adapter, "facilitators", None)
+        if bases:
+            sale["facilitators"] = [urlsplit(b).netloc for b in bases]
         references = {cid: {w: self.references.basis(cid, w) for w in WORKLOAD_CLASSES}
                       for cid in PEER_CLASSES}
         return {"product": "RigGrade", "bench_version": BENCH_VERSION,
