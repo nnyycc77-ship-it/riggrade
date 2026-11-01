@@ -13,9 +13,15 @@ x402 (exact scheme on Base; "upto" also offered). What it needs from a
 seller: a Bazaar-listed x402 v2 resource with a request schema and a
 one-line reason to call.
 
-RigGrade: listed on the Bazaar (every paid route settled once); x402 v2
-exact on Base; request schema in the 402's bazaar extension; "Use when"
-line on every listing since PR 52. **Ready.** No action.
+RigGrade: the technical requirements are met (x402 v2 exact on Base; the
+bazaar extension with a request schema in every paid 402; a "Use when"
+line on every listing since PR 52), and the listing event has occurred: a
+settlement through the Coinbase facilitator with the extension echoed
+(attributed by elimination, 1 Nov 2026), after which indexing follows on
+Coinbase's own schedule. A positive read of the Bazaar catalogue showing
+the RigGrade resources has not yet been made from this side; the Bazaar
+discovery crawler has visited. **Ready on our side; listing read pending.**
+No action beyond the read.
 
 ## 2. Cloudflare Monetization Gateway (closed beta since 30 Sep 2026)
 
