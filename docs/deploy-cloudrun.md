@@ -179,6 +179,11 @@ gcloud iam workload-identity-pools providers disable riggrade --location=global 
 
 ## Without GitHub Actions (manual path)
 
+**Warning:** this path tags the image `latest`. It is for recovery only.
+Before any graded or paid run, deploy through the workflow, which records
+the exact image; or replace `:latest` below with the digest the build
+printed (`@sha256:...`).
+
 These commands run from a clone of the repository in Cloud Shell, after
 part A. Sign in to GitHub in the browser when asked; choose "Login with a
 web browser", not a token.
