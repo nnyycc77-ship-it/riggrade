@@ -230,7 +230,13 @@ A public badge is a live link to the current record, never a static image, and t
 
 Class references need runs, and the capital boundary rules out rentals ahead of revenue. So v0 launches with **provisional references**: for each class, the median of the ruler throughputs from the first paid sessions in that class. Until at least 5 distinct rigs stand behind it, no speed grade is issued in that class, and speed prints Insufficient data. This replaces the plan's "published results for the open benchmark", which cannot exist for our own pinned image and rulers; accepted in review (section 15, item 2).
 
-- **Before payment.** While a class has fewer than 5 rigs behind its reference, the preview tells the payer "reference-building session, speed not graded". The price does not change, because prices are decided items (Message 146).
+- **Before payment.** While a class has fewer than 5 rigs behind its reference, the preview tells the payer "reference-building session, speed not graded".
+- **Free reference-building sessions (owner decision, 1 Nov 2026).** While a class and workload has no reference yet, each rig's first session there is free. That session is graded on the pillars it can measure and it counts toward the reference; speed is not graded. The rules:
+  - A repeat session from the same rig, while the reference is still building, cannot be speed graded, so it is not sold (422, nothing charged).
+  - In a session that mixes classes, only workloads whose class has a reference are charged.
+  - Once a reference exists, the decided prices apply unchanged: 3 USDC for consumer cards, 5 USDC for data-centre cards.
+  - Free sessions are recorded in the sale log with an amount of 0.
+  - Steering risk: a free first session makes it cheaper to submit a spoofed rig and nudge a provisional reference. The existing defences still apply: one first session per rig identity, attested rigs take priority once 5 exist, and controlled references replace provisional ones as soon as granted access exists.
 - **Published basis.** The endpoint descriptor and every evidence pack publish, per class, the number of rigs behind the reference, how many are attested, and the basis used.
 - **Steering defences.** At most one session per rig identity counts. Once 5 attested rigs exist, the median uses attested rigs only. Controlled reference runs replace the provisional median as soon as granted access exists, without waiting for a fixed count.
 

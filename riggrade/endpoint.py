@@ -40,6 +40,9 @@ USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 # Decided prices (plan Revision 5, decided items 1), USDC atomic units.
 POINT_PRICE_ATOMIC = {DATA_CENTRE: 5_000_000, "consumer": 3_000_000}
 WALLET = re.compile(r"^0x[0-9a-fA-F]{40}$")
+FREE_REFERENCE_NOTE = ("Free reference-building session: while a class has fewer than 5 "
+                       "graded rigs, each rig's first session in it is free. Speed is "
+                       "not graded until the bar is set; this session helps set it.")
 # Plan Decision 15, restated for payers (spec section 10a).
 APPEALS = ("Appeals within 30 days of the grade, decided on the evidence already "
            "held, with no paid retest. A proven error is corrected by an appended "
@@ -138,6 +141,7 @@ class GradingApp:
         return {"product": "RigGrade", "bench_version": BENCH_VERSION,
                 "spec": "docs/grading-spec.md", "statement": STATEMENT,
                 "point_grade_price_usdc": {"data_centre": "5", "consumer": "3"},
+                "free_reference_sessions": FREE_REFERENCE_NOTE,
                 "references": references,
                 "appeals": APPEALS,
                 "sale": sale}
@@ -189,14 +193,38 @@ class GradingApp:
             return _json(start_response, "422 Unprocessable Entity",
                          {"error": "nothing gradable in this session",
                           "preview": prev, "charged": False})
+        # Owner decision (1 Nov 2026): while a class is still building its
+        # reference, each rig's first session in it is free and sets the bar.
+        # A rig's repeat session in such a class cannot be speed graded, so it
+        # is not sold. Only workloads with a reference are charged.
+        rig_id = (session["bundle"].get("identity") or {}).get("rig_id") or "rg_unknown"
+        free, payable, blocked = [], [], []
+        for workload, entry in prev["classes"].items():
+            if not entry.get("gate_passed"):
+                continue
+            if self.references.reference(class_id, workload)[0] is not None:
+                payable.append(workload)
+            elif self.references.has_rig(class_id, workload, rig_id):
+                blocked.append(workload)
+            else:
+                free.append(workload)
+        if not free and not payable:
+            return _json(start_response, "422 Unprocessable Entity",
+                         {"error": "nothing gradable in this session: the class is still "
+                                   "building its reference and this rig's free first "
+                                   "session there is already used",
+                          "preview": prev, "charged": False})
+        if not payable:
+            return self._free_reference_grade(start_response, sid, session, free)
         tier = price_tier(class_id)
-        amount = POINT_PRICE_ATOMIC[tier] * len(session["workloads"])
+        amount = POINT_PRICE_ATOMIC[tier] * len(payable)
         requirement = {"scheme": "exact", "network": self.config.network,
                        "asset": USDC_BASE, "payTo": self.config.wallet,
                        "maxAmountRequired": str(amount),
                        "resource": _url(environ, resource_path or PREFIX + "/session/%s/grade" % sid),
-                       "description": "RigGrade point grade, %d workload class(es)"
-                                      % len(session["workloads"]),
+                       "description": "RigGrade point grade, %d workload class(es)%s"
+                                      % (len(payable), "; reference-building included free: "
+                                         + ", ".join(free) if free else ""),
                        "mimeType": "application/json",
                        "maxTimeoutSeconds": 300,
                        # EIP-712 domain of USDC on Base, needed to check the signature.
@@ -237,12 +265,32 @@ class GradingApp:
         salelog.append(self.config.sale_log,
                        {"product": "riggrade_point_grade", "session_id": sid,
                         "amount_atomic": requirement["maxAmountRequired"],
+                        "paid_workloads": payable, "free_workloads": free,
                         "payer": result.get("payer"), "tx": result.get("tx"),
                         "at": self.clock()})
         extra = [("X-PAYMENT-RESPONSE", result.get("receipt_header", ""))]
         return _json(start_response, "200 OK",
                      {"labels": labels, "badges": badges, "evidence_pack": pack},
                      extra)
+
+    def _free_reference_grade(self, start_response, sid, session, free):
+        attested = bool(self.verify_attestation(session["bundle"]))
+        labels, pack = grade_session(session, self.references, self.envelopes,
+                                     attested=attested, now=self.clock())
+        pack["free_reference_session"] = True
+        badges = [badge_text(lab, "") for lab in labels]
+        if lint(badges):
+            raise RuntimeError("promise words in badge text: %s" % lint(badges))
+        session["graded"] = True
+        self.store.put(sid, session)
+        salelog.append(self.config.sale_log,
+                       {"product": "riggrade_point_grade", "session_id": sid,
+                        "status": "free_reference_session", "amount_atomic": "0",
+                        "free_workloads": free, "at": self.clock()})
+        return _json(start_response, "200 OK",
+                     {"labels": labels, "badges": badges, "evidence_pack": pack,
+                      "charged": False, "free_reference_session": True,
+                      "note": FREE_REFERENCE_NOTE})
 
     def heartbeat(self, start_response, body):
         if not self.on_sale:

@@ -216,6 +216,10 @@ class ReferenceBook:
         bucket = self._samples.setdefault((class_id, workload), {})
         bucket.setdefault(rig_id, (throughput, bool(attested)))
 
+    def has_rig(self, class_id, workload, rig_id):
+        """True when this rig's first session already counts for this class."""
+        return rig_id in self._samples.get((class_id, workload), {})
+
     def set_controlled(self, class_id, workload, throughput):
         self._controlled[(class_id, workload)] = throughput
 

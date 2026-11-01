@@ -78,10 +78,13 @@ class Harness(unittest.TestCase):
                     "RIGGRADE_IMAGE_DIGESTS": IMAGE}
         self.clock = Clock()
 
+    references = None  # None: an empty book, every class still reference-building
+
     def app(self, env=None, adapter="default"):
         self.adapter = FakeAdapter() if adapter == "default" else adapter
         return GradingApp(self.env if env is None else env, self.clock,
-                          adapter=self.adapter)
+                          adapter=self.adapter,
+                          references=self.references() if self.references else None)
 
     def run_session(self, app, **kw):
         _s, _h, s = call(app, "POST", "/riggrade/v1/session",
@@ -166,7 +169,18 @@ class SessionTests(Harness):
         self.assertIn("window_expired", doc["errors"])
 
 
+def _with_references():
+    from riggrade.grading import ReferenceBook
+    book = ReferenceBook()
+    book.set_controlled("rtx4090-24", "inference", 100.0)
+    book.set_controlled("h100-sxm-80", "inference", 100.0)
+    return book
+
+
 class PaidTests(Harness):
+    """Classes whose reference is set: grades are paid."""
+    references = staticmethod(_with_references)
+
     def test_unpaid_gets_402_with_price_and_no_grade(self):
         app = self.app()
         sid, _st, _b = self.run_session(app)
@@ -183,47 +197,6 @@ class PaidTests(Harness):
         _s, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
         self.assertEqual(doc["accepts"][0]["maxAmountRequired"], "5000000")
 
-    def test_preview_warns_before_payment_while_reference_building(self):
-        app = self.app()
-        sid, _st, b = self.run_session(app)
-        cls = b["preview"]["classes"]["inference"]
-        self.assertEqual(cls["notice"], "reference-building session, speed not graded")
-        _s, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
-        self.assertEqual(doc["preview"]["classes"]["inference"]["notice"],
-                         "reference-building session, speed not graded")
-
-    def test_descriptor_publishes_reference_basis_and_appeals(self):
-        app = self.app()
-        _s, _h, doc = call(app, "GET", "/riggrade/v1")
-        self.assertEqual(doc["references"]["rtx4090-24"]["inference"]["rigs"], 0)
-        self.assertIn("30 days", doc["appeals"])
-
-    def test_first_sessions_print_insufficient_speed_then_grades(self):
-        app = self.app()
-        for i in range(5):
-            sid, _st, _b = self.run_session(app, rig_id="rig-%d" % i)
-            status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid,
-                                   payment="pay")
-            self.assertEqual(status, "200 OK")
-            self.assertEqual(doc["labels"][0]["grade"], "insufficient")
-        sid, _st, _b = self.run_session(app, rig_id="rig-new")
-        _s, headers, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid,
-                                payment="pay")
-        label = doc["labels"][0]
-        # Speed ratio about 1.0 and steady passes earn Grade 1 on the pillars,
-        # but unattested evidence caps the overall grade at 2 (spec 5.5).
-        self.assertEqual(label["grade"], 2)
-        self.assertEqual(label["capped_by"], "evidence")
-        self.assertIn("provisional", label["evidence_tag"])
-        self.assertEqual(label["pillars"]["reliability"], "not measured (point grade)")
-        self.assertEqual(headers["X-PAYMENT-RESPONSE"], "eyJ0eCI6ICJvayJ9")
-        self.assertEqual(doc["evidence_pack"]["paying_wallet"], PAYER)
-        basis = doc["evidence_pack"]["classes"]["inference"]["reference_basis"]
-        self.assertEqual(basis["rigs"], 5)
-        self.assertIn("single session", doc["badges"][0])
-        sales = salelog.read_chain(self.log)
-        self.assertEqual(len(sales), 6)
-        self.assertEqual(sales[-1]["amount_atomic"], "3000000")
 
     def test_refused_payment_charges_nothing_and_grades_nothing(self):
         app = self.app(adapter=FakeAdapter(ok=False))
@@ -318,6 +291,85 @@ class SaleLogTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 salelog.read_chain(path)
             self.assertFalse(salelog.ready(path))
+
+
+class FreeReferenceTests(Harness):
+    """Owner decision 1 Nov 2026: a rig's first session in a class that is
+    still building its reference is free."""
+
+    def test_first_session_per_rig_is_free_and_counts(self):
+        app = self.app()
+        sid, _st, b = self.run_session(app)
+        self.assertEqual(b["preview"]["classes"]["inference"]["notice"],
+                         "reference-building session, speed not graded")
+        status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
+        self.assertEqual(status, "200 OK")
+        self.assertTrue(doc["free_reference_session"])
+        self.assertFalse(doc["charged"])
+        self.assertEqual(self.adapter.calls, [])
+        self.assertEqual(app.references.basis("rtx4090-24", "inference")["rigs"], 1)
+        (entry,) = salelog.read_chain(self.log)
+        self.assertEqual((entry["status"], entry["amount_atomic"]),
+                         ("free_reference_session", "0"))
+
+    def test_repeat_session_from_same_rig_is_not_sold(self):
+        app = self.app()
+        sid, _st, _b = self.run_session(app, rig_id="rig-x")
+        call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
+        sid2, _st, _b = self.run_session(app, rig_id="rig-x")
+        status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid2,
+                               payment="pay")
+        self.assertEqual(status, "422 Unprocessable Entity")
+        self.assertFalse(doc["charged"])
+        self.assertEqual(self.adapter.calls, [])
+
+    def test_free_until_five_rigs_then_paid(self):
+        app = self.app()
+        for k in range(5):
+            sid, _st, _b = self.run_session(app, rig_id="rig-%d" % k)
+            _s, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
+            self.assertTrue(doc["free_reference_session"])
+        sid, _st, _b = self.run_session(app, rig_id="rig-new")
+        status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
+        self.assertEqual(status, "402 Payment Required")
+        self.assertEqual(doc["accepts"][0]["maxAmountRequired"], "3000000")
+
+    def test_descriptor_publishes_reference_basis_and_appeals(self):
+        app = self.app()
+        _s, _h, doc = call(app, "GET", "/riggrade/v1")
+        self.assertEqual(doc["references"]["rtx4090-24"]["inference"]["rigs"], 0)
+        self.assertIn("30 days", doc["appeals"])
+
+    def test_first_sessions_print_insufficient_speed_then_grades(self):
+        app = self.app()
+        for i in range(5):
+            sid, _st, _b = self.run_session(app, rig_id="rig-%d" % i)
+            status, _h, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid,
+                                   payment="pay")
+            self.assertEqual(status, "200 OK")
+            self.assertEqual(doc["labels"][0]["grade"], "insufficient")
+        sid, _st, _b = self.run_session(app, rig_id="rig-new")
+        _s, headers, doc = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid,
+                                payment="pay")
+        label = doc["labels"][0]
+        # Speed ratio about 1.0 and steady passes earn Grade 1 on the pillars,
+        # but unattested evidence caps the overall grade at 2 (spec 5.5).
+        self.assertEqual(label["grade"], 2)
+        self.assertEqual(label["capped_by"], "evidence")
+        self.assertIn("provisional", label["evidence_tag"])
+        self.assertEqual(label["pillars"]["reliability"], "not measured (point grade)")
+        self.assertEqual(headers["X-PAYMENT-RESPONSE"], "eyJ0eCI6ICJvayJ9")
+        self.assertEqual(doc["evidence_pack"]["paying_wallet"], PAYER)
+        basis = doc["evidence_pack"]["classes"]["inference"]["reference_basis"]
+        self.assertEqual(basis["rigs"], 5)
+        self.assertIn("single session", doc["badges"][0])
+        sales = salelog.read_chain(self.log)
+        self.assertEqual(len(sales), 6)
+        self.assertEqual(sales[-1]["amount_atomic"], "3000000")
+
+    def test_descriptor_states_the_rule(self):
+        _s, _h, doc = call(self.app(), "GET", "/riggrade/v1")
+        self.assertIn("first session in it is free", doc["free_reference_sessions"])
 
 
 if __name__ == "__main__":
