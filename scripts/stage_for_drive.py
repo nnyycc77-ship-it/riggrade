@@ -23,7 +23,7 @@ FILES = [
     "riggrade/label.py", "riggrade/salelog.py", "riggrade/session.py",
     "runner/__init__.py", "runner/bundle.py", "runner/gpu.py", "runner/identity.py",
     "runner/local.py", "runner/preflight.py", "runner/rulers.py", "runner/smoke.py",
-    "runner/stats.py", "spec/param-distribution.json",
+    "runner/stats.py", "riggrade/spec/param-distribution.json",
 ]
 
 

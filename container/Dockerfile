@@ -19,7 +19,6 @@ WORKDIR /opt/riggrade
 COPY riggrade/__init__.py riggrade/__init__.py
 COPY riggrade/cluster_rules.py riggrade/cluster_rules.py
 COPY runner/ runner/
-COPY spec/ spec/
 
 # The digest of this image, filled in by the build pipeline at step 2.
 ENV RIGGRADE_IMAGE_DIGEST=unpinned
