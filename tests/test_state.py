@@ -170,3 +170,21 @@ class SaleSwitchDeployTests(unittest.TestCase):
     def test_screen_path_matches_the_image(self):
         self.assertIn("RIGGRADE_SCREEN_LIST=/opt/riggrade/screen/blocked-addresses.txt",
                       self.text)
+
+
+class BenchDigestTests(unittest.TestCase):
+    def test_digest_file_is_valid_and_wired_into_the_deploy(self):
+        import re
+        env = (ROOT / "deploy" / "bench-image.env").read_text()
+        digests = re.search(r"^RIGGRADE_IMAGE_DIGESTS=(.+)$", env, re.M).group(1)
+        for d in digests.split(","):
+            self.assertRegex(d, r"^sha256:[0-9a-f]{64}$")
+        image = re.search(r"^BENCH_IMAGE=(.+)$", env, re.M).group(1)
+        self.assertTrue(image.startswith("ghcr.io/nnyycc77-ship-it/riggrade-bench@"))
+        self.assertIn(image.split("@")[1], digests)
+        workflow = (ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+        self.assertIn("deploy/bench-image.env", workflow)
+        self.assertIn("RIGGRADE_IMAGE_DIGESTS=$RIGGRADE_IMAGE_DIGESTS", workflow)
+        readme = (ROOT / "README.md").read_text()
+        self.assertIn("riggrade-bench", readme)
+        self.assertNotIn("riggrade-bench:latest", readme)

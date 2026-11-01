@@ -15,6 +15,22 @@ Status: step 1 (spec, sample grades, container and endpoint, built and tested wi
 - [Smoke test from Google Drive](notebooks/smoke_test_drive.ipynb): the same free GPU test, reading the code from Drive after checking it against a manifest (`scripts/stage_for_drive.py`) and writing both reports back to Drive.
 - [Smoke test notebook](notebooks/smoke_test.ipynb): checks the GPU code paths on a free Colab or Kaggle GPU. Not a grade: small model, short run, local endpoint with the sale off. Command: `python3 -m runner.smoke --minutes 2`.
 
+## Running a graded session
+
+The benchmark container is public: `ghcr.io/nnyycc77-ship-it/riggrade-bench`,
+pinned by digest in `deploy/bench-image.env`. The server accepts result
+bundles only from a listed digest, so run it by digest, never by tag:
+
+```bash
+. deploy/bench-image.env
+docker run --rm --gpus all -e RIGGRADE_IMAGE_DIGEST=$RIGGRADE_IMAGE_DIGESTS \
+  -e RIGGRADE_ENDPOINT=https://riggrade-674098696181.us-central1.run.app/riggrade/v1 \
+  $BENCH_IMAGE --help
+```
+
+The container carries the runner and the spec only. The grading server,
+payment code and screen list never ship in it.
+
 ## Licence
 
 Apache License 2.0; see `LICENSE`. The benchmark is open so that anyone can

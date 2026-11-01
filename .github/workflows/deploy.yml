@@ -24,6 +24,8 @@ jobs:
         run: |
           set -euo pipefail
           grep -E '^GCP_[A-Z_]+=' deploy/gcp.env >> "$GITHUB_ENV"
+          grep -E '^RIGGRADE_IMAGE_DIGESTS=sha256:[0-9a-f]{64}(,sha256:[0-9a-f]{64})*$' deploy/bench-image.env >> "$GITHUB_ENV" \
+            || { echo "deploy/bench-image.env has no valid RIGGRADE_IMAGE_DIGESTS" >&2; exit 1; }
           if grep -q REPLACE_ME deploy/gcp.env; then
             echo "deploy/gcp.env is not filled in yet" >&2; exit 1
           fi
@@ -69,7 +71,7 @@ jobs:
             --memory 512Mi --cpu 1 --allow-unauthenticated \
             --add-volume "name=state,type=cloud-storage,bucket=$GCP_PROJECT-riggrade-state,mount-options=uid=10001;gid=10001" \
             --add-volume-mount volume=state,mount-path=/state \
-            --update-env-vars "^@^RIGGRADE_ENABLED=1@RIGGRADE_FACILITATORS=https://x402.dexter.cash,https://facilitator.payai.network@RIGGRADE_SCREEN_LIST=/opt/riggrade/screen/blocked-addresses.txt"
+            --update-env-vars "^@^RIGGRADE_ENABLED=1@RIGGRADE_FACILITATORS=https://x402.dexter.cash,https://facilitator.payai.network@RIGGRADE_SCREEN_LIST=/opt/riggrade/screen/blocked-addresses.txt@RIGGRADE_IMAGE_DIGESTS=$RIGGRADE_IMAGE_DIGESTS"
       - name: Check the live descriptor
         run: |
           set -euo pipefail
