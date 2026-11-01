@@ -44,8 +44,7 @@ NETWORK_BASE = "eip155:8453"
 PAID_ROUTES = {("grade",): "grade", ("fixit",): "fixit", ("cluster", "acceptance"): "cluster"}
 V1_REFUSED = ("x402 v1 (X-PAYMENT) is not accepted; send PAYMENT-SIGNATURE with "
               "x402Version 2, as the PAYMENT-REQUIRED header of this answer describes")
-DISCOVERY_PATHS = ("/", "/favicon.ico", "/.well-known/agent.json", "/.well-known/x402",
-                   "/.well-known/x402.json", "/llms.txt", "/openapi.json",
+DISCOVERY_PATHS = ("/", "/favicon.ico", "/.well-known/agent.json", "/llms.txt", "/openapi.json",
                    PREFIX + "/openapi.json")
 MAX_BODY = 4 * 1024 * 1024
 USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
@@ -203,8 +202,6 @@ class GradingApp:
             start_response("200 OK", [("Content-Type", "text/plain; charset=utf-8"),
                                       ("Content-Length", str(len(data)))])
             return [data]
-        if path in ("/.well-known/x402", "/.well-known/x402.json"):
-            return _json(start_response, "200 OK", discovery.well_known_x402(base, PREFIX))
         if path == "/.well-known/agent.json":
             return _json(start_response, "200 OK", discovery.agent_card(base, PREFIX, self.on_sale))
         if path in ("/openapi.json", PREFIX + "/openapi.json"):

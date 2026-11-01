@@ -91,11 +91,15 @@ def llms_txt(base, prefix, on_sale):
     ])
 
 
-# x402scan discovery spec (docs/DISCOVERY.md in Merit-Systems/x402scan): each
-# paid operation declares x-payment-info with protocols and a USD price;
-# the runtime 402 stays authoritative. USD strings here must equal the
-# atomic prices in riggrade.endpoint (a test holds them together).
-PAYMENT_PROTOCOLS = [{"x402": {"versions": [2], "network": "eip155:8453", "asset": "USDC"}}]
+# Discovery profile read by x402scan (its parser is @agentcash/discovery;
+# docs/SPECIFICATION.md there): every operation declares security, and a
+# paid one is "security: []" plus x-payment-info with protocols and a USD
+# price. Payment is declared independently of API authentication, so no
+# security scheme is used for it. The runtime 402 stays authoritative. USD
+# strings here must equal the atomic prices in riggrade.endpoint (a test
+# holds them together). The legacy /.well-known/x402 file is not served:
+# the same parser no longer reads it and flags it as a migration warning.
+PAYMENT_PROTOCOLS = [{"x402": {}}]
 PRICES_USD = {"grade": {"mode": "dynamic", "currency": "USD", "min": "3.00", "max": "10.00"},
               "fixit": {"mode": "fixed", "currency": "USD", "amount": "2.00"},
               "cluster": {"mode": "fixed", "currency": "USD", "amount": "25.00"}}
@@ -106,17 +110,6 @@ def payment_info(product):
     return {"protocols": PAYMENT_PROTOCOLS, "price": PRICES_USD[product]}
 
 
-def well_known_x402(base, prefix):
-    """/.well-known/x402 (x402scan compatibility fan-out): the paid resources."""
-    api = base + prefix
-    return {"version": 1,
-            "resources": [api + PAID_PATHS[p] for p in ("grade", "fixit", "cluster")],
-            "instructions": ("RigGrade: independent grading of rented GPU rigs, paid with x402 v2 "
-                             "(USDC on Base). Each resource answers a bare request with a 402 that "
-                             "states its price; the OpenAPI document at " + base + "/openapi.json "
-                             "describes the bodies. Free preflight and session steps need no payment.")}
-
-
 def openapi(base, prefix):
     api = base + prefix
     sess = {"type": "object", "properties": {
@@ -125,10 +118,10 @@ def openapi(base, prefix):
         "required": ["workload_classes", "declared_runner"]}
     post = lambda summary, body=None, extra=None, paid=None: {"post": {  # noqa: E731
         "summary": summary,
-        # x402scan and similar probes: a paid operation is challenged with 402
-        # on a bare request and declares x-payment-info; a free one carries an
-        # empty security list so it is not probed for a paywall.
-        "security": [{"x402": []}] if paid else [],
+        # No API authentication on any operation (security []); a paid one
+        # also declares x-payment-info and is challenged with 402 on a bare
+        # request. A free one is then listed as unprotected, not probed.
+        "security": [],
         **({"x-payment-info": payment_info(paid)} if paid else {}),
         **({"requestBody": {"required": True, "content": {"application/json": {"schema": body}}}} if body else {}),
         "responses": {"200": {"description": "OK"}, "400": {"description": "bad request"},
@@ -137,13 +130,16 @@ def openapi(base, prefix):
     return {
         "openapi": "3.1.0",
         "info": {"title": "RigGrade grading API", "version": BENCH_VERSION,
-                 "description": DESCRIPTION, "license": {"name": "Apache-2.0"}},
+                 "description": DESCRIPTION, "license": {"name": "Apache-2.0"},
+                 "x-guidance": ("Paid operations answer a bare request with 402: the x402 v2 "
+                                "PaymentRequired is in the PAYMENT-REQUIRED header (USDC on Base, "
+                                "eip155:8453); retry with the signed PaymentPayload in "
+                                "PAYMENT-SIGNATURE. Free preflight and session steps need no "
+                                "payment. Measured, not promised.")},
         "servers": [{"url": api}],
-        "components": {"securitySchemes": {"x402": {
-            "type": "apiKey", "in": "header", "name": "PAYMENT-SIGNATURE",
-            "description": "x402 v2 payment: the 402 answer carries the PaymentRequired object "
-                           "in its PAYMENT-REQUIRED header (USDC on Base, eip155:8453); retry "
-                           "with the signed PaymentPayload in PAYMENT-SIGNATURE."}}},
+        # Guidance for agents: short inline, and the llms.txt pointer the
+        # discovery profile names (x-agentcash-guidance.llmsTxtUrl).
+        "x-agentcash-guidance": {"llmsTxtUrl": base + "/llms.txt"},
         "paths": {
             "/": {"get": {"summary": "Service descriptor: prices, references per class, sale state",
                           "security": [], "responses": {"200": {"description": "OK"}}}},
