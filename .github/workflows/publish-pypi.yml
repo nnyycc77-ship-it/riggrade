@@ -3,7 +3,9 @@
 # registered this repository, this workflow file name and the "pypi"
 # environment as a trusted publisher on his PyPI project; until then the
 # publish step is refused by PyPI and nothing else happens. Triggered by
-# publishing a GitHub release (the owner's act) or by hand on a tag.
+# publishing a GitHub release (the owner's act); run by hand, it only
+# builds and keeps the sdist and wheel as a run artifact (with SHA-256s
+# in the summary) for review, and never publishes.
 name: publish-pypi
 on:
   release:
@@ -30,6 +32,7 @@ jobs:
           path: dist/
   publish:
     needs: build
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     environment: pypi
     permissions:

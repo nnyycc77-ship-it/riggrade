@@ -159,6 +159,7 @@ class PublishWorkflowTests(unittest.TestCase):
         self.assertIn("pypa/gh-action-pypi-publish", text)
         self.assertIn("environment: pypi", text)
         self.assertIn("python -m unittest discover", text)
+        self.assertIn("if: github.event_name == 'release'", text)  # a manual run only builds
         for word in ("password", "secrets.", "PYPI_API_TOKEN", "TWINE"):
             self.assertNotIn(word, text)
         self.assertIsNone(re.search(r"pypi-[A-Za-z0-9_-]{20,}", text))
