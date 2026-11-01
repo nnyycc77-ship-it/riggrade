@@ -39,6 +39,8 @@ def preview(bundle, workloads, references=None):
         entry = {"gate_passed": passed and class_id is not None,
                  "gate_failed": failed,
                  "pillars_measured": 2 if passed else 0}
+        if class_id is None:
+            entry["reason"] = "no v0 peer class for this device"
         if class_id is not None and references is not None:
             entry["reference"] = references.basis(class_id, workload)
             if references.reference(class_id, workload)[0] is None:

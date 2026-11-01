@@ -179,13 +179,32 @@ def evaluate(obs):
 
     for i, load in sorted((obs.get("load") or {}).items()):
         ratio = load.get("clock_ratio")
-        add("gpu%s.clocks_under_load" % i,
-            _grade_low_bad(ratio, *LIMITS["clock_ratio"]),
-            "median SM clock %s of max under load" % (
-                "unknown" if ratio is None else "%.0f%%" % (100 * ratio)))
-        bad = sorted(set(load.get("reasons", [])) & BAD_REASONS)
+        seen = sorted(set(load.get("reasons", [])) - {"gpu_idle"})
+        bad = sorted(set(seen) & BAD_REASONS)
+        status = _grade_low_bad(ratio, *LIMITS["clock_ratio"])
+        detail = "median SM clock %s of max under load" % (
+            "unknown" if ratio is None else "%.0f%%" % (100 * ratio))
+        if status in (WARN, FAIL) and not bad and "sw_power_cap" in seen:
+            # Low clocks under full load with only the power cap active is how
+            # power-limited cards (a 70 W T4, for example) are meant to run, as
+            # long as the limit is the card's own default. A limit the host has
+            # lowered is a warning, never a pass.
+            limit, default = (obs.get("power_limits") or {}).get(int(i), (None, None))
+            if limit and default and limit < 0.95 * default:
+                status = WARN
+                detail += ("; held by a power limit the host lowered to %.0f W "
+                           "(card default %.0f W)" % (limit, default))
+            elif limit and default:
+                status = PASS
+                detail += ("; held by the card's own power limit (%.0f W, the default), "
+                           "which is by design" % default)
+            else:
+                status = WARN
+                detail += "; held by a power cap, and the card's default limit is unknown"
+        add("gpu%s.clocks_under_load" % i, status, detail)
         add("gpu%s.slowdown_reasons" % i, FAIL if bad else PASS,
-            "active: %s" % (", ".join(bad) if bad else "none of %s" % ", ".join(sorted(BAD_REASONS))))
+            "bad reasons active: %s; all reasons seen: %s" % (
+                ", ".join(bad) or "none", ", ".join(seen) or "none"))
         temp = load.get("peak_temperature_c")
         add("gpu%s.temperature" % i,
             _grade_high_bad(temp, *LIMITS["temperature_c"]),
@@ -281,7 +300,8 @@ def load_and_sample(seconds, query, interval=2.0):
     import torch
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA is not available to this process")
-    dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+    # Native bf16 only from compute capability 8.0; older cards emulate it slowly.
+    dtype = torch.bfloat16 if torch.cuda.get_device_capability(0)[0] >= 8 else torch.float16
     stop, tflops, samples = threading.Event(), {}, []
 
     def worker(dev):
@@ -359,6 +379,20 @@ class Probes:
                              capture_output=True, text=True, timeout=30)
         return out.returncode == 0 and "Enabled" in out.stdout
 
+    def power_limits(self):
+        """{gpu index: (enforced limit W, default limit W)}."""
+        out = subprocess.run(["nvidia-smi", "--query-gpu=index,power.limit,power.default_limit",
+                              "--format=csv,noheader,nounits"],
+                             capture_output=True, text=True, timeout=30)
+        if out.returncode != 0:
+            return {}
+        rows = {}
+        for line in out.stdout.splitlines():
+            parts = [p.strip() for p in line.split(",")]
+            if len(parts) == 3 and _num(parts[0]) is not None:
+                rows[int(_num(parts[0]))] = (_num(parts[1]), _num(parts[2]))
+        return rows
+
     def driver_cuda(self):
         out = subprocess.run(["nvidia-smi"], capture_output=True, text=True, timeout=30)
         return parse_driver_cuda(out.stdout)
@@ -396,6 +430,8 @@ def run(probes, seconds=30.0, url=DEFAULT_URL, download=True, directory=".",
         obs["shared"] = "declared with --shared"
     elif getattr(probes, "mig_enabled", None) and attempt("mig", probes.mig_enabled):
         obs["shared"] = "MIG mode on"
+    if getattr(probes, "power_limits", None):
+        obs["power_limits"] = attempt("power_limits", probes.power_limits) or {}
     obs["driver_cuda"] = attempt("driver_cuda", probes.driver_cuda)
     obs["software_cuda"] = attempt("software_cuda", probes.software_cuda)
     loaded = attempt("load", lambda: probes.load(seconds))

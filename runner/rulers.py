@@ -8,7 +8,9 @@ synthetic random tokens, so nothing is downloaded but the inference model.
 """
 
 import json
+import os
 import subprocess
+import tempfile
 import threading
 import time
 import urllib.request
@@ -18,24 +20,51 @@ SERVER_PORT = 8811
 
 
 class InferenceServer:
+    """vLLM's server as a subprocess. Its output goes to a log file, and a
+    failed start reports the tail of that log, so the reason (for example an
+    unsupported dtype) is in the report instead of a bare timeout. A server
+    that exits during start-up is reported at once, not after the timeout."""
+
     def __init__(self, model=INFERENCE_MODEL, port=SERVER_PORT, dtype="bfloat16",
-                 extra_args=()):
+                 extra_args=(), log_path=None, startup_timeout=900,
+                 popen=subprocess.Popen, health=None, sleep=time.sleep):
         self.model, self.port, self.proc = model, port, None
         self.dtype, self.extra_args = dtype, list(extra_args)
+        self.log_path = log_path or os.path.join(tempfile.gettempdir(), "riggrade-vllm.log")
+        self.startup_timeout = startup_timeout
+        self._popen, self._sleep = popen, sleep
+        self._health = health or (lambda: urllib.request.urlopen(
+            "http://127.0.0.1:%d/health" % self.port, timeout=5))
+
+    def log_tail(self, lines=20):
+        try:
+            with open(self.log_path, encoding="utf-8", errors="replace") as fh:
+                return "".join(fh.readlines()[-lines:]).strip()
+        except OSError:
+            return "(no server log)"
 
     def __enter__(self):
-        self.proc = subprocess.Popen(
+        log = open(self.log_path, "w", encoding="utf-8")
+        self.proc = self._popen(
             ["vllm", "serve", self.model, "--dtype", self.dtype,
              "--port", str(self.port), "--tensor-parallel-size", "1"] + self.extra_args,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        deadline = time.time() + 900
+            stdout=log, stderr=subprocess.STDOUT)
+        deadline = time.time() + self.startup_timeout
         while time.time() < deadline:
+            code = self.proc.poll()
+            if code is not None:
+                log.close()
+                raise RuntimeError("inference server exited during start-up (code %s). "
+                                   "Last log lines:\n%s" % (code, self.log_tail()))
             try:
-                urllib.request.urlopen("http://127.0.0.1:%d/health" % self.port, timeout=5)
+                self._health()
                 return self
             except OSError:
-                time.sleep(5)
-        raise RuntimeError("inference server did not start")
+                self._sleep(5)
+        self.proc.terminate()
+        log.close()
+        raise RuntimeError("inference server did not start within %d s. Last log lines:\n%s"
+                           % (self.startup_timeout, self.log_tail()))
 
     def __exit__(self, *exc):
         if self.proc:
