@@ -43,6 +43,11 @@ def measure(backend, session_params, workloads, sustained_s=SUSTAINED_S,
         raw["gate." + workload] = gate[workload]
         if not all(results.values()):
             continue
+        # One unmeasured warm-up pass first. On the third free T4 run the first
+        # inference pass read 327 tokens/s against 650 for the next two (server
+        # warm-up), which would read as inconsistency in the CV.
+        warm, _lat = backend.ruler_pass(workload, session_params)
+        raw["warmup." + workload] = {"throughput": warm}
         passes, latencies = [], []
         for _ in range(session_params["passes"]):
             throughput, lat = backend.ruler_pass(workload, session_params)
