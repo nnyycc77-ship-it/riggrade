@@ -89,6 +89,8 @@ class Config:
         self.enabled = env.get("RIGGRADE_ENABLED") == "1"
         # CAIP-2 chain id (x402 v2): Base mainnet.
         self.network = env.get("RIGGRADE_NETWORK", NETWORK_BASE)
+        # Published in the OpenAPI info block only when set (owner's choice).
+        self.contact_email = env.get("RIGGRADE_CONTACT_EMAIL", "").strip()
         self.products = {p.strip() for p in env.get("RIGGRADE_PRODUCTS", "").split(",") if p.strip()}
 
     def reasons_off(self, adapter):
@@ -205,7 +207,8 @@ class GradingApp:
         if path == "/.well-known/agent.json":
             return _json(start_response, "200 OK", discovery.agent_card(base, PREFIX, self.on_sale))
         if path in ("/openapi.json", PREFIX + "/openapi.json"):
-            return _json(start_response, "200 OK", discovery.openapi(base, PREFIX))
+            return _json(start_response, "200 OK",
+                         discovery.openapi(base, PREFIX, self.config.contact_email))
         return _json(start_response, "200 OK",
                      {"product": "RigGrade", "descriptor": base + PREFIX,
                       "openapi": base + PREFIX + "/openapi.json",
