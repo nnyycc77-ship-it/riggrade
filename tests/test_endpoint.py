@@ -241,8 +241,12 @@ class PaidTests(Harness):
                                payment="pay")
         self.assertEqual(status, "200 OK")
         self.assertTrue(self.adapter.calls[-1][1]["resource"].endswith("/riggrade/v1/grade"))
-        status, _h, _d = call(app, "POST", "/riggrade/v1/grade", {})
-        self.assertEqual(status, "400 Bad Request")
+        # No session: the informational discovery 402 (price only), never a settle.
+        calls = len(self.adapter.calls)
+        status, _h, doc = call(app, "POST", "/riggrade/v1/grade", {})
+        self.assertEqual(status, "402 Payment Required")
+        self.assertIn("session_id is required", doc["error"])
+        self.assertEqual(len(self.adapter.calls), calls)
 
     def test_unknown_class_is_not_sold(self):
         app = self.app()

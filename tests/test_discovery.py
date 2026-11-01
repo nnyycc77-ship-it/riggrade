@@ -45,6 +45,11 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(doc["openapi"], "3.1.0")
         self.assertIn("402", doc["paths"]["/grade"]["post"]["responses"])
 
+    def test_root_openapi_alias_for_crawlers(self):
+        status, _h, out = get(self.app, "/openapi.json")
+        self.assertTrue(status.startswith("200"))
+        self.assertEqual(json.loads(out)["openapi"], "3.1.0")
+
     def test_root_points_at_the_documents_and_posts_still_404(self):
         status, _h, out = get(self.app, "/")
         self.assertTrue(status.startswith("200"))
@@ -74,3 +79,43 @@ class ListingFilesTests(unittest.TestCase):
         self.assertIn("riggrade.mcp", smithery)
         for text in (smithery, (ROOT / "pyproject.toml").read_text()):
             self.assertIsNone(re.search(r"(?i)((secret|token|password|api_key)\s*[:=]\s*\S|0x[0-9a-fA-F]{40})", text))
+
+
+class Discovery402Tests(unittest.TestCase):
+    def probe(self, app, header=None):
+        environ = {"REQUEST_METHOD": "POST", "PATH_INFO": "/riggrade/v1/grade",
+                   "CONTENT_LENGTH": "0", "wsgi.input": io.BytesIO(b""),
+                   "HTTP_HOST": "grade.example", "wsgi.url_scheme": "https"}
+        if header:
+            environ["HTTP_X_PAYMENT"] = header
+        status = []
+        out = b"".join(app(environ, lambda s, h: status.append(s)))
+        return status[0], json.loads(out)
+
+    def test_sale_off_keeps_the_400(self):
+        status, doc = self.probe(serve.build({}))
+        self.assertTrue(status.startswith("400"), doc)
+
+    def test_sale_on_answers_an_informational_402_and_never_settles(self):
+        import tempfile
+        from riggrade.endpoint import GradingApp
+        from tests.test_endpoint import FakeAdapter, IMAGE, WALLET
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        adapter = FakeAdapter()
+        app = GradingApp({"RIGGRADE_ENABLED": "1", "PAYOUT_WALLET_ADDRESS": WALLET,
+                          "RIGGRADE_SALE_LOG": tmp.name + "/sales.jsonl",
+                          "RIGGRADE_SECRET": "s", "RIGGRADE_IMAGE_DIGESTS": IMAGE},
+                         lambda: 1_800_000_000, adapter=adapter)
+        self.assertTrue(app.on_sale)
+        status, doc = self.probe(app)
+        self.assertTrue(status.startswith("402"), doc)
+        req = doc["accepts"][0]
+        self.assertEqual(req["resource"], "https://grade.example/riggrade/v1/grade")
+        self.assertEqual(req["maxAmountRequired"], "3000000")
+        self.assertIn("bazaar", doc["extensions"])
+        self.assertFalse(doc["charged"])
+        # A payment header with no session is a bad request, not a settle.
+        status, doc = self.probe(app, header="eyJ...")
+        self.assertTrue(status.startswith("400"), doc)
+        self.assertEqual(adapter.calls, [])
