@@ -257,7 +257,13 @@ class PaidTests(Harness):
         self.assertEqual(set(doc["accepts"][0]), {"scheme", "network", "amount", "asset", "payTo",
                                                    "maxTimeoutSeconds", "extra"})
         bazaar = doc["extensions"]["bazaar"]
-        self.assertEqual(bazaar["schema"]["required"], ["session_id"])
+        # The schema describes the info object; readers take input.body as the
+        # request schema and output.example as the response schema.
+        body_schema = bazaar["schema"]["properties"]["input"]["properties"]["body"]
+        self.assertEqual(body_schema["required"], ["session_id"])
+        self.assertEqual(bazaar["schema"]["properties"]["output"]["properties"]["example"]["type"], "object")
+        self.assertIn("labels", bazaar["schema"]["properties"]["output"]["properties"]["example"]["properties"])
+        self.assertEqual(bazaar["info"]["input"]["body"], {"session_id": "rg_s_..."})
         self.assertIn("gpu", bazaar["tags"])
         # An x402 v1 header is refused with a 402 that names the version; no settle.
         calls = len(self.adapter.calls)

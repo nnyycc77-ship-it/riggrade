@@ -39,6 +39,17 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(out[:4], b"\x00\x00\x01\x00")  # ICO header
         self.assertEqual(int(headers["Content-Length"]), len(out))
 
+    def test_head_answers_like_get_without_a_body(self):
+        for path, ctype in (("/favicon.ico", "image/x-icon"), ("/openapi.json", "application/json")):
+            environ = {"REQUEST_METHOD": "HEAD", "PATH_INFO": path, "HTTP_HOST": "grade.example",
+                       "wsgi.url_scheme": "https", "wsgi.input": io.BytesIO(b"")}
+            status, headers = [], []
+            out = b"".join(self.app(environ, lambda s, h: (status.append(s), headers.extend(h))))
+            self.assertTrue(status[0].startswith("200"), path)
+            self.assertEqual(dict(headers)["Content-Type"], ctype)
+            self.assertGreater(int(dict(headers)["Content-Length"]), 0)
+            self.assertEqual(out, b"")
+
     def test_openapi_declares_security_on_every_operation_and_payment_separately(self):
         status, _h, out = get(self.app, "/openapi.json")
         doc = json.loads(out)

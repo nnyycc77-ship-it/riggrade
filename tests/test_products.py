@@ -128,7 +128,8 @@ class ProductEndpointTests(unittest.TestCase):
         self.assertEqual(doc["x402Version"], 2)
         self.assertEqual(req["network"], "eip155:8453")
         self.assertIn("PAYMENT-REQUIRED", _h)
-        self.assertIn("preflight_report", doc["extensions"]["bazaar"]["schema"]["properties"])
+        self.assertIn("preflight_report", doc["extensions"]["bazaar"]["schema"]["properties"]["input"]
+                      ["properties"]["body"]["properties"])
         self.assertEqual(self.adapter.calls, [])
         status, headers, doc = call(app, "POST", "/riggrade/v1/fixit",
                                     {"preflight_report": REPORT}, payment="pay")
