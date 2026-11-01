@@ -95,3 +95,32 @@ class DeployFilesTests(unittest.TestCase):
         self.assertNotIn("runner/", text)
         self.assertIn("deploy/server.Dockerfile",
                       (ROOT / "deploy" / "cloudbuild.yaml").read_text())
+
+
+class DeployWorkflowTests(unittest.TestCase):
+    def setUp(self):
+        self.text = (ROOT / ".github" / "workflows" / "deploy.yml").read_text()
+
+    def test_manual_only_main_only_keyless(self):
+        on_block = self.text.split("on:", 1)[1].split("permissions:", 1)[0]
+        self.assertEqual(on_block.split(), ["workflow_dispatch:"])
+        self.assertIn("if: github.ref == 'refs/heads/main'", self.text)
+        self.assertIn("id-token: write", self.text)
+        self.assertIn("workload_identity_provider:", self.text)
+        for word in ("credentials_json", "secrets."):
+            self.assertNotIn(word, self.text)
+
+    def test_deploy_matches_the_documented_shape(self):
+        for flag in ("--max-instances 1", "--add-volume-mount volume=state,mount-path=/state",
+                     "mount-options=uid=10001;gid=10001", "deploy/server.Dockerfile"):
+            self.assertIn(flag, self.text)
+        doc = (ROOT / "docs" / "deploy-cloudrun.md").read_text()
+        self.assertIn("assertion.ref=='refs/heads/main'", doc)
+        self.assertIn("riggrade-deployer", doc)
+
+    def test_settings_file_holds_no_secret_and_is_guarded(self):
+        env = (ROOT / "deploy" / "gcp.env").read_text()
+        keys = {line.split("=", 1)[0] for line in env.splitlines()
+                if line and not line.startswith("#")}
+        self.assertEqual(keys, {"GCP_PROJECT", "GCP_PROJECT_NUMBER", "GCP_REGION"})
+        self.assertIn("grep -q REPLACE_ME deploy/gcp.env", self.text)
