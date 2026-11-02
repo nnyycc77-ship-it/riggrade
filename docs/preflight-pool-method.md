@@ -1,8 +1,9 @@
 # Pooled preflight results: method, v0 (draft)
 
-Status: draft, 2 Nov 2026. Collection is on (owner decision, 2 Nov 2026:
-yes to pooling anonymised preflight results). Publication of the
-aggregates is off until this method has been reviewed; the service answers
+Status: v0, accepted in review on 2 Nov 2026 with conditions now written in.
+Collection is on (owner decision, 2 Nov 2026: yes to pooling anonymised
+preflight results). Publication of the aggregates is off until the
+conditions are met in the page wording and the switch is set; the service answers
 `GET /riggrade/v1/index/quality` with 503 and this document's address until
 then. The method is written before any aggregate is shown.
 
@@ -32,6 +33,26 @@ agents, rig ids, session ids, wallet addresses, mount paths, error
 strings, detail strings, or any free text. The service does not record the
 sender's address.
 
+### 1a. What the sender sees before opting in
+
+The runner prints this text (and the summary it is about to send) before
+sending, and `--dry-share` prints both and sends nothing; the MCP tool's
+`share` flag carries the same statement in its description and returns it
+in the result:
+
+> Sharing sends an anonymised summary to the RigGrade pool: the GPU model,
+> count, memory size and driver version, the CUDA versions, the verdict,
+> each check's status (pass, warn, fail, skipped), the measured numbers
+> (clock ratio, peak temperature, memory bandwidth, download and disk
+> rates, TFLOPS, ECC counts, host load, memory and swap), the disk
+> filesystem type, the CPU governor name, and whether the box was declared
+> exclusive. Nothing else is sent: no hostname, path, address, id, error or
+> detail text. The service keeps exactly those fields plus the hour of
+> receipt and the peer class, and records no sender address. Rows are kept
+> for as long as the series runs and are published only as per-class
+> aggregates once a class holds five records. Because nothing in a row
+> identifies a sender, there is no per-sender deletion path.
+
 ## 2. What is published
 
 Per peer class, once the class holds at least **5** records: the count,
@@ -45,6 +66,18 @@ Nothing is published as an individual record. The aggregates are
 information, not a grade: nothing here enters a grade pillar, a bar, a
 reference or a consistency rule (the same guard as the diagnostics
 thresholds, board record 1 Nov 2026).
+
+**Records, not rigs.** Rows carry no identifier by design, so distinct
+rigs cannot be counted and repeat records from one sender cannot be told
+apart. Every published aggregate counts records, never rigs or hosts, and
+states beside its figures that the pool is self-reported and subject to
+opt-in bias. The five-record gate is a gate on records.
+
+**Collection start.** Collection began with deploy run 24 on 2 November
+2026 at 02:26 UTC, the first service build that accepted shares. The
+first publication states that date and, if it includes rows collected
+under the v0 draft before the method's accepting review (2 Nov 2026,
+board Message 255), says so with the count of those rows, as records.
 
 ## 3. Retention
 

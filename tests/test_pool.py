@@ -61,7 +61,7 @@ class AggregateTests(unittest.TestCase):
 
     def test_gate_and_medians(self):
         agg = pool.aggregate(self.rows(4) + self.rows(5, "rtx3090-24", "warn"))
-        self.assertEqual(agg["rtx4090-24"], {"n": 4, "status": "insufficient", "min_n": 5})
+        self.assertEqual(agg["rtx4090-24"], {"records": 4, "n": 4, "status": "insufficient", "min_n": 5})
         c = agg["rtx3090-24"]
         self.assertEqual(c["status"], "published")
         self.assertEqual(c["verdict_share"]["warn"], 1.0)
@@ -117,6 +117,20 @@ class ClientTests(unittest.TestCase):
         text = res["content"][0]["text"]
         self.assertIn('"shared"', text)
         self.assertIn('"accepted": true', text)
+        self.assertIn("no per-sender deletion path", text)
+
+    def test_dry_share_prints_consent_and_sends_nothing(self):
+        import contextlib
+        from unittest import mock
+        buf = io.StringIO()
+        with mock.patch.object(preflight, "Probes", FakeProbes), \
+             mock.patch.object(preflight, "share", side_effect=AssertionError("must not send")), \
+             contextlib.redirect_stdout(buf):
+            preflight.main(["--seconds", "5", "--skip-download", "--dry-share"])
+        out = buf.getvalue()
+        self.assertIn("no per-sender deletion path", out)
+        self.assertIn("Dry run: nothing was sent.", out)
+        self.assertIn('"pool": 1', out)
 
 
 class ServerTests(unittest.TestCase):
@@ -128,6 +142,7 @@ class ServerTests(unittest.TestCase):
             status, doc = call(app, "POST", endpoint.PREFIX + "/preflight/share", shared_doc())
             self.assertEqual(status, "200 OK")
             self.assertTrue(doc["accepted"])
+            self.assertIn("no per-sender deletion path", doc["consent"])
             self.assertEqual(doc["stored"]["peer_class"], "rtx4090-24")
             self.assertEqual(doc["stored"]["at_hour"], 1_800_000_000)
             stored = json.loads(path.read_text().splitlines()[0])
@@ -143,8 +158,11 @@ class ServerTests(unittest.TestCase):
                                         "RIGGRADE_POOL_PUBLISH": "1"}, lambda: 1_800_003_599)
             status, doc = call(app2, "GET", endpoint.PREFIX + "/index/quality")
             self.assertEqual(status, "200 OK")
-            self.assertEqual(doc["classes"]["rtx4090-24"]["n"], 5)
+            self.assertEqual(doc["classes"]["rtx4090-24"]["records"], 5)
             self.assertEqual(doc["classes"]["rtx4090-24"]["status"], "published")
+            self.assertIn("records, not rigs", doc["note"])
+            self.assertEqual(doc["collection_began"], pool.COLLECTION_BEGAN)
+            self.assertIn("not rigs", doc["unit"])
 
     def test_pool_off(self):
         app = endpoint.GradingApp({"RIGGRADE_SECRET": "s", "RIGGRADE_PREFLIGHT_POOL": "off"}, lambda: 0)
