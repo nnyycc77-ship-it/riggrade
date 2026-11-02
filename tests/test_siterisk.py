@@ -87,6 +87,40 @@ class FetcherParseTests(unittest.TestCase):
             ss.parse_mix([["YEAR", "STATE", "TYPE OF PRODUCER", "ENERGY SOURCE", "GENERATION"]])
 
 
+class FetcherRunTests(unittest.TestCase):
+    def test_one_failed_source_keeps_the_others_and_ends_red(self):
+        import tempfile as tf
+
+        def fake_fetch(url, timeout=120):
+            if url == ss.URLS["nri"]:
+                ss.fail(f"{url}: HTTP 403 at https://moved.example/x; redirects: ['302 -> https://moved.example/x']")
+            return b"sheet"
+
+        price_rows = [["Year", "State", "Industry Sector Category", "Commercial", "Industrial"]]
+        price_rows += [[2024, f"S{i}", "Total Electric Industry", 11.0, 7.0] for i in range(50)]
+        mix_rows = [["YEAR", "STATE", "TYPE OF PRODUCER", "ENERGY SOURCE", "GENERATION (Megawatthours)"]]
+        for i in range(50):
+            mix_rows += [[2024, f"S{i}", "Total Electric Power Industry", "Total", 10.0],
+                         [2024, f"S{i}", "Total Electric Power Industry", "Wind", 10.0]]
+        saved = ss.fetch, ss.excel_rows
+        ss.fetch = fake_fetch
+        ss.excel_rows = lambda data, name: price_rows if name.endswith(".xlsx") else mix_rows
+        try:
+            with tf.TemporaryDirectory() as d:
+                Path(d, "SOURCES.json").write_text(json.dumps({"nri": {"fetched_at": "2026-10-01T00:00:00Z"}}))
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out), self.assertRaises(SystemExit) as cm:
+                    ss.main(["--out", d])
+                kept = json.loads(Path(d, "SOURCES.json").read_text())
+                self.assertEqual(kept["nri"]["fetched_at"], "2026-10-01T00:00:00Z")
+                self.assertEqual(kept["price"]["rows"], 50)
+                self.assertTrue(Path(d, "eia_state_mix.csv").exists())
+                self.assertIn("1 of 3 sources failed", str(cm.exception))
+                self.assertIn("redirects: ['302 -> https://moved.example/x']", out.getvalue())
+        finally:
+            ss.fetch, ss.excel_rows = saved
+
+
 def snapshot(d):
     d = Path(d)
     hz = list(sr.HAZARDS)
