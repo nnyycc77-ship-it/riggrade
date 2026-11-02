@@ -29,7 +29,7 @@ POSTURE = (
 READ_LAST = "A missing line is a missing read, not a clean bill."
 
 HAZARDS = {
-    "HWAV": "Heat wave", "RFLD": "Riverine flooding", "CFLD": "Coastal flooding",
+    "HWAV": "Heat wave", "RFLD": "Riverine flooding", "IFLD": "Inland flooding", "CFLD": "Coastal flooding",
     "HRCN": "Hurricane", "WFIR": "Wildfire", "TRND": "Tornado", "SWND": "Strong wind",
     "ISTM": "Ice storm", "WNTW": "Winter weather", "CWAV": "Cold wave", "DRGT": "Drought",
     "ERQK": "Earthquake", "LTNG": "Lightning", "HAIL": "Hail", "LNDS": "Landslide",
@@ -142,7 +142,8 @@ def energy(state, prices, mix, src):
         lines.append({"item": "Generation mix, state, all producers",
                       "value": ", ".join(f"{s} {v * 100:.0f}%" for s, v in shares if v >= 0.02),
                       "year": int(next(r for r in mix if r["state"] == state)["year"])})
-    return {"status": "read", "source": "EIA Detailed State Data",
+    names = [m.get("name") for m in (src.get("price"), src.get("mix")) if m and m.get("name")]
+    return {"status": "read", "source": "; ".join(names) or "EIA state electricity data",
             "fetched_at": (src.get("price") or {}).get("fetched_at", "date unknown"),
             "scope": "state level: a site's own tariff or supply contract can differ", "lines": lines}
 

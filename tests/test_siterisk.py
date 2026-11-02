@@ -40,14 +40,21 @@ def nri_csv(n=3005, bad_rating=None, drop=None):
 
 class FetcherParseTests(unittest.TestCase):
     def test_nri_rows_are_coded_and_padded(self):
-        rows, inner = ss.parse_nri(nri_csv())
+        rows, header, inner = ss.parse_nri(nri_csv())
         self.assertEqual(inner, "NRI_Table_Counties.csv")
+        self.assertIn("RFLD", header)
         first = rows[0]
         self.assertEqual(first[:3], ["01001", "AL", "C0"])
         hazards = dict(zip(ss.HAZARDS, first[6:], strict=True))
         self.assertEqual(hazards["HWAV"], "VH")
         self.assertEqual(hazards["RFLD"], "NR")  # blank reads as no rating
         self.assertEqual(first[4], "RM")
+
+    def test_a_hazard_with_neither_name_is_refused_with_the_columns_listed(self):
+        with self.assertRaises(SystemExit) as cm:
+            ss.resolve_hazards({f"{h}_RISKR" for h in ss.HAZARDS if h != "RFLD"} | {"XFLD_RISKR"})
+        self.assertIn("['RFLD']", str(cm.exception))
+        self.assertIn("XFLD_RISKR", str(cm.exception))
 
     def test_nri_stops_on_unknown_rating_missing_column_or_short_table(self):
         with self.assertRaises(SystemExit):
@@ -88,12 +95,36 @@ class FetcherParseTests(unittest.TestCase):
             ss.parse_mix([["YEAR", "STATE", "TYPE OF PRODUCER", "ENERGY SOURCE", "GENERATION"]])
 
 
+class LatestPriceTests(unittest.TestCase):
+    def table(self):
+        rows = [["Table 2.10. Average Price of Electricity to Ultimate Customers by End-Use Sector, by State"],
+                ["Census Division and State", "Residential", None, "Commercial", None, "Industrial", None,
+                 "Transportation", None, "All Sectors", None],
+                [None, "2024", "2023", "2024", "2023", "2024", "2023", "2024", "2023", "2024", "2023"],
+                ["New England", 28, 27, 21, 20, 17, 16, 9, 9, 23, 22]]
+        for name in list(ss.STATES)[:-2]:
+            rows.append([name, 16.0, 15.0, 12.5, 12.0, 8.25, 8.0, 10, 10, 13, 12])
+        rows.append(["U.S. Total", 16.48, 16.0, 12.7, 12.4, 8.1, 8.0, 11, 11, 13, 12])
+        return rows
+
+    def test_latest_year_columns_by_sector(self):
+        out = ss.parse_price_latest(self.table())
+        tx = next(r for r in out if r[0] == "TX")
+        self.assertEqual(tx, ["TX", 2024, 8.25, 12.5])
+        self.assertIn(["US", 2024, 8.1, 12.7], out)
+        self.assertNotIn("New England", {r[0] for r in out})
+
+    def test_a_table_without_the_sector_header_stops(self):
+        with self.assertRaises(SystemExit):
+            ss.parse_price_latest([["Texas", 1, 2, 3]])
+
+
 class FetcherRunTests(unittest.TestCase):
     def test_one_failed_source_keeps_the_others_and_ends_red(self):
         import tempfile as tf
 
         def fake_fetch(url, timeout=120):
-            if url in (ss.URLS["price"], ss.URLS["mix"]):
+            if url in (ss.URLS["price"], ss.URLS["mix"], ss.URLS["price_latest"]):
                 return b"sheet"
             ss.fail(f"{url}: HTTP 403 at https://moved.example/x; redirects: ['302 -> https://moved.example/x']")
 
@@ -105,7 +136,9 @@ class FetcherRunTests(unittest.TestCase):
                          [2024, f"S{i}", "Total Electric Power Industry", "Wind", 10.0]]
         saved = ss.fetch, ss.excel_sheets
         ss.fetch = fake_fetch
-        ss.excel_sheets = lambda data, name: [("Sheet1", price_rows if name.endswith(".xlsx") else mix_rows)]
+        latest_rows = LatestPriceTests().table()
+        ss.excel_sheets = lambda data, name: [("Sheet1", latest_rows if "epa_02_10" in name
+                                               else price_rows if name.endswith(".xlsx") else mix_rows)]
         try:
             with tf.TemporaryDirectory() as d:
                 Path(d, "SOURCES.json").write_text(json.dumps({"nri": {"fetched_at": "2026-10-01T00:00:00Z"}}))
@@ -114,7 +147,8 @@ class FetcherRunTests(unittest.TestCase):
                     ss.main(["--out", d])
                 kept = json.loads(Path(d, "SOURCES.json").read_text())
                 self.assertEqual(kept["nri"]["fetched_at"], "2026-10-01T00:00:00Z")
-                self.assertEqual(kept["price"]["rows"], 50)
+                self.assertEqual(kept["price"]["rows"], 52)
+                self.assertEqual(kept["price"]["base"]["year"], 2024)
                 self.assertTrue(Path(d, "eia_state_mix.csv").exists())
                 self.assertIn("1 of 3 sources failed", str(cm.exception))
                 self.assertIn("redirects: ['302 -> https://moved.example/x']", out.getvalue())
@@ -125,7 +159,7 @@ class FetcherRunTests(unittest.TestCase):
 class HostedLayerTests(unittest.TestCase):
     def answers(self, owner="Federal Emergency Management Agency (FEMA)", n=3005, page=1000):
         fields = ["OBJECTID", "STCOFIPS", "STATEABBRV", "COUNTY", "RISK_RATNG", "SOVI_RATNG", "RESL_RATNG"]
-        fields += [f"{h}_RISKR" for h in ss.HAZARDS]
+        fields += [f"{'IFLD' if h == 'RFLD' else h}_RISKR" for h in ss.HAZARDS]
         recs = []
         for i in range(n):
             r = {f: "Relatively Low" for f in fields}
@@ -148,7 +182,9 @@ class HostedLayerTests(unittest.TestCase):
 
     def test_pages_the_layer_and_records_the_owner(self):
         get, calls = self.answers()
-        rows, meta = ss.fetch_nri_service(get)
+        rows, header, meta = ss.fetch_nri_service(get)
+        self.assertIn("IFLD", header)
+        self.assertNotIn("RFLD", header)
         self.assertEqual(len(rows), 3005)
         self.assertEqual(rows[0][:3], ["01001", "AL", "C0"])
         self.assertEqual(dict(zip(ss.HAZARDS, rows[0][6:], strict=True))["WFIR"], "VH")
