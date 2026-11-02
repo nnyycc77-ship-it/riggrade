@@ -45,6 +45,7 @@ from . import signing
 from . import pool
 from . import ledger
 from . import hostcert
+from . import record
 
 PREFIX = "/riggrade/v1"
 X402_VERSION = 2
@@ -139,6 +140,10 @@ class Config:
         raw_pool = env.get("RIGGRADE_PREFLIGHT_POOL", "").strip()
         self.preflight_pool = raw_pool if raw_pool and raw_pool.lower() != "off" else None
         self.pool_publish = env.get("RIGGRADE_POOL_PUBLISH", "").strip() == "1"
+        # GPU record (docs/gpu-record-method.md): the append-only log path;
+        # unset or "off" keeps the record closed until the method is accepted.
+        raw_record = env.get("RIGGRADE_RECORD", "").strip()
+        self.record_path = raw_record if raw_record and raw_record.lower() != "off" else None
         # Prior certificate-signing public keys (base64, comma-separated) stay
         # published after a secret rotation so older certificates still verify.
         self.prior_public_keys = [k for k in env.get("RIGGRADE_PRIOR_PUBLIC_KEYS", "").split(",") if k.strip()]
@@ -253,6 +258,8 @@ class GradingApp:
                 return _json(start_response, "200 OK", self.descriptor())
             if rest == ["index", "quality"] and method == "GET":
                 return self.pool_quality(start_response)
+            if method == "GET" and len(rest) == 2 and rest[0] == "record":
+                return self.record_lookup(start_response, rest[1])
             if rest == ["index"] and method == "GET":
                 # Free: the reconstructed weekly listed-price series per class.
                 return _json(start_response, "200 OK", price_index.latest(self.index.current()),
@@ -296,6 +303,8 @@ class GradingApp:
                 return self.heartbeat(start_response, body)
             if rest == ["preflight", "share"]:
                 return self.preflight_share(start_response, body)
+            if rest == ["record"]:
+                return self.record_submit(start_response, body)
             if rest == ["fixit"]:
                 return self.fixit_report(start_response, environ, body)
             if rest == ["cluster", "acceptance"]:
@@ -896,6 +905,35 @@ class GradingApp:
                       "note": "Only this record is kept: no identifier of the box, the host or you. "
                               "Aggregates per peer class publish at GET /index/quality once the "
                               "class has %d records and the method is reviewed." % pool.MIN_N})
+
+    def record_submit(self, start_response, body):
+        """Consented entry for the GPU record (riggrade.record.clean); free;
+        closed until RIGGRADE_RECORD names the log."""
+        if not self.config.record_path:
+            return _json(start_response, "503 Service Unavailable",
+                         {"accepted": False, "error": "the GPU record is closed on this service: "
+                                                      "its method is under review"})
+        try:
+            entry = record.clean(body, self.clock())
+        except ValueError as exc:
+            raise BadRequest("not a record entry: %s" % exc)
+        record.append(self.config.record_path, entry)
+        return _json(start_response, "200 OK",
+                     {"accepted": True, "held": entry["held"], "stored": entry, "consent": record.CONSENT,
+                      "lookup": [PREFIX + "/record/" + c["card_id"] for c in entry["cards"]]})
+
+    def record_lookup(self, start_response, card_id):
+        if not self.config.record_path:
+            return _json(start_response, "503 Service Unavailable",
+                         {"error": "the GPU record is closed on this service: its method is under review"})
+        if not record.CARD_ID.match(card_id):
+            return _json(start_response, "404 Not Found", {"error": "no such card"})
+        rows = record.read(self.config.record_path)
+        doc = record.history(rows, card_id)
+        if not doc["records"] and not doc["held"]:
+            return _json(start_response, "404 Not Found", {"error": "no record for this card", "card_id": card_id})
+        return _json(start_response, "200 OK", dict(doc, method=record.METHOD_VERSION),
+                     [("Cache-Control", "public, max-age=300")])
 
     def pool_quality(self, start_response):
         """Per-class aggregates of the pooled preflights; gated until the

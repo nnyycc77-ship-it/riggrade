@@ -695,6 +695,36 @@ CONSENT = (
     "https://github.com/nnyycc77-ship-it/riggrade/blob/main/docs/preflight-pool-method.md")
 
 
+# The record's consent text; riggrade.record.CONSENT must read the same (a test holds it).
+RECORD_CONSENT = (
+    "Recording sends, with your explicit opt-in, an entry to the public RigGrade GPU record: the "
+    "per-card identity (a hash of each card's driver UUID, never the UUID itself, and the board "
+    "serial where the driver exposes it), the rig identity hash, the GPU model, count, memory and "
+    "driver, the verdict, each check's status, the measured numbers, whether the box was declared "
+    "exclusive, shared or virtualised, and who you declared as the runner (host, buyer or riggrade). "
+    "Nothing else is sent: no hostname, path, address, wallet, owner, location or free text. The "
+    "entry is public once accepted and cannot be withdrawn: the record is append-only, a later run "
+    "supersedes, nothing is deleted. An entry declared as a buyer's run on someone else's rig is held "
+    "and not served until the rig's host consents. Method: "
+    "https://github.com/nnyycc77-ship-it/riggrade/blob/main/docs/gpu-record-method.md"
+)
+
+
+def record_doc(report, runner):
+    """The record entry the runner sends with --record: the anonymised
+    summary plus the per-card identity block and the declared runner."""
+    doc = anonymise(report)
+    doc.pop("pool", None)
+    doc.update({"record": 1, "rig_id": report.get("rig_id"), "cards": report.get("cards"),
+                "declared_runner": runner, "attested": False,
+                "virtualised": not bool(report.get("exclusive_box_assumed", True))})
+    return doc
+
+
+def record_send(doc, endpoint=None, opener=None, timeout=10):
+    return share(doc, endpoint=endpoint, opener=opener, timeout=timeout, path="/record")
+
+
 def anonymise(report):
     """The shareable summary: peer-class inputs, verdict, each check's
     status, the measured numbers. No hostnames, paths, ids, free text or
@@ -714,12 +744,12 @@ def anonymise(report):
     return {k: v for k, v in doc.items() if v is not None}
 
 
-def share(doc, endpoint=None, opener=None, timeout=10):
+def share(doc, endpoint=None, opener=None, timeout=10, path="/preflight/share"):
     """POST the anonymised summary; returns the server's answer or an
     error dict. Never raises: sharing must not change the verdict."""
     import urllib.error
     import urllib.request
-    url = (endpoint or os.environ.get("RIGGRADE_ENDPOINT") or DEFAULT_ENDPOINT).rstrip("/") + "/preflight/share"
+    url = (endpoint or os.environ.get("RIGGRADE_ENDPOINT") or DEFAULT_ENDPOINT).rstrip("/") + path
     data = json.dumps(doc).encode()
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json",
                                                            "User-Agent": "riggrade-preflight"})
@@ -814,6 +844,12 @@ def main(argv=None):
                          "published only as per-class aggregates at five records; no per-sender "
                          "deletion path, since nothing identifies you. The exact wording is printed "
                          "before sending; --dry-share prints the summary and sends nothing.")
+    ap.add_argument("--record", action="store_true",
+                    help="opt in: after the check, send an entry to the public RigGrade GPU record "
+                         "(per-card identity hashes and serials where exposed, plus the anonymised "
+                         "summary); requires --runner; the consent text is printed first")
+    ap.add_argument("--runner", choices=("host", "buyer", "riggrade"), default=None,
+                    help="who is running this box for --record: its host, a buyer renting it, or riggrade")
     ap.add_argument("--dry-share", action="store_true",
                     help="print the anonymised summary that --share would send, and send nothing")
     ap.add_argument("--endpoint", default=None, help="service URL for --share (default: RIGGRADE_ENDPOINT)")
@@ -823,6 +859,17 @@ def main(argv=None):
     report = run(Probes(), args.seconds, args.url, not args.skip_download, args.dir,
                  shared=args.shared)
     bad = (FAIL, WARN) if args.fail_on_warn else (FAIL,)
+    if args.record:
+        if not args.runner:
+            ap.error("--record requires --runner host|buyer|riggrade")
+        doc = record_doc(report, args.runner)
+        sys.stdout.write("\nRECORD CONSENT: " + RECORD_CONSENT + "\n")
+        sys.stdout.write(json.dumps(doc, indent=2, sort_keys=True) + "\n")
+        try:
+            answer = record_send(doc, endpoint=args.endpoint)
+            sys.stdout.write("record: %s\n" % json.dumps(answer, sort_keys=True))
+        except Exception as exc:  # noqa: BLE001 - the local report stands whatever the network did
+            sys.stdout.write("record not sent: %s\n" % exc)
     if args.share or args.dry_share:
         doc = anonymise(report)
         sys.stdout.write("\n" + CONSENT + "\n\nSummary to send:\n" + json.dumps(doc, indent=1, sort_keys=True) + "\n")
