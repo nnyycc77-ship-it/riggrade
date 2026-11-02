@@ -21,6 +21,19 @@ from pathlib import Path
 from .classes import identify
 
 MIN_N = 5
+COLLECTION_BEGAN = "2026-11-02T02:26:00Z"   # deploy run 24, the first service that accepted shares
+UNIT = "records (one opt-in shared preflight each; self-reported, subject to opt-in bias; not rigs or hosts)"
+CONSENT = (
+    "Sharing sends an anonymised summary to the RigGrade pool: the GPU model, count, memory size and "
+    "driver version, the CUDA versions, the verdict, each check's status (pass, warn, fail, skipped), "
+    "the measured numbers (clock ratio, peak temperature, memory bandwidth, download and disk rates, "
+    "TFLOPS, ECC counts, host load, memory and swap), the disk filesystem type, the CPU governor name, "
+    "and whether the box was declared exclusive. Nothing else is sent: no hostname, path, address, "
+    "id, error or detail text. The service keeps exactly those fields plus the hour of receipt and the "
+    "peer class, and records no sender address. Rows are kept for as long as the series runs and are "
+    "published only as per-class aggregates once a class holds five records. Because nothing in a row "
+    "identifies a sender, there is no per-sender deletion path. Method: "
+    "https://github.com/nnyycc77-ship-it/riggrade/blob/main/docs/preflight-pool-method.md")
 MAX_DOC_BYTES = 16 * 1024
 STATUSES = ("pass", "warn", "fail", "skipped")
 MEASURE_KEYS = ("clock_ratio", "peak_temperature_c", "mem_bw_gbs", "download_mbs", "disk_write_mbs",
@@ -93,7 +106,7 @@ def aggregate(rows, min_n=MIN_N):
     for cid, rs in sorted(by_class.items()):
         n = len(rs)
         if n < min_n:
-            out[cid] = {"n": n, "status": "insufficient", "min_n": min_n}
+            out[cid] = {"records": n, "n": n, "status": "insufficient", "min_n": min_n}
             continue
         verdicts = {v: sum(1 for r in rs if r.get("verdict") == v) / n for v in ("pass", "warn", "fail")}
         checks = {}
@@ -108,7 +121,8 @@ def aggregate(rows, min_n=MIN_N):
             vals = [r["measures"][key] for r in rs if key in (r.get("measures") or {})]
             if len(vals) >= min_n:
                 medians[key] = {"median": round(statistics.median(vals), 3), "n": len(vals)}
-        out[cid] = {"n": n, "status": "published", "verdict_share": {k: round(v, 3) for k, v in verdicts.items()},
+        out[cid] = {"records": n, "n": n, "status": "published",
+                    "verdict_share": {k: round(v, 3) for k, v in verdicts.items()},
                     "check_status_share": check_shares, "measures_median": medians,
                     "first_hour": min(r.get("at_hour", 0) for r in rs),
                     "last_hour": max(r.get("at_hour", 0) for r in rs)}

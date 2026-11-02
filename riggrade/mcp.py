@@ -83,9 +83,16 @@ TOOLS = [
              "shared": {"type": "boolean",
                         "description": "The box is shared or sliced: skip the foreign-use checks."},
              "share": {"type": "boolean",
-                       "description": "Opt in: after the check, send an anonymised summary (peer class, "
-                                      "each check's status, the measured numbers; no identifiers) to "
-                                      "the RigGrade pool so the class aggregates improve."},
+                       "description": "Opt in: after the check, send an anonymised summary to the RigGrade "
+                                      "pool. Sent: GPU model, count, memory, driver and CUDA versions, the "
+                                      "verdict, each check's status, the measured numbers, the disk "
+                                      "filesystem type, the CPU governor, and whether the box was declared "
+                                      "exclusive. Not sent: hostname, paths, addresses, ids, errors, detail "
+                                      "text. The service keeps those fields plus the hour of receipt and "
+                                      "the peer class, no sender address; rows are kept while the series "
+                                      "runs and published only as per-class aggregates at five records; "
+                                      "no per-sender deletion path, since nothing identifies the sender. "
+                                      "Method: docs/preflight-pool-method.md in the repository."},
          },
          "additionalProperties": False}},
     {"name": "gpu_price_index",
@@ -139,6 +146,7 @@ def _preflight(args, probes=None, share_opener=None):
     summary["errors"] = report["errors"]
     summary["measures"] = report.get("measures", {})
     if args.get("share"):
+        summary["consent"] = preflight.CONSENT
         summary["shared"] = preflight.share(preflight.anonymise(report), opener=share_opener)
     return _text(out.getvalue() + "\n" + json.dumps(summary, indent=1, sort_keys=True))
 

@@ -610,6 +610,7 @@ class GradingApp:
         pool.append(self.config.preflight_pool, rec)
         return _json(start_response, "200 OK",
                      {"accepted": True, "stored": rec,
+                      "consent": pool.CONSENT,
                       "note": "Only this record is kept: no identifier of the box, the host or you. "
                               "Aggregates per peer class publish at GET /index/quality once the "
                               "class has %d records and the method is reviewed." % pool.MIN_N})
@@ -623,9 +624,12 @@ class GradingApp:
                           "method": "https://github.com/nnyycc77-ship-it/riggrade/blob/main/docs/preflight-pool-method.md"})
         rows = pool.read(self.config.preflight_pool) if self.config.preflight_pool else []
         return _json(start_response, "200 OK",
-                     {"series": "preflight-pool", "min_n": pool.MIN_N, "classes": pool.aggregate(rows),
-                      "note": "Anonymised, opt-in preflight results aggregated per peer class; "
-                              "information, not a grade."},
+                     {"series": "preflight-pool", "min_n": pool.MIN_N, "unit": pool.UNIT,
+                      "collection_began": pool.COLLECTION_BEGAN,
+                      "classes": pool.aggregate(rows),
+                      "note": "Counts are records, not rigs or hosts: rows carry no identifier, so repeat "
+                              "shares from one sender cannot be told apart. Self-reported, opt-in, subject "
+                              "to opt-in bias. Information, not a grade; nothing here enters a grade rule."},
                      [("Cache-Control", "public, max-age=3600")])
 
     def certificate_lookup(self, start_response, cert_id, environ=None):

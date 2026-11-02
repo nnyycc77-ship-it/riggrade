@@ -658,6 +658,19 @@ def measures_of(obs):
     return m
 
 
+CONSENT = (
+    "Sharing sends an anonymised summary to the RigGrade pool: the GPU model, count, memory size and "
+    "driver version, the CUDA versions, the verdict, each check's status (pass, warn, fail, skipped), "
+    "the measured numbers (clock ratio, peak temperature, memory bandwidth, download and disk rates, "
+    "TFLOPS, ECC counts, host load, memory and swap), the disk filesystem type, the CPU governor name, "
+    "and whether the box was declared exclusive. Nothing else is sent: no hostname, path, address, "
+    "id, error or detail text. The service keeps exactly those fields plus the hour of receipt and the "
+    "peer class, and records no sender address. Rows are kept for as long as the series runs and are "
+    "published only as per-class aggregates once a class holds five records. Because nothing in a row "
+    "identifies a sender, there is no per-sender deletion path. Method: "
+    "https://github.com/nnyycc77-ship-it/riggrade/blob/main/docs/preflight-pool-method.md")
+
+
 def anonymise(report):
     """The shareable summary: peer-class inputs, verdict, each check's
     status, the measured numbers. No hostnames, paths, ids, free text or
@@ -763,8 +776,16 @@ def main(argv=None):
     ap.add_argument("--shared", action="store_true",
                     help="box is shared or sliced: skip the foreign-use checks")
     ap.add_argument("--share", action="store_true",
-                    help="opt in: send an anonymised summary (class, statuses, numbers; no "
-                         "identifiers) to the RigGrade pool after the check")
+                    help="opt in: after the check, send an anonymised summary to the RigGrade pool. "
+                         "Sent: GPU model, count, memory, driver and CUDA versions, the verdict, each "
+                         "check's status, the measured numbers, the disk filesystem type, the CPU "
+                         "governor, and whether the box was declared exclusive. Not sent: hostname, "
+                         "paths, addresses, ids, errors, detail text. Kept while the series runs, "
+                         "published only as per-class aggregates at five records; no per-sender "
+                         "deletion path, since nothing identifies you. The exact wording is printed "
+                         "before sending; --dry-share prints the summary and sends nothing.")
+    ap.add_argument("--dry-share", action="store_true",
+                    help="print the anonymised summary that --share would send, and send nothing")
     ap.add_argument("--endpoint", default=None, help="service URL for --share (default: RIGGRADE_ENDPOINT)")
     ap.add_argument("--fail-on-warn", action="store_true",
                     help="exit 1 on warn as well as fail")
@@ -772,9 +793,14 @@ def main(argv=None):
     report = run(Probes(), args.seconds, args.url, not args.skip_download, args.dir,
                  shared=args.shared)
     bad = (FAIL, WARN) if args.fail_on_warn else (FAIL,)
-    if args.share:
-        answer = share(anonymise(report), args.endpoint)
-        sys.stdout.write("Shared with the RigGrade pool: %s\n" % json.dumps(answer, sort_keys=True))
+    if args.share or args.dry_share:
+        doc = anonymise(report)
+        sys.stdout.write("\n" + CONSENT + "\n\nSummary to send:\n" + json.dumps(doc, indent=1, sort_keys=True) + "\n")
+        if args.share:
+            answer = share(doc, args.endpoint)
+            sys.stdout.write("Shared with the RigGrade pool: %s\n" % json.dumps(answer, sort_keys=True))
+        else:
+            sys.stdout.write("Dry run: nothing was sent.\n")
     return 1 if report["verdict"] in bad else 0
 
 

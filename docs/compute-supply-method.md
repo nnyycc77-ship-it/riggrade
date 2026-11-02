@@ -1,7 +1,8 @@
 # RigGrade compute supply ledger: method, v0 (draft)
 
-Status: draft, 2 Nov 2026. No value is published under this method until it
-has been reviewed. The method is written before any number, so the rules
+Status: v0, adopted in review on 2 Nov 2026 for the Revision 6 batch, with
+the conditions now written into sections 4, 4a and 4b. No value is published
+until those conditions are met in the page wording too. The method is written before any number, so the rules
 cannot be fitted to the data. It is information, not an offer, a rate, a
 forecast or investment advice; RigGrade runs no trading, contracts or
 tokens on it.
@@ -51,7 +52,32 @@ beside it for reconciliation, never combined with it into one number.
 
 A signal is a sentence with a date, produced only when every series it
 names has a published value for the period. Each is defined here before
-any is published; none is a forecast.
+any is published; none is a forecast. Every signal, when produced, prints
+the value of each leg it names, the window it used and the threshold, so a
+reader sees the size of a move and not only its direction.
+
+**Tolerance for "flat".** A series is flat over a window when its end
+value is within 5% of its start value and no intermediate weekly value
+leaves a 10% band around the start value. The tolerance is printed with
+the signal.
+
+**Chip-to-class mapping for the secondary link.** Resale asks are quoted
+per chip (H100, A100); rental asks are per peer class. The comparison uses
+the published mapping table of the reconstructed index: H100 resale
+against the chip-family series `chip:h100` (and, where it exists, the
+h100-sxm-80 and h100-pcie-80 classes shown separately); A100 resale
+against `chip:a100` and the a100 classes likewise. No chip maps to a class
+it does not name.
+
+**Sponsor classes and debt service.** A sponsor class is a group of
+sponsors with the same disclosed financing shape, named in the method
+when first used (for example "GPU-backed term loans, 2025 to 2026
+vintage"). Debt service per GPU-year is disclosed principal and interest
+due per year divided by the disclosed GPU count the facility covers, taken
+only from the primary document (the prospectus, loan agreement summary or
+filing), with the sponsor's own utilisation assumption printed beside it.
+A sponsor whose documents do not disclose enough for that arithmetic is
+not placed in a class and is not named by a signal.
 
 - **Absorption gap.** Link 1 implied units rose over the last four quarters
   while link 4 offering counts for the matching classes rose and the median
@@ -68,7 +94,8 @@ any is published; none is a forecast.
   band for the matching peer class. Reads: at listed prices and the most
   generous utilisation, the marginal market does not cover the disclosed
   debt service. Printed with the sponsor's own utilisation assumption beside
-  it.
+  it. This is an arithmetic comparison of two published numbers and is never
+  worded as a credit judgement, a rating or a recommendation.
 - **Delivery gap.** Link 6 delivered-versus-claimed ratio for a class is
   below 0.9 at the median across at least five rigs. Reads: listed capacity
   of that class is underperforming its own claims. Published only at that
@@ -78,6 +105,25 @@ Every signal names the series, the period and the threshold it used, and
 links to the published values. A signal that fails to fire is not reported
 as absence of the condition; it is reported as "no signal", with the series
 that were missing, if any.
+
+## 4a. Primary sources only
+
+A context value (links 1, 2, 3 and 5) is recorded only after it has been
+checked against the primary document for that value: the filing, the
+company's own announcement, the published term sheet, the utility's queue
+publication, the source's own dataset file. A secondary summary, a press
+report or a research helper's reading is never enough on its own; it can
+point at the document, not stand in for it. The record of each value names
+the document and the page or field it came from.
+
+## 4b. Posture on every page
+
+Any published note, page or feed that shows a figure or a signal from this
+method carries, on that same page, these three statements: "information,
+not advice, and not an offer, a rate or a forecast"; "marketplace listings
+are the marginal market, not fleet utilisation"; and "listed prices are
+asks, not paid prices". A page that cannot carry them does not carry the
+figure.
 
 ## 5. Rules that do not change silently
 
