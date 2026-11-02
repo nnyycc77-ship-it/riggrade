@@ -131,6 +131,23 @@ class AdapterTests(unittest.TestCase):
         res = pay.FacilitatorAdapter([A], allow, post=post).settle(header(), REQ)
         self.assertEqual((res["ok"], res["charged"]), (False, True))
 
+    def test_bazaar_outcome_is_recorded(self):
+        # The paying client did not echo the extension: nothing to catalogue.
+        post = Post({A + "/verify": OK_VERIFY, A + "/settle": OK_SETTLE})
+        res = pay.FacilitatorAdapter([A], allow, post=post).settle(header(), REQ)
+        self.assertEqual(res["bazaar"], {"echoed_by_client": False, "facilitator_outcome": None})
+        # Echoed, and the facilitator reports the cataloguing outcome in its sidechannel.
+        h = header()
+        payload = json.loads(base64.b64decode(h))
+        payload["extensions"] = {"bazaar": {"info": {"input": {"type": "http", "method": "POST"}}}}
+        h2 = base64.b64encode(json.dumps(payload).encode()).decode()
+        settle = dict(OK_SETTLE, extensions={"bazaar": {"status": "processing"}})
+        post = Post({A + "/verify": OK_VERIFY, A + "/settle": settle})
+        res = pay.FacilitatorAdapter([A], allow, post=post).settle(h2, REQ)
+        self.assertEqual(res["bazaar"], {"echoed_by_client": True, "facilitator_outcome": {"status": "processing"}})
+        self.assertEqual(pay.bazaar_outcome({}, {"extensions": {"bazaar": {"status": "rejected", "rejectedReason": "x"}}}, {}),
+                         {"echoed_by_client": False, "facilitator_outcome": {"status": "rejected", "rejectedReason": "x"}})
+
     def test_all_unreachable(self):
         res = pay.FacilitatorAdapter([A, B], allow, post=Post({})).settle(header(), REQ)
         self.assertEqual((res["ok"], res["charged"]), (False, False))

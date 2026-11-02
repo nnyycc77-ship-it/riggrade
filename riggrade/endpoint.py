@@ -372,7 +372,7 @@ class GradingApp:
                             "charged": result.get("charged"),
                             "amount_atomic": requirement["amount"],
                             "payer": result.get("payer"), "tx": result.get("tx"),
-                        "facilitator": result.get("facilitator"),
+                        "facilitator": result.get("facilitator"), "bazaar": result.get("bazaar"),
                             "error": result.get("error"), "at": self.clock()})
         if not result.get("ok"):
             return _json(start_response, "402 Payment Required",
@@ -400,7 +400,7 @@ class GradingApp:
                         "amount_atomic": requirement["amount"],
                         "paid_workloads": payable, "free_workloads": free,
                         "payer": result.get("payer"), "tx": result.get("tx"),
-                        "facilitator": result.get("facilitator"),
+                        "facilitator": result.get("facilitator"), "bazaar": result.get("bazaar"),
                         "at": self.clock()})
         extra = [("PAYMENT-RESPONSE", result.get("receipt_header", ""))]
         return _json(start_response, "200 OK",
@@ -496,7 +496,7 @@ class GradingApp:
                             "charged": result.get("charged"),
                             "amount_atomic": requirement["amount"],
                             "payer": result.get("payer"), "tx": result.get("tx"),
-                        "facilitator": result.get("facilitator"),
+                        "facilitator": result.get("facilitator"), "bazaar": result.get("bazaar"),
                             "error": result.get("error"), "at": self.clock()})
         if not result.get("ok"):
             return _json(start_response, "402 Payment Required",
@@ -509,7 +509,7 @@ class GradingApp:
                            {"product": product, "status": "charged_without_delivery",
                             "charged": True, "amount_atomic": requirement["amount"],
                             "payer": result.get("payer"), "tx": result.get("tx"),
-                        "facilitator": result.get("facilitator"),
+                        "facilitator": result.get("facilitator"), "bazaar": result.get("bazaar"),
                             "error": "delivery failed: %s: %s" % (type(exc).__name__, exc),
                             "at": self.clock()})
             return _json(start_response, "500 Internal Server Error",
@@ -518,7 +518,7 @@ class GradingApp:
         salelog.append(self.config.sale_log,
                        dict({"product": product, "amount_atomic": requirement["amount"],
                              "payer": result.get("payer"), "tx": result.get("tx"),
-                        "facilitator": result.get("facilitator"),
+                        "facilitator": result.get("facilitator"), "bazaar": result.get("bazaar"),
                              "at": self.clock()}, **extra))
         return _json(start_response, "200 OK", doc,
                      [("PAYMENT-RESPONSE", result.get("receipt_header", ""))])
