@@ -571,6 +571,14 @@ class Probes:
     def host(self):
         return read_host()
 
+    def cards(self):
+        """Per-card identity for the record: UUID hash and board serial where
+        exposed; the UUID itself is never written (runner.identity)."""
+        out = subprocess.run(["nvidia-smi", "--query-gpu=index,uuid,serial",
+                              "--format=csv,noheader,nounits"],
+                             capture_output=True, text=True, timeout=30)
+        return parse_cards_csv(out.stdout) if out.returncode == 0 else None
+
     def mount(self, directory):
         try:
             mounts = Path("/proc/mounts").read_text(encoding="utf-8")
@@ -607,6 +615,22 @@ def idle_snapshot(probes, samples=5, interval=None, sleep=time.sleep):
 
 
 DEFAULT_ENDPOINT = "https://riggrade-674098696181.us-central1.run.app/riggrade/v1"
+
+
+def parse_cards_csv(csv_text):
+    """[{index, card_id, serial}] and the rig id from `index,uuid,serial` rows."""
+    from . import identity
+    cards, uuids = [], []
+    for line in csv_text.splitlines():
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) < 2 or not parts[1].startswith("GPU-"):
+            continue
+        serial = parts[2] if len(parts) > 2 and parts[2] not in identity.NOT_REPORTED else None
+        cards.append({"index": _num(parts[0]), "card_id": identity.card_id(parts[1]), "serial": serial})
+        uuids.append(parts[1])
+    if not cards:
+        return None
+    return {"rig_id": identity.rig_id(uuids), "cards": cards}
 
 
 def measures_of(obs):
@@ -750,6 +774,8 @@ def run(probes, seconds=30.0, url=DEFAULT_URL, download=True, directory=".",
     if getattr(probes, "mount", None):
         obs["disk_mount"] = attempt("mount", lambda: probes.mount(directory)) or {}
 
+    if getattr(probes, "cards", None):
+        obs["cards"] = attempt("cards", probes.cards)
     findings = evaluate(obs)
     report = {"preflight": True, "measures": measures_of(obs),
               "note": "Not a grade. No results were sent anywhere.",
@@ -757,6 +783,10 @@ def run(probes, seconds=30.0, url=DEFAULT_URL, download=True, directory=".",
               "gpus": [{"index": g.get("index"), "name": g.get("name"),
                         "driver": g.get("driver_version")} for g in obs["idle"]],
               "tflops_per_gpu": obs.get("tflops"),
+              # Identity for the GPU record: hashes and board serials only;
+              # kept on the box, never in the anonymised share.
+              "rig_id": (obs.get("cards") or {}).get("rig_id"),
+              "cards": (obs.get("cards") or {}).get("cards"),
               "findings": findings, "errors": errors, "limits": LIMITS}
     report.update(verdict(findings))
     Path("preflight-report.json").write_text(

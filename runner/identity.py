@@ -3,8 +3,9 @@
 import hashlib
 import subprocess
 
-QUERY = ["nvidia-smi", "--query-gpu=name,memory.total,driver_version,pci.bus_id,uuid",
+QUERY = ["nvidia-smi", "--query-gpu=name,memory.total,driver_version,pci.bus_id,uuid,serial",
          "--format=csv,noheader,nounits"]
+NOT_REPORTED = ("[N/A]", "[Not Supported]", "N/A", "")
 
 
 class IdentityError(RuntimeError):
@@ -28,8 +29,9 @@ def parse(csv_text):
         if len(parts) < 5:
             raise IdentityError("unexpected nvidia-smi row: %r" % row)
         name, mem_mib, driver, bus, uuid = parts[:5]
+        serial = parts[5] if len(parts) > 5 and parts[5] not in NOT_REPORTED else None
         cards.append({"name": name, "memory_gb": round(float(mem_mib) / 1024, 1),
-                      "driver": driver, "pci_bus_id": bus, "uuid": uuid})
+                      "driver": driver, "pci_bus_id": bus, "uuid": uuid, "serial": serial})
     names = {c["name"] for c in cards}
     if len(names) > 1:
         raise IdentityError("mixed card models in one rig: %s" % sorted(names))
@@ -38,7 +40,17 @@ def parse(csv_text):
             "card_count": len(cards),
             "driver": cards[0]["driver"],
             "pci_bus_ids": [c["pci_bus_id"] for c in cards],
-            "rig_id": rig_id([c["uuid"] for c in cards])}
+            "rig_id": rig_id([c["uuid"] for c in cards]),
+            # Per-card identity for the GPU record (docs/gpu-record-method.md):
+            # the hash of the driver's UUID, and the board serial where the
+            # driver exposes it (data-centre cards; GeForce usually reports
+            # N/A). The UUID itself is never written.
+            "cards": [{"card_id": card_id(c["uuid"]), "serial": c["serial"]} for c in cards]}
+
+
+def card_id(uuid):
+    """Stable per-card identity from the GPU UUID, without storing the UUID."""
+    return "gc_" + hashlib.sha256(uuid.encode()).hexdigest()[:16]
 
 
 def rig_id(uuids):

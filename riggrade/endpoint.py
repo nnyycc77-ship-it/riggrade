@@ -22,6 +22,7 @@ and only then settle. Attestation is verified by attestation_verifier
 """
 
 import base64
+import datetime
 import json
 from urllib.parse import urlsplit
 import re
@@ -148,6 +149,20 @@ class Config:
         self.ledger_price = int(raw_price) if raw_price.isdigit() and int(raw_price) > 0 else None
         raw_hc = env.get("RIGGRADE_HOSTCERT_PRICE_ATOMIC", "").strip()
         self.hostcert_price = int(raw_hc) if raw_hc.isdigit() and int(raw_hc) > 0 else None
+        # Launch window (owner decision, recorded by the coordinator before it
+        # is set): price 0 with an end date means the certificate issues on a
+        # 0 USDC authorisation, verified and never settled, until that date
+        # (inclusive, UTC). After it the product is off again until a price
+        # is set. Any other zero or missing price keeps the product off.
+        self.hostcert_free_until = None
+        raw_until = env.get("RIGGRADE_HOSTCERT_FREE_UNTIL", "").strip()
+        if raw_hc == "0" and raw_until:
+            try:
+                day = datetime.date.fromisoformat(raw_until)
+                self.hostcert_free_until = int(datetime.datetime(day.year, day.month, day.day, 23, 59, 59,
+                                                                 tzinfo=datetime.timezone.utc).timestamp())
+            except ValueError:
+                self.hostcert_free_until = None
 
     def reasons_off(self, adapter):
         reasons = []
@@ -193,14 +208,25 @@ class GradingApp:
         if name not in self.config.products:
             reasons.append("RIGGRADE_PRODUCTS does not include %s" % name)
         if self.product_price(name) is None:
-            reasons.append(f"no price is set for {name} (RIGGRADE_{name.upper()}_PRICE_ATOMIC)")
+            if name == "hostcert" and self.config.hostcert_free_until is not None:
+                reasons.append("the free launch window for hostcert ended on "
+                               f"{self.free_until_text()}; no price is set")
+            else:
+                reasons.append(f"no price is set for {name} (RIGGRADE_{name.upper()}_PRICE_ATOMIC)")
         return reasons
+
+    def free_until_text(self):
+        until = self.config.hostcert_free_until
+        return datetime.datetime.fromtimestamp(until, datetime.timezone.utc).strftime("%Y-%m-%d") if until else None
 
     def product_price(self, name):
         """USDC atomic units, or None while the owner has set no price."""
         if name == "ledger":
             return self.config.ledger_price
         if name == "hostcert":
+            until = self.config.hostcert_free_until
+            if until is not None:
+                return 0 if self.clock() <= until else None
             return self.config.hostcert_price
         return PRODUCT_PRICE_ATOMIC.get(name)
 
@@ -330,9 +356,13 @@ class GradingApp:
                 "spec": "docs/grading-spec.md", "statement": STATEMENT,
                 "point_grade_price_usdc": {"data_centre": "5", "consumer": "3"},
                 "free_reference_sessions": FREE_REFERENCE_NOTE,
-                "products": {name: {"price_usdc": _usdc(self.product_price(name)),
-                                    "on_sale": not self.product_reasons_off(name),
-                                    "note": PRODUCT_NOTES[name]}
+                "products": {name: dict({"price_usdc": _usdc(self.product_price(name)),
+                                         "on_sale": not self.product_reasons_off(name),
+                                         "note": PRODUCT_NOTES[name]},
+                                        **({"free_until": self.free_until_text(),
+                                            "launch": "free launch window: issued on a 0 USDC "
+                                                      "authorisation, verified and never settled"}
+                                           if name == "hostcert" and self.product_price(name) == 0 else {}))
                              for name in self.priced_products()},
                 "operator_rules": {"cap_per_operator": CAP_PER_OPERATOR,
                                    "min_operators": MIN_OPERATORS,
@@ -555,13 +585,26 @@ class GradingApp:
         if off:
             return _json(start_response, "503 Service Unavailable",
                          {"charged": False, "preview": preview_doc, "reasons_off": off})
-        requirement = self._accept(self.product_price(name))
+        amount = self.product_price(name)
+        requirement = self._accept(amount)
         header = self._payment_header(environ)
+        if amount == 0:
+            description = (description + f" Free launch window until {self.free_until_text()} (UTC): "
+                           "send a 0 USDC x402 authorisation; it is verified and never settled.")
         if not header:
-            return self._payment_required(start_response, environ, path, self.product_price(name),
+            return self._payment_required(start_response, environ, path, amount,
                                           description, bazaar=bazaar_extension(name),
                                           error=self._v1_error(environ), preview=preview_doc)
-        result = self.adapter.settle(header, requirement)
+        if amount == 0:
+            # A free launch issue: verified like the free-session claim, never
+            # settled, screened like a payer, logged with amount 0.
+            verify = getattr(self.adapter, "verify_only", None)
+            result = verify(header, requirement) if verify else {"ok": False, "error": "claims not supported",
+                                                                 "charged": False}
+            if result.get("ok"):
+                result = dict(result, charged=False, free_launch=True)
+        else:
+            result = self.adapter.settle(header, requirement)
         product = {"fixit": fixit.PRODUCT, "cluster": acceptance.PRODUCT, "ledger": ledger.PRODUCT,
                    "hostcert": hostcert.PRODUCT}[name]
         if not result.get("ok") and result.get("charged") in (True, "unknown"):
@@ -591,6 +634,7 @@ class GradingApp:
                           "charged": True, "tx": result.get("tx")})
         salelog.append(self.config.sale_log,
                        dict({"product": product, "amount_atomic": requirement["amount"],
+                             **({"status": "free_launch"} if result.get("free_launch") else {}),
                              "payer": result.get("payer"), "tx": result.get("tx"),
                         "facilitator": result.get("facilitator"), "bazaar": result.get("bazaar"),
                              "at": self.clock()}, **extra))

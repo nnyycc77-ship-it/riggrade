@@ -116,6 +116,19 @@ centre) stays as is; whether the certificate is included in the grade or priced
 separately is the owner's call, recorded by the coordinator before the switch is
 set. No listing, no outreach, no spend.
 
+**Launch window at zero price (owner direction on Adviser 1's side, 2 Nov 2026;
+binding once the owner gives it to the coordinator in his own chat and it is
+recorded).** For a stated window the certificate issues at a price of zero: the
+caller sends a 0 USDC x402 authorisation, which is verified and never settled,
+screened like a payer, and logged with amount 0 and status `free_launch`. The
+consent rule of section 4 and the one-per-session rule are unchanged. The window
+is set by `RIGGRADE_HOSTCERT_PRICE_ATOMIC=0` with `RIGGRADE_HOSTCERT_FREE_UNTIL`
+(a UTC date, inclusive); when it ends the product is off again, with the reason,
+until a price is set. The purpose is the GPU record (docs/gpu-record-method.md):
+a signed certificate and a badge for the host's own pages are the reason to run
+the free preflight, and every run is a record entry. The window's dates are the
+owner's to set.
+
 ## 7. What it cannot say
 
 A certificate states one session on one rig at one time, from a declared runner.

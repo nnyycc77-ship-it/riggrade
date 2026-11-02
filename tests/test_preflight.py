@@ -182,6 +182,21 @@ class RunTests(unittest.TestCase):
         self.assertEqual(status["gpu_visible"], pf.FAIL)
         self.assertEqual(status["compute"], "skipped")
 
+    def test_cards_parse_and_never_reach_the_share(self):
+        got = pf.parse_cards_csv("0, GPU-1111, 1650000000001\n1, GPU-2222, [N/A]\n")
+        self.assertEqual(got["cards"][0]["serial"], "1650000000001")
+        self.assertIsNone(got["cards"][1]["serial"])
+        self.assertTrue(got["rig_id"].startswith("rg_"))
+        self.assertNotIn("GPU-1111", repr(got))
+        self.assertIsNone(pf.parse_cards_csv(""))
+        report = {"preflight": True, "verdict": "pass", "findings": [], "measures": {},
+                  "gpus": [{"name": "NVIDIA RTX 4090", "driver": "550"}],
+                  "rig_id": got["rig_id"], "cards": got["cards"]}
+        shared = pf.anonymise(report)
+        self.assertNotIn("1650000000001", repr(shared))
+        self.assertNotIn("rig_id", shared)
+        self.assertNotIn("cards", shared)
+
     def test_shared_box_skips_foreign_checks_not_fails(self):
         class Busy(FakeProbes):
             def gpus(self):
