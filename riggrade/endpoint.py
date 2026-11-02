@@ -63,6 +63,21 @@ POINT_PRICE_ATOMIC = {DATA_CENTRE: 5_000_000, "consumer": 3_000_000}
 # Products beyond the point grade (decided 1 Nov 2026; each is on
 # sale only when RIGGRADE_PRODUCTS names it). USDC atomic units.
 PRODUCT_PRICE_ATOMIC = {"fixit": 2_000_000, "cluster": 25_000_000}
+# Products a free trial may cover (owner decision 2 Nov 2026, set only once
+# the coordinator records his confirmation): the host fix-it report and the
+# point grade. Trial grades are verified on a 0 USDC authorisation, never
+# settled, logged as free_trial, and never added to the reference set.
+TRIAL_ELIGIBLE = ("fixit", "grade")
+
+
+def _end_of_day(raw):
+    """A UTC date string as the epoch second ending that day, or None."""
+    try:
+        day = datetime.date.fromisoformat(raw.strip())
+    except (AttributeError, ValueError):
+        return None
+    return int(datetime.datetime(day.year, day.month, day.day, 23, 59, 59,
+                                 tzinfo=datetime.timezone.utc).timestamp())
 # Every paid resource description opens with a "Use when" line: catalogues
 # show it as the one-line reason to call, and most listings lack one.
 USE_WHEN = {
@@ -159,15 +174,13 @@ class Config:
         # 0 USDC authorisation, verified and never settled, until that date
         # (inclusive, UTC). After it the product is off again until a price
         # is set. Any other zero or missing price keeps the product off.
-        self.hostcert_free_until = None
         raw_until = env.get("RIGGRADE_HOSTCERT_FREE_UNTIL", "").strip()
-        if raw_hc == "0" and raw_until:
-            try:
-                day = datetime.date.fromisoformat(raw_until)
-                self.hostcert_free_until = int(datetime.datetime(day.year, day.month, day.day, 23, 59, 59,
-                                                                 tzinfo=datetime.timezone.utc).timestamp())
-            except ValueError:
-                self.hostcert_free_until = None
+        self.hostcert_free_until = _end_of_day(raw_until) if raw_hc == "0" and raw_until else None
+        # Free trial: named eligible products at 0 USDC until the end date
+        # (inclusive, UTC); after it they return to their prices on their own.
+        self.trial_products = {p.strip() for p in env.get("RIGGRADE_TRIAL_PRODUCTS", "").split(",")
+                               if p.strip() in TRIAL_ELIGIBLE}
+        self.trial_until = _end_of_day(env.get("RIGGRADE_TRIAL_UNTIL", "")) if self.trial_products else None
 
     def reasons_off(self, adapter):
         reasons = []
@@ -220,9 +233,22 @@ class GradingApp:
                 reasons.append(f"no price is set for {name} (RIGGRADE_{name.upper()}_PRICE_ATOMIC)")
         return reasons
 
-    def free_until_text(self):
-        until = self.config.hostcert_free_until
+    def trial_active(self, name):
+        until = self.config.trial_until
+        return name in self.config.trial_products and until is not None and self.clock() <= until
+
+    def free_until_text(self, name="hostcert"):
+        until = self.config.trial_until if name in TRIAL_ELIGIBLE else self.config.hostcert_free_until
         return datetime.datetime.fromtimestamp(until, datetime.timezone.utc).strftime("%Y-%m-%d") if until else None
+
+    def free_note(self, name):
+        """The sentence a 402 or the descriptor adds while a product is free."""
+        if name == "hostcert":
+            return (f"Free launch window until {self.free_until_text(name)} (UTC): "
+                    "send a 0 USDC x402 authorisation; it is verified and never settled.")
+        return (f"Free trial until {self.free_until_text(name)} (UTC): send a 0 USDC x402 "
+                "authorisation; it is verified and never settled. Results during the trial are "
+                "marked free_trial" + ("" if name != "grade" else " and are not added to the reference set") + ".")
 
     def product_price(self, name):
         """USDC atomic units, or None while the owner has set no price."""
@@ -233,6 +259,8 @@ class GradingApp:
             if until is not None:
                 return 0 if self.clock() <= until else None
             return self.config.hostcert_price
+        if self.trial_active(name):
+            return 0
         return PRODUCT_PRICE_ATOMIC.get(name)
 
     def priced_products(self):
@@ -364,14 +392,20 @@ class GradingApp:
         return {"product": "RigGrade", "bench_version": BENCH_VERSION,
                 "spec": "docs/grading-spec.md", "statement": STATEMENT,
                 "point_grade_price_usdc": {"data_centre": "5", "consumer": "3"},
+                **({"point_grade_free_trial": {"until": self.free_until_text("grade"),
+                                               "note": self.free_note("grade")}}
+                   if self.trial_active("grade") else {}),
                 "free_reference_sessions": FREE_REFERENCE_NOTE,
                 "products": {name: dict({"price_usdc": _usdc(self.product_price(name)),
                                          "on_sale": not self.product_reasons_off(name),
                                          "note": PRODUCT_NOTES[name]},
-                                        **({"free_until": self.free_until_text(),
+                                        **({"free_until": self.free_until_text(name),
                                             "launch": "free launch window: issued on a 0 USDC "
                                                       "authorisation, verified and never settled"}
-                                           if name == "hostcert" and self.product_price(name) == 0 else {}))
+                                           if name == "hostcert" and self.product_price(name) == 0 else {}),
+                                        **({"free_until": self.free_until_text(name),
+                                            "trial": self.free_note(name)}
+                                           if self.trial_active(name) else {}))
                              for name in self.priced_products()},
                 "operator_rules": {"cap_per_operator": CAP_PER_OPERATOR,
                                    "min_operators": MIN_OPERATORS,
@@ -452,18 +486,29 @@ class GradingApp:
         if not payable:
             return self._free_reference_grade(start_response, sid, session, free, environ)
         tier = price_tier(class_id)
-        amount = POINT_PRICE_ATOMIC[tier] * len(payable)
+        trial = self.trial_active("grade")
+        amount = 0 if trial else POINT_PRICE_ATOMIC[tier] * len(payable)
         requirement = self._accept(amount)
         path = resource_path or PREFIX + "/session/%s/grade" % sid
         description = ("RigGrade point grade, %d workload class(es)%s"
                        % (len(payable), "; reference-building included free: "
                           + ", ".join(free) if free else ""))
+        if trial:
+            description = description + ". " + self.free_note("grade")
         header = self._payment_header(environ)
         if not header:
             return self._payment_required(start_response, environ, path, amount, description,
                                           bazaar=bazaar_extension(),
                                           error=self._v1_error(environ), preview=prev)
-        result = self.adapter.settle(header, requirement)
+        if trial:
+            # Verified like the free-session claim, never settled, screened.
+            verify = getattr(self.adapter, "verify_only", None)
+            result = verify(header, requirement) if verify else {"ok": False, "error": "claims not supported",
+                                                                 "charged": False}
+            if result.get("ok"):
+                result = dict(result, charged=False)
+        else:
+            result = self.adapter.settle(header, requirement)
         if not result.get("ok") and result.get("charged") in (True, "unknown"):
             # Money may have moved without a grade: log it for reconciliation
             # and a refund by hand. The session stays ungraded.
@@ -488,8 +533,11 @@ class GradingApp:
         operator = result.get("payer") if (host_paid or session["declared_runner"] == "buyer") else None
         labels, pack = grade_session(session, self.references, self.envelopes,
                                      attested=attested, now=self.clock(),
-                                     host_paid=host_paid, operator=operator)
+                                     host_paid=host_paid, operator=operator,
+                                     record_reference=not trial)
         pack["paying_wallet"] = result.get("payer")
+        if trial:
+            pack["free_trial"] = True
         pack["operator"] = operator
         session["grade"] = {"labels": labels, "pack": pack, "payer": result.get("payer"),
                             "host_paid": host_paid, "at": self.clock()}
@@ -501,6 +549,7 @@ class GradingApp:
         salelog.append(self.config.sale_log,
                        {"product": "riggrade_point_grade", "session_id": sid,
                         "amount_atomic": requirement["amount"],
+                        **({"status": "free_trial"} if trial else {}),
                         "paid_workloads": payable, "free_workloads": free,
                         "payer": result.get("payer"), "tx": result.get("tx"),
                         "facilitator": result.get("facilitator"), "bazaar": result.get("bazaar"),
@@ -515,8 +564,11 @@ class GradingApp:
                        "for consumer cards, 5 USDC for data-centre cards. Open a session first "
                        "(POST /session), run the pinned container, submit the bundle, then POST "
                        "here with {session_id}; the 402 for that session states the exact amount.")
+        if self.trial_active("grade"):
+            description = description + " " + self.free_note("grade")
         return self._payment_required(start_response, environ, PREFIX + "/grade",
-                                      POINT_PRICE_ATOMIC["consumer"], description,
+                                      0 if self.trial_active("grade") else POINT_PRICE_ATOMIC["consumer"],
+                                      description,
                                       bazaar=bazaar_extension(),
                                       error=self._v1_error(environ)
                                       or "session_id is required; this 402 describes the price only")
@@ -598,8 +650,7 @@ class GradingApp:
         requirement = self._accept(amount)
         header = self._payment_header(environ)
         if amount == 0:
-            description = (description + f" Free launch window until {self.free_until_text()} (UTC): "
-                           "send a 0 USDC x402 authorisation; it is verified and never settled.")
+            description = description + " " + self.free_note(name)
         if not header:
             return self._payment_required(start_response, environ, path, amount,
                                           description, bazaar=bazaar_extension(name),
@@ -643,7 +694,8 @@ class GradingApp:
                           "charged": True, "tx": result.get("tx")})
         salelog.append(self.config.sale_log,
                        dict({"product": product, "amount_atomic": requirement["amount"],
-                             **({"status": "free_launch"} if result.get("free_launch") else {}),
+                             **({"status": "free_launch" if name == "hostcert" else "free_trial"}
+                                if result.get("free_launch") else {}),
                              "payer": result.get("payer"), "tx": result.get("tx"),
                         "facilitator": result.get("facilitator"), "bazaar": result.get("bazaar"),
                              "at": self.clock()}, **extra))
