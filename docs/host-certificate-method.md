@@ -125,6 +125,18 @@ about any other rig the host operates.
 
 ## 8. Build, once this text is accepted
 
+Build state, 2 Nov 2026 (riggrade PR 74, after the coordinator's acceptance in
+board Message 268): built as listed below, behind the `hostcert` switch, off,
+with no price. One deviation, stated plainly: the certificate is issued only by
+the later route (`POST /riggrade/v1/host/certificate` with the session id, paid
+by the wallet that paid the grade); the `publish` flag on the grade request waits
+on the owner's price decision, because whether the certificate is included in
+the grade price or priced separately decides what that flag settles. Marketplaces
+recorded for the badge: none. Routes: `POST /host/certificate`, `POST
+/host/consent` (0 USDC host authorisation), `GET /host/{id}` (JSON or page),
+`GET /host/{id}/badge.svg`.
+
+
 - `riggrade/hostcert.py`: build the certificate body from the labels and the
   evidence pack (grade kind, reliability line, full evidence tag, declared runner
   wording, recorded rig identity), sign (reuse `acceptance.attach_ed25519` and
