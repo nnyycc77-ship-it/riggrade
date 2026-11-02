@@ -42,6 +42,7 @@ def build(env=None, clock=None):
         store = FileStore(state_dir / "sessions")
         references = ReferenceBook(state_dir / "references.json")
         env.setdefault("RIGGRADE_SALE_LOG", str(state_dir / "sales.jsonl"))
+        env.setdefault("RIGGRADE_PREFLIGHT_POOL", str(state_dir / "preflight_pool.jsonl"))
     return GradingApp(env, clock or (lambda: int(time.time())),
                       adapter=payment.from_env(env), store=store, references=references)
 

@@ -41,6 +41,7 @@ from . import acceptance
 from . import index as price_index
 from . import certificate_page
 from . import signing
+from . import pool
 
 PREFIX = "/riggrade/v1"
 X402_VERSION = 2
@@ -109,6 +110,12 @@ class Config:
         self.contact_email = env.get("RIGGRADE_CONTACT_EMAIL", "").strip()
         # The free price index refreshes from this URL (packaged copy otherwise).
         self.index_url = env.get("RIGGRADE_INDEX_URL", "").strip() or None
+        # Pooled preflight results (owner decision 2 Nov 2026): collection on
+        # when a path is set ("off" disables); publication of the aggregates
+        # only when RIGGRADE_POOL_PUBLISH=1, after the method's review.
+        raw_pool = env.get("RIGGRADE_PREFLIGHT_POOL", "").strip()
+        self.preflight_pool = raw_pool if raw_pool and raw_pool.lower() != "off" else None
+        self.pool_publish = env.get("RIGGRADE_POOL_PUBLISH", "").strip() == "1"
         # Prior certificate-signing public keys (base64, comma-separated) stay
         # published after a secret rotation so older certificates still verify.
         self.prior_public_keys = [k for k in env.get("RIGGRADE_PRIOR_PUBLIC_KEYS", "").split(",") if k.strip()]
@@ -176,6 +183,8 @@ class GradingApp:
         try:
             if rest == [""] and method == "GET":
                 return _json(start_response, "200 OK", self.descriptor())
+            if rest == ["index", "quality"] and method == "GET":
+                return self.pool_quality(start_response)
             if rest == ["index"] and method == "GET":
                 # Free: the reconstructed weekly listed-price series per class.
                 return _json(start_response, "200 OK", price_index.latest(self.index.current()),
@@ -214,6 +223,8 @@ class GradingApp:
                                   resource_path=PREFIX + "/grade")
             if rest == ["heartbeat"]:
                 return self.heartbeat(start_response, body)
+            if rest == ["preflight", "share"]:
+                return self.preflight_share(start_response, body)
             if rest == ["fixit"]:
                 return self.fixit_report(start_response, environ, body)
             if rest == ["cluster", "acceptance"]:
@@ -582,6 +593,37 @@ class GradingApp:
                     {"certificate_id": cert_id, "verdict": result["verdict"]})
         return self._sell(start_response, environ, "cluster", PREFIX + "/cluster/acceptance",
                           description, prev, deliver)
+
+    def preflight_share(self, start_response, body):
+        """Opt-in intake of an anonymised preflight summary. Stores the
+        cleaned record only (riggrade.pool.clean); never the sender."""
+        if not self.config.preflight_pool:
+            return _json(start_response, "503 Service Unavailable",
+                         {"accepted": False, "error": "the preflight pool is closed on this service"})
+        try:
+            rec = pool.clean(body, self.clock() // 3600 * 3600)
+        except ValueError as exc:
+            raise BadRequest("not a shareable preflight summary: %s" % exc)
+        pool.append(self.config.preflight_pool, rec)
+        return _json(start_response, "200 OK",
+                     {"accepted": True, "stored": rec,
+                      "note": "Only this record is kept: no identifier of the box, the host or you. "
+                              "Aggregates per peer class publish at GET /index/quality once the "
+                              "class has %d records and the method is reviewed." % pool.MIN_N})
+
+    def pool_quality(self, start_response):
+        """Per-class aggregates of the pooled preflights; gated until the
+        method is reviewed (RIGGRADE_POOL_PUBLISH=1)."""
+        if not self.config.pool_publish:
+            return _json(start_response, "503 Service Unavailable",
+                         {"error": "the preflight quality series is not yet published: its method is under review",
+                          "method": "https://github.com/nnyycc77-ship-it/riggrade/blob/main/docs/preflight-pool-method.md"})
+        rows = pool.read(self.config.preflight_pool) if self.config.preflight_pool else []
+        return _json(start_response, "200 OK",
+                     {"series": "preflight-pool", "min_n": pool.MIN_N, "classes": pool.aggregate(rows),
+                      "note": "Anonymised, opt-in preflight results aggregated per peer class; "
+                              "information, not a grade."},
+                     [("Cache-Control", "public, max-age=3600")])
 
     def certificate_lookup(self, start_response, cert_id, environ=None):
         """JSON by default; a readable, printable page (the dispute copy)

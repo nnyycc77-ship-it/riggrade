@@ -27,6 +27,18 @@ exits 1 too. The report file always carries `pass`, `warn` or `fail` for every
 check and for the overall `verdict`, so an agent gating a long run can tell a
 warn from a clean pass.
 
+## Share your result (opt in)
+
+Add `--share` (or `share: true` on the MCP tool) and the runner sends an
+anonymised summary to the RigGrade pool after the check: the GPU model and
+driver, the verdict, each check's status and the measured numbers. No
+hostname, path, id, address or error text is sent, and the service keeps
+only those fields (`docs/preflight-pool-method.md`). The summary is what
+`preflight-report.json` holds under `measures` plus the statuses. Once a
+GPU class has five shared results and the method is reviewed, the class
+aggregates publish free at `GET /riggrade/v1/index/quality`. Sharing never
+changes the verdict, and a failed send is printed, not raised.
+
 ## Exclusive box assumed
 
 Preflight in this form is built for an exclusive box: the whole card is
