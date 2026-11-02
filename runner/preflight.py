@@ -635,12 +635,17 @@ def parse_cards_csv(csv_text):
 
 def measures_of(obs):
     """The measured numbers behind the findings, as a flat dict (first GPU
-    for per-GPU values, every GPU under per_gpu). Numbers only."""
+    for per-GPU values, every GPU under per_gpu). Numbers only, except the slowdown reason
+    names kept per GPU under per_gpu (the shared summary drops per_gpu)."""
     m = {}
     loads = obs.get("load") or {}
     per_gpu = {}
     for i, load in sorted(loads.items()):
         per_gpu[str(i)] = {k: load.get(k) for k in ("clock_ratio", "peak_temperature_c") if load.get(k) is not None}
+        if load.get("reasons"):
+            # Slowdown reasons seen under load, as names: the site signals
+            # (cooling, external power brake) read these, not the text lines.
+            per_gpu[str(i)]["reasons"] = list(load["reasons"])
     if per_gpu:
         first = per_gpu[sorted(per_gpu)[0]]
         m.update(first)
