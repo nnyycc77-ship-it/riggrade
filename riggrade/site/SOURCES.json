@@ -1,7 +1,7 @@
 {
   "mix": {
     "bytes": 6949376,
-    "fetched_at": "2026-11-02T14:52:10Z",
+    "fetched_at": "2026-11-02T14:53:45Z",
     "licence": "US federal government work, public domain (17 U.S.C. 105)",
     "name": "EIA net generation by state and energy source, all producers",
     "rows": 474,
@@ -10,15 +10,35 @@
     "url": "https://www.eia.gov/electricity/data/state/annual_generation_state.xls",
     "year": 2024
   },
-  "price": {
-    "bytes": 253341,
-    "fetched_at": "2026-11-02T14:49:15Z",
+  "nri": {
+    "bytes": 439848,
+    "fetched_at": "2026-11-02T14:53:45Z",
+    "layer": "NRI_Counties_Prod",
+    "layer_last_edit_ms": 1791992778545,
     "licence": "US federal government work, public domain (17 U.S.C. 105)",
-    "name": "EIA average retail price of electricity by state and sector",
+    "name": "FEMA National Risk Index, county table",
+    "note": "sha256 and bytes are of the extracted rows; the layer has no file to hash",
+    "owner": "FEMA AGOL",
+    "rows": 3232,
+    "service": "https://services.arcgis.com/XG15cJAlne2vxtgt/arcgis/rest/services/National_Risk_Index_Counties/FeatureServer",
+    "sha256": "bed1ac5846901c35dd1573ef9ccbd9b97122a59fd85fd958d2dfb0d45059fec2",
+    "url": "https://services.arcgis.com/XG15cJAlne2vxtgt/arcgis/rest/services/National_Risk_Index_Counties/FeatureServer",
+    "via": "hosted layer"
+  },
+  "price": {
+    "base": {
+      "sha256": "27af5b91bd669756e72912c454eb58cea88a195cc5f67548eda12213aaa24522",
+      "url": "https://www.eia.gov/electricity/data/state/avgprice_annual.xlsx",
+      "year": 2020
+    },
+    "bytes": 16608,
+    "fetched_at": "2026-11-02T14:53:45Z",
+    "licence": "US federal government work, public domain (17 U.S.C. 105)",
+    "name": "EIA Electric Power Annual table 2.10, average price by state and sector",
     "rows": 52,
-    "sha256": "27af5b91bd669756e72912c454eb58cea88a195cc5f67548eda12213aaa24522",
-    "sheet": "Price",
-    "url": "https://www.eia.gov/electricity/data/state/avgprice_annual.xlsx",
-    "year": 2020
+    "sha256": "aa9615b7b340b8c5dc60a7b5a1d8d74a070478502e5607c3783bb5a380c282b1",
+    "sheet": "epa_02_10",
+    "url": "https://www.eia.gov/electricity/annual/xls/epa_02_10.xlsx",
+    "year": 2025
   }
 }
