@@ -326,30 +326,54 @@ def _norm_header(cell):
     return " ".join(str(cell or "").replace("\n", " ").lower().split())
 
 
+def _spread(row, width):
+    """A merged-cell header row with each label carried right across its span."""
+    out, cur = [], ""
+    for c in range(width):
+        cell = _norm_header(row[c]) if c < len(row) else ""
+        if cell and cell != "nan":
+            cur = cell
+        out.append(cur)
+    return out
+
+
 def parse_reliability(rows):
-    """Per utility and state: SAIDI and SAIFI under the IEEE standard, with and
-    without major event days. Rows: [utility, state, name, year, saidi_all,
-    saidi_no_med, saifi_all, saifi_no_med]."""
+    """Per utility and state: SAIDI and SAIFI under the IEEE standard, all
+    events and without major event days. Rows: [utility, state, name, year,
+    saidi_all, saidi_no_med, saifi_all, saifi_no_med].
+
+    The workbook EIA served on 2 Nov 2026 has three header rows: the standard
+    ("IEEE Standard"), the event basis ("All Events (With Major Event Days)",
+    "Without Major Event Days", "Loss of Supply Removed ..."), then the measure
+    ("SAIDI (minutes per year)", "SAIFI (times per year)", "CAIDI ...")."""
     h = None
     for i, row in enumerate(rows[:20]):
         cells = [_norm_header(c) for c in row]
         if "utility number" in cells and "state" in cells and any(c.startswith("saidi") for c in cells):
             h = i
             break
-    require(h is not None, "no reliability header row (Utility Number, State, SAIDI) in the first 20 rows")
-    head = [_norm_header(c) for c in rows[h]]
-    group = [_norm_header(c) for c in rows[h - 1]] if h > 0 else []
-    start = next((i for i, c in enumerate(group) if "ieee" in c), 0)
+    require(h is not None and h >= 2, "no reliability header row (Utility Number, State, SAIDI) under two group rows")
+    width = max(len(rows[h]), len(rows[h - 1]), len(rows[h - 2]))
+    head = [_norm_header(rows[h][c]) if c < len(rows[h]) else "" for c in range(width)]
+    basis = _spread(rows[h - 1], width)
+    standard = _spread(rows[h - 2], width)
 
-    def first(prefix):
-        hit = next((i for i, c in enumerate(head) if i >= start and c.startswith(prefix)), None)
-        require(hit is not None, f"no column starting {prefix!r} at or after the IEEE group; header {rows[h]}")
-        return hit
+    def col(measure, wanted):
+        hits = [c for c in range(width) if "ieee" in standard[c] and head[c].startswith(measure) and wanted(basis[c])]
+        require(len(hits) == 1, f"expected one IEEE {measure} column for this event basis, found {len(hits)}; "
+                                f"standard {rows[h - 2]}, basis {rows[h - 1]}, header {rows[h]}")
+        return hits[0]
+
+    def all_events(b):
+        return b.startswith("all events")
+
+    def without_med(b):
+        return b.startswith("without major event days")
 
     iu, ist = head.index("utility number"), head.index("state")
     iname = next((i for i, c in enumerate(head) if c.startswith("utility name")), None)
     iyear = next((i for i, c in enumerate(head) if c.startswith("data year")), None)
-    cols = [first("saidi with med"), first("saidi without med"), first("saifi with med"), first("saifi without med")]
+    cols = [col("saidi", all_events), col("saidi", without_med), col("saifi", all_events), col("saifi", without_med)]
     out = []
     for r in rows[h + 1:]:
         if len(r) <= max([iu, ist, *cols]):

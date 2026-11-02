@@ -98,25 +98,33 @@ class FetcherParseTests(unittest.TestCase):
 class ReliabilityTests(unittest.TestCase):
     @staticmethod
     def table(n=210):
-        rows = [["Reliability, 2024"], [],
-                [None, None, None, None, None, "IEEE Standard", None, None, None, None, "Other Standard", None],
-                ["Data Year", "Utility Number", "Utility Name", "State", "Ownership",
-                 "SAIDI With MED", "SAIDI Without MED", "SAIFI With MED", "SAIFI Without MED", "CAIDI With MED",
-                 "SAIDI With MED", "SAIDI Without MED"]]
+        # The layout EIA served on 2 Nov 2026 (Reliability_2025.xlsx, sheet Reliability_States).
+        nan = float("nan")
+        rows = [["Utility Characteristics", None, nan, nan, nan, "IEEE Standard", None, None, None, None, None,
+                 None, None, None],
+                [None, None, nan, nan, nan, "All Events (With Major Event Days)", None, None,
+                 "Without Major Event Days", None, None, "Loss of Supply Removed (With Major Event Days)", None, None],
+                ["Data Year", "Utility Number", "Utility Name", "State", "Ownership"]
+                + ["SAIDI (minutes per year)", "SAIFI (times per year)", "CAIDI (minutes per interruption)"] * 3]
         for i in range(n):
-            rows.append([2024, 1000 + i, f"Utility {i}", "TX", "Investor Owned", 300.5, 120.25, 1.6, 1.1, 180,
-                         999, 999])
-        rows.append([2024, 5, "No figures", "TX", "Cooperative", ".", ".", ".", ".", ".", ".", "."])
+            rows.append([2025, 1000 + i, f"Utility {i}", "TX", "Investor Owned", 300.5, 1.6, 180,
+                         120.25, 1.1, 109, 999, 9, 99])
+        rows.append([2025, 5, "No figures", "TX", "Cooperative", ".", ".", ".", ".", ".", ".", ".", ".", "."])
+        rows.append([2025, 6, "Partial", "TX", "Cooperative", 189.26, ".", ".", 118.93, ".", ".", 188.86, ".", "."])
         return rows
 
     def test_ieee_columns_not_the_other_standard(self):
         out = ss.parse_reliability(self.table())
-        self.assertEqual(out[0], [1000, "TX", "Utility 0", 2024, 300.5, 120.25, 1.6, 1.1])
+        self.assertEqual(out[0], [1000, "TX", "Utility 0", 2025, 300.5, 120.25, 1.6, 1.1])
         self.assertNotIn(5, {r[0] for r in out})
+        self.assertIn([6, "TX", "Partial", 2025, 189.26, 118.93, "", ""], out)  # loss-of-supply 188.86 never read
 
     def test_shape_surprises_stop(self):
         with self.assertRaises(SystemExit):
             ss.parse_reliability([["Utility Number", "State"]])
+        flat = self.table()[2:]  # the measure row with no group rows above it
+        with self.assertRaises(SystemExit):
+            ss.parse_reliability(flat)
         with self.assertRaises(SystemExit):
             ss.parse_reliability(self.table(n=10))
 
@@ -166,7 +174,7 @@ class Eia861FetchTests(unittest.TestCase):
                     ss.main(["--out", d])
                 kept = json.loads(Path(d, "SOURCES.json").read_text())
                 self.assertEqual(kept["reliability"]["year"], this - 1)
-                self.assertEqual(kept["reliability"]["rows"], 210)
+                self.assertEqual(kept["reliability"]["rows"], 211)  # 210 full rows and one partial
                 self.assertTrue(Path(d, "eia861_territory.csv").exists())
                 self.assertIn("mix: FAILED: a crash inside one source", out.getvalue())
                 self.assertIn("3 of 4 sources failed", str(cm.exception))
