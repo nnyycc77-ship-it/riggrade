@@ -73,8 +73,23 @@ def latest(doc):
                         "usd_per_gpu_hour_min": v["min_price"], "usd_per_gpu_hour_max": v["max_price"],
                         "providers": v["provider_count"], "offerings": v["offering_count"],
                         "weeks_available": len(c["weeks"])}
+    families = {}
+    for fid, c in sorted((doc.get("chip_families") or {}).items()):
+        week = c.get("latest_week")
+        if not week:
+            continue
+        v = c["weeks"][week]
+        families[fid] = {"label": c.get("label"), "mixes": c.get("mixes"), "rule": c.get("rule"),
+                         "latest_week": week, "source_name": c.get("source_name"),
+                         "usd_per_gpu_hour_median": v["median_price"],
+                         "usd_per_gpu_hour_provider_median": v["provider_median_price"],
+                         "usd_per_gpu_hour_min": v["min_price"], "usd_per_gpu_hour_max": v["max_price"],
+                         "providers": v["provider_count"], "offerings": v["offering_count"],
+                         "weeks_available": len(c["weeks"])}
     imports = doc.get("imports") or []
     return {"series": doc.get("series"), "method": doc.get("method"), "method_url": doc.get("method_url"),
+            # Amendment A1: chip families live beside the classes, never inside them.
+            "chip_families": families,
             "billing": doc.get("billing"), "unit": "USD per GPU per hour, on-demand, listed not paid",
             "source": {k: doc["source"].get(k) for k in ("title", "home", "licence", "licence_url", "attribution")},
             "last_import": imports[-1] if imports else None,

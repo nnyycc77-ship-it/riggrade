@@ -48,6 +48,30 @@ MAPPING = {
 AMBIGUOUS = {"nvidia-h100": "form not stated: could be h100-sxm-80 or h100-pcie-80",
              "nvidia-a100": "memory not stated: could be a100-sxm-80, a100-pcie-80 or a100-pcie-40"}
 
+# Amendment A1 (method text accepted in review on 2026-11-01; 14 days' notice):
+# a chip-family series for the two ambiguous names, in its own namespace,
+# never a peer class, alongside and never spliced. Published only from the
+# date the notice ends. Section 3 is unchanged: the names stay dropped and
+# counted in the peer-class series whether or not A1 publishes.
+A1_NOTICE_ENDS = "2026-11-15"
+A1_METHOD_VERSION = "reconstructed-v0-draft-A1"
+CHIP_FAMILY = {"nvidia-h100": "chip:h100", "nvidia-a100": "chip:a100"}
+CHIP_FAMILY_LABEL = "chip family (form and memory not stated by the source)"
+CHIP_FAMILY_MIXES = {
+    "chip:h100": "The source does not state the form (SXM or PCIe); this figure mixes h100-sxm-80 "
+                 "and h100-pcie-80 in whatever shares the source's offerings had that week.",
+    "chip:a100": "The source does not state the form or the memory size; this figure mixes "
+                 "a100-sxm-80, a100-pcie-80 and a100-pcie-40 in whatever shares the source's "
+                 "offerings had that week.",
+}
+CHIP_FAMILY_RULE = ("Never a peer class, never spliced into one, never used for a grade, a bar, "
+                    "a reference, a consistency rule or a performance-adjusted price.")
+
+
+def a1_published(now):
+    """True once the notice period has ended, judged on the import date."""
+    return str(now)[:10] >= A1_NOTICE_ENDS
+
 FIELDS = ("median_price", "provider_median_price", "min_price", "max_price",
           "provider_count", "offering_count")
 
@@ -84,6 +108,24 @@ def _week_value(row):
     return {k: row[k] for k in FIELDS}
 
 
+def _merge_append_only(series, previous, corrections, now, kind):
+    """Carry every recorded week forward; a changed value becomes a
+    correction beside the original; a missing week stays recorded."""
+    for key, old in (previous or {}).items():
+        new = series.setdefault(key, {"source_name": old.get("source_name"), "weeks": {}})
+        for week, old_value in (old.get("weeks") or {}).items():
+            new_value = new["weeks"].get(week)
+            if new_value is None:
+                new["weeks"][week] = old_value          # a gap in the new file stays as recorded
+            elif new_value != old_value:
+                corrections.append({kind: key, "week": week, "recorded": old_value,
+                                    "source_now_states": new_value, "noticed_at": now})
+                new["weeks"][week] = old_value          # history is never rewritten
+    for c in series.values():
+        c["weeks"] = dict(sorted(c["weeks"].items()))
+        c["latest_week"] = max(c["weeks"]) if c["weeks"] else None
+
+
 def build(raw, existing=None, now=None):
     """The series document. `existing` is the previous document, so past
     weeks are never rewritten: a changed value is appended as a correction
@@ -91,6 +133,10 @@ def build(raw, existing=None, now=None):
     now = now or dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     meta, rows = parse(raw)
     classes = {cid: {"source_name": slug, "weeks": {}} for slug, cid in MAPPING.items()}
+    publish_a1 = a1_published(now)
+    families = ({fid: {"source_name": slug, "label": CHIP_FAMILY_LABEL, "mixes": CHIP_FAMILY_MIXES[fid],
+                       "rule": CHIP_FAMILY_RULE, "weeks": {}} for slug, fid in CHIP_FAMILY.items()}
+                if publish_a1 else {})
     dropped = {}
     for row in rows:
         if row["billing_type"] != BILLING:
@@ -98,30 +144,23 @@ def build(raw, existing=None, now=None):
         slug = row["gpu_slug"]
         cid = MAPPING.get(slug)
         if cid is None:
-            dropped[slug] = dropped.get(slug, 0) + 1
+            dropped[slug] = dropped.get(slug, 0) + 1   # section 3: ambiguous names stay dropped and counted
+            fid = CHIP_FAMILY.get(slug)
+            if fid and publish_a1:
+                families[fid]["weeks"][row["date"]] = _week_value(row)
             continue
         classes[cid]["weeks"][row["date"]] = _week_value(row)
     corrections = list((existing or {}).get("corrections") or [])
-    if existing:
-        for cid, old in (existing.get("classes") or {}).items():
-            new = classes.setdefault(cid, {"source_name": old.get("source_name"), "weeks": {}})
-            for week, old_value in (old.get("weeks") or {}).items():
-                new_value = new["weeks"].get(week)
-                if new_value is None:
-                    new["weeks"][week] = old_value          # a gap in the new file stays as recorded
-                elif new_value != old_value:
-                    corrections.append({"class": cid, "week": week, "recorded": old_value,
-                                        "source_now_states": new_value, "noticed_at": now})
-                    new["weeks"][week] = old_value          # history is never rewritten
-    for c in classes.values():
-        c["weeks"] = dict(sorted(c["weeks"].items()))
-        c["latest_week"] = max(c["weeks"]) if c["weeks"] else None
+    _merge_append_only(classes, (existing or {}).get("classes"), corrections, now, "class")
+    if publish_a1:
+        _merge_append_only(families, (existing or {}).get("chip_families"), corrections, now, "chip_family")
     imports = list((existing or {}).get("imports") or [])
     imports.append({"retrieved_at": now, "url": SOURCE["url"], "bytes": len(raw),
                     "sha256": hashlib.sha256(raw).hexdigest(),
                     "source_latest_week": meta.get("latest_week"),
                     "source_last_snapshot": meta.get("last_snapshot")})
-    return {"series": "reconstructed", "method": METHOD_VERSION,
+    return {"series": "reconstructed", "method": A1_METHOD_VERSION if publish_a1 else METHOD_VERSION,
+            "a1_notice_ends": A1_NOTICE_ENDS, "chip_families": families,
             "method_url": "https://github.com/nnyycc77-ship-it/riggrade/blob/main/docs/index-reconstructed-method.md",
             "note": "Information, not an offer, a rate or advice. Listed prices as a third party "
                     "recorded them, mapped to peer classes; never joined to the live series.",
@@ -135,7 +174,8 @@ def to_csv(doc):
     header = ("class,source_name,week,median_price,provider_median_price,min_price,max_price,"
               "provider_count,offering_count,licence,attribution")
     lines = [header]
-    for cid, c in sorted(doc["classes"].items()):
+    rows = list(sorted(doc["classes"].items())) + list(sorted((doc.get("chip_families") or {}).items()))
+    for cid, c in rows:
         for week, v in c["weeks"].items():
             lines.append(",".join(str(x) for x in (
                 cid, c["source_name"], week, v["median_price"], v["provider_median_price"],

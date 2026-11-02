@@ -138,3 +138,64 @@ class McpTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AmendmentA1Tests(unittest.TestCase):
+    """Chip-family series: own namespace, labelled, gated by the notice date,
+    alongside and never inside the peer classes; section 3 unchanged."""
+
+    ROWS = [ROW, dict(ROW, gpu_slug="nvidia-h100", median_price=2.5), dict(ROW, gpu_slug="nvidia-a100", median_price=1.2)]
+
+    def test_nothing_published_before_the_notice_ends(self):
+        doc = rec.build(payload(self.ROWS), now="2026-11-14T23:59:59Z")
+        self.assertEqual(doc["chip_families"], {})
+        self.assertEqual(doc["method"], rec.METHOD_VERSION)
+        self.assertEqual(doc["dropped_rows_by_source_name"], {"nvidia-a100": 1, "nvidia-h100": 1})
+        self.assertNotIn("chip:h100", index.latest(doc)["classes"])
+        self.assertEqual(index.latest(doc)["chip_families"], {})
+
+    def test_published_from_the_notice_date_in_its_own_namespace(self):
+        doc = rec.build(payload(self.ROWS), now="2026-11-15T00:00:00Z")
+        self.assertEqual(doc["method"], rec.A1_METHOD_VERSION)
+        fam = doc["chip_families"]
+        self.assertEqual(set(fam), {"chip:h100", "chip:a100"})
+        self.assertEqual(fam["chip:h100"]["weeks"]["2026-10-19"]["median_price"], 2.5)
+        self.assertEqual(fam["chip:h100"]["label"], rec.CHIP_FAMILY_LABEL)
+        self.assertIn("does not state the form", fam["chip:h100"]["mixes"])
+        self.assertIn("never used for a grade", fam["chip:a100"]["rule"].lower())
+        # Section 3 unchanged: the names stay dropped and counted in the peer-class series.
+        self.assertEqual(doc["dropped_rows_by_source_name"], {"nvidia-a100": 1, "nvidia-h100": 1})
+        self.assertNotIn("chip:h100", doc["classes"])
+        self.assertEqual(set(doc["classes"]), set(rec.MAPPING.values()))
+        latest = index.latest(doc)
+        self.assertEqual(set(latest["chip_families"]), {"chip:h100", "chip:a100"})
+        self.assertIn("mixes", latest["chip_families"]["chip:h100"])
+        self.assertFalse(any(k.startswith("chip:") for k in latest["classes"]))
+
+    def test_chip_family_keys_never_enter_grading_inputs(self):
+        self.assertFalse(any(k.startswith("chip:") for k in PEER_CLASSES))
+        for fid in rec.CHIP_FAMILY.values():
+            self.assertNotIn(fid, PEER_CLASSES)
+            self.assertNotIn(fid, rec.MAPPING.values())
+
+    def test_history_rules_apply_to_chip_families_too(self):
+        first = rec.build(payload(self.ROWS), now="2026-11-15T00:00:00Z")
+        changed = [dict(r, median_price=9.9) if r["gpu_slug"] == "nvidia-h100" else r for r in self.ROWS]
+        second = rec.build(payload(changed), existing=first, now="2026-11-22T00:00:00Z")
+        self.assertEqual(second["chip_families"]["chip:h100"]["weeks"]["2026-10-19"]["median_price"], 2.5)
+        self.assertEqual([c["chip_family"] for c in second["corrections"] if "chip_family" in c], ["chip:h100"])
+
+    def test_csv_labels_chip_family_rows_by_key(self):
+        doc = rec.build(payload(self.ROWS), now="2026-11-15T00:00:00Z")
+        lines = rec.to_csv(doc).splitlines()
+        self.assertTrue(any(ln.startswith("chip:h100,nvidia-h100,") for ln in lines))
+        self.assertTrue(any(ln.startswith("rtx4090-24,nvidia-rtx-4090,") for ln in lines))
+
+    def test_mcp_filter_accepts_a_chip_family_once_published(self):
+        doc = rec.build(payload(self.ROWS), now="2026-11-15T00:00:00Z")
+        fetch = lambda url: doc  # noqa: E731
+        res = mcp.call_tool("gpu_price_index", {"class_id": "chip:h100"}, fetch=fetch)
+        self.assertFalse(res["isError"])
+        out = json.loads(res["content"][0]["text"])
+        self.assertEqual(list(out["chip_families"]), ["chip:h100"])
+        self.assertEqual(out["classes"], {})
