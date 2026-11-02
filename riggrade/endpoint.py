@@ -77,7 +77,7 @@ PRODUCT_NOTES = {
                "does not recompute, and issues a signed, stored certificate. GET "
                "/riggrade/v1/cluster/acceptance/{id} returns it. The certificate carries an "
                "Ed25519 signature verifiable offline with the public key at "
-               "/.well-known/riggrade-keys.json (python3 -m riggrade.verify).",
+               "/.well-known/riggrade-keys.json (pip install riggrade; riggrade-verify).",
 }
 WALLET = re.compile(r"^0x[0-9a-fA-F]{40}$")
 OPERATOR_CLAIM_NOTE = ("A free reference session is claimed with a PAYMENT-SIGNATURE authorisation "

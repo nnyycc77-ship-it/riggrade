@@ -9,7 +9,7 @@ Status (1 Nov 2026): live at https://riggrade-674098696181.us-central1.run.app/r
 - [Preflight check](docs/preflight.md): the kind of acceptance test big buyers run before paying for GPUs, for everyone else. Free one-minute check of a rented or hosted GPU box (throttling, foreign processes, driver vs CUDA, PCIe link, download and disk speed). `python3 -m runner.preflight`. Not a grade.
 - [GPU index method, v0 draft](docs/index-method.md): daily listed price per GPU-hour by peer class, and price per unit of measured work once graded rigs exist. Method published before any value. Recorder: `python3 -m pricewatch.record --out PATH`.
 - [Cluster acceptance test, spec v0 draft](docs/cluster-acceptance.md): checks a rented multi-node cluster against its provider's own claims (inventory, node health, stragglers, inter-node fabric, storage) and writes an evidence pack. The signed certificate is on sale at 25 USDC (see the offer below).
-- MCP server for agents: `python3 -m riggrade.mcp` exposes `gpu_preflight` and `riggrade_service_info` over stdio.
+- MCP server for agents: `riggrade-mcp` (or `python3 -m riggrade.mcp`) exposes `gpu_preflight`, `gpu_price_index`, `verify_certificate` and `riggrade_service_info` over stdio. `pip install riggrade`.
 - [Products](docs/products.md): the host fix-it report (2 USDC) and the cluster acceptance certificate (25 USDC), each on sale only when the service names it.
 - [Payments](docs/payments.md): x402 through keyless public facilitators with an automatic backup; payer screened against the OFAC list before settle. Payments are live; the descriptor at `/riggrade/v1` lists what is on sale.
 - [Reconstructed price history method, v0 draft](docs/index-reconstructed-method.md): a separate, labelled series from third-party records, never joined to the live index; no reconstructed grades.
@@ -25,17 +25,26 @@ Status (1 Nov 2026): live at https://riggrade-674098696181.us-central1.run.app/r
 Standard library only, stdio, no secrets. Two tools: `gpu_preflight` (free, runs
 on the box the server runs on) and `riggrade_service_info`.
 
-Claude Desktop or Claude Code (`claude mcp add riggrade -- python3 -m riggrade.mcp`),
+Claude Desktop or Claude Code (`claude mcp add riggrade -- riggrade-mcp`),
 or in any MCP client config:
 
 ```json
 {"mcpServers": {"riggrade": {
-  "command": "python3", "args": ["-m", "riggrade.mcp"],
+  "command": "riggrade-mcp", "args": [],
   "env": {"RIGGRADE_ENDPOINT": "https://riggrade-674098696181.us-central1.run.app/riggrade/v1"}}}}
 ```
 
-With `pip install git+https://github.com/nnyycc77-ship-it/riggrade` the commands
-`riggrade-mcp` and `riggrade-preflight` are on the path.
+## Install
+
+```bash
+pip install riggrade          # PyPI, v0.1.0, no dependencies
+riggrade-preflight            # the free one-minute check, on the box you rented
+riggrade-mcp                  # the MCP server (stdio) for an agent
+riggrade-verify cert.json     # verify a cluster acceptance certificate offline
+```
+
+The package carries the free price index data and the published spec; the
+benchmark container is separate and run by digest (below).
 
 ## Running a graded session
 

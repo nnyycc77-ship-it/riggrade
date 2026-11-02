@@ -40,7 +40,7 @@ the recomputed verdict and check statuses. The paid answer is a
 certificate: the claims, the images every node ran, each check with its
 numbers, the verdict, the pack's SHA-256, an Ed25519 signature verifiable
 offline with the public key at `/.well-known/riggrade-keys.json`
-(`python3 -m riggrade.verify certificate.json`), and the server's own HMAC
+(`pip install riggrade`, then `riggrade-verify certificate.json`), and the server's own HMAC
 check. The certificate is stored, and anyone holding its id can fetch it at
 `GET /riggrade/v1/cluster/acceptance/{certificate_id}`, where the service
 reports both checks and stored record and answers

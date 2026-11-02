@@ -8,13 +8,17 @@ The largest GPU buyers pay for capacity only once it passes acceptance
 testing. Preflight is that first check for everyone else: a renter with no
 lawyers and no test plan gets a verdict in a minute.
 
-From an agent, run it as an MCP tool: `python3 -m riggrade.mcp` on the
-rented box exposes `gpu_preflight` and `riggrade_service_info`.
+Install and run on the rented box (`pip install riggrade`; torch optional,
+the GPU load checks need it):
 
-    docker run --gpus all <riggrade image> python3 -m runner.preflight
-    # or, from a checkout with torch installed:
-    python3 -m runner.preflight [--seconds 30] [--url URL] [--skip-download] [--dir PATH]
-                                [--shared] [--fail-on-warn]
+    riggrade-preflight [--seconds 30] [--url URL] [--skip-download] [--dir PATH]
+                       [--shared] [--fail-on-warn]
+    # the same, from a checkout or inside the benchmark container:
+    python3 -m runner.preflight ...
+
+From an agent, run it as an MCP tool: `riggrade-mcp` on the rented box
+exposes `gpu_preflight` (and `gpu_price_index`, `verify_certificate`,
+`riggrade_service_info`).
 
 No results are sent anywhere. Results print to the screen and to
 `preflight-report.json`. The download check only reads a public file to time
