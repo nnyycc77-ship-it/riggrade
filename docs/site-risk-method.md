@@ -54,8 +54,8 @@ FEMA's download address for the county table now forwards to its Resilience Anal
 hosted ArcGIS layer, and uses that layer only when the organisation owning it names itself as FEMA. The
 owner's name, the layer name and its last-edit time are recorded in `SOURCES.json` and printed in the source
 line. The first complete fetch (2 November 2026) read layer NRI_Counties_Prod, owner "FEMA AGOL", last edited
-14 October 2026: 3,232 counties. If neither route
-answers, the physical section reads "not yet fetched" and the run is red.
+14 October 2026: 3,232 counties. If neither route answers, the physical section reads "not yet fetched" and
+the run is red.
 
 The county table has renamed one hazard between versions: riverine flooding (RFLD) became inland flooding
 (IFLD) in the hosted layer. The fetcher takes whichever is present and the page prints the name of the one
