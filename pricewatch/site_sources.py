@@ -210,10 +210,44 @@ def write_csv(path, header, rows):
         w.writerows(rows)
 
 
+CATALOGUES = {
+    "data.gov": "https://catalog.data.gov/api/3/action/package_search?rows=10&q=%22National+Risk+Index%22+counties",
+    "arcgis-hub": "https://hub.arcgis.com/api/search/v1/collections/dataset/items?limit=10&q=National%20Risk%20Index%20Counties",
+}
+
+
+def find_nri(out=sys.stdout):
+    """Print where public catalogues say the county risk index now lives.
+    Read-only, for a person to pick the agency's own address; nothing is
+    adopted from here automatically."""
+    for name, url in CATALOGUES.items():
+        out.write(f"== {name}: {url}\n")
+        try:
+            doc = json.loads(fetch(url, timeout=30))
+        except SystemExit as exc:
+            out.write(f"   unavailable: {exc}\n")
+            continue
+        if name == "data.gov":
+            for pkg in (doc.get("result") or {}).get("results", []):
+                org = (pkg.get("organization") or {}).get("title")
+                out.write(f"- {pkg.get('title')} | {org} | modified {pkg.get('metadata_modified')}\n")
+                for res in pkg.get("resources", [])[:6]:
+                    out.write(f"    {res.get('format')}: {res.get('url')}\n")
+        else:
+            for feat in doc.get("features", []):
+                p = feat.get("properties") or {}
+                out.write(f"- {p.get('title')} | owner {p.get('owner')} | org {p.get('orgTitle') or p.get('source')}"
+                          f" | {p.get('url')}\n")
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", default=str(OUT))
+    ap.add_argument("--find-nri", action="store_true", help="print catalogue entries for the county risk index and stop")
     args = ap.parse_args(argv)
+    if args.find_nri:
+        return find_nri()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

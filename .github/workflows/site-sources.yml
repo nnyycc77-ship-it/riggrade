@@ -27,9 +27,13 @@ jobs:
       - name: Fetch and extract (each source stands alone; any failure ends the run red below)
         id: fetch
         run: |
-          set -uo pipefail
+          set +e -uo pipefail
           python3 -m pricewatch.site_sources | tee -a "$GITHUB_STEP_SUMMARY"
           echo "code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Where the risk index lives now (read-only catalogue search, printed for a primary read)
+        if: steps.fetch.outputs.code != '0'
+        run: python3 -m pricewatch.site_sources --find-nri | tee -a "$GITHUB_STEP_SUMMARY" || true
       - name: Check what was written
         run: |
           set -euo pipefail
