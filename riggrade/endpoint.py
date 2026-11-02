@@ -491,8 +491,13 @@ class GradingApp:
         """One x402 v2 PaymentRequirements entry: exact USDC on Base."""
         return {"scheme": "exact", "network": self.config.network, "amount": str(amount),
                 "asset": USDC_BASE, "payTo": self.config.wallet, "maxTimeoutSeconds": 300,
-                # EIP-712 domain of USDC on Base, needed to check the signature.
-                "extra": {"name": "USD Coin", "version": "2"}}
+                # EIP-712 domain of USDC on Base, needed to check the signature,
+                # and the transfer method stated rather than left to the
+                # scheme default (exact EVM spec: absent means eip3009; a
+                # Permit2-only client then skips this entry instead of
+                # guessing). Permit2 payloads are refused before settlement
+                # because the payer is read from authorization.from.
+                "extra": {"name": "USD Coin", "version": "2", "assetTransferMethod": "eip3009"}}
 
     def _payment_required(self, start_response, environ, path, amount, description,
                           bazaar=None, error=None, **body_extra):

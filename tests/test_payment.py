@@ -105,6 +105,29 @@ class AdapterTests(unittest.TestCase):
             self.assertIn(expect, res["error"])
         self.assertEqual(post.calls, [])
 
+    def test_permit2_payload_is_refused_before_any_network_call(self):
+        """We advertise eip3009 only; a Permit2 payload carries its payer in
+        permit2Authorization, not authorization.from, so it fails closed
+        locally and is never sent to a facilitator."""
+        body = {"x402Version": 2, "resource": {"url": "/r", "description": "d",
+                                               "mimeType": "application/json"},
+                "accepted": dict(REQ, extra={"name": "USD Coin", "version": "2",
+                                             "assetTransferMethod": "permit2"}),
+                "payload": {"signature": "0x" + "ab" * 65,
+                            "permit2Authorization": {
+                                "permitted": {"token": REQ["asset"], "amount": "3000000"},
+                                "from": PAYER, "spender": "0x" + "77" * 20, "nonce": "1",
+                                "deadline": "9999999999",
+                                "witness": {"to": PAY_TO, "validAfter": "0"}}}}
+        h = base64.b64encode(json.dumps(body).encode()).decode()
+        post = Post({})
+        ad = pay.FacilitatorAdapter([A], allow, post=post)
+        res = ad.settle(h, REQ)
+        self.assertFalse(res["ok"])
+        self.assertFalse(res["charged"])
+        self.assertIn("no payer address in authorisation", res["error"])
+        self.assertEqual(post.calls, [])
+
     def test_blocked_payer_refused_before_verify(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "blocked.txt"

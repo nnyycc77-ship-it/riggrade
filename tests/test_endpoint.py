@@ -235,7 +235,8 @@ class PaidTests(Harness):
         self.assertEqual(entry["status"], "charged_without_grade")
         self.assertEqual(entry["session_id"], sid)
         req = self.adapter.calls[0][1]
-        self.assertEqual(req["extra"], {"name": "USD Coin", "version": "2"})
+        self.assertEqual(req["extra"], {"name": "USD Coin", "version": "2",
+                                        "assetTransferMethod": "eip3009"})
         self.assertEqual(req["maxTimeoutSeconds"], 300)
         # the session stays ungraded, so it is not marked sold
         status, _h, _d = call(app, "POST", "/riggrade/v1/session/%s/grade" % sid)
