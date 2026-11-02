@@ -119,11 +119,12 @@ the document and the page or field it came from.
 ## 4b. Posture on every page
 
 Any published note, page or feed that shows a figure or a signal from this
-method carries, on that same page, these three statements: "information,
-not advice, and not an offer, a rate or a forecast"; "marketplace listings
-are the marginal market, not fleet utilisation"; and "listed prices are
-asks, not paid prices". A page that cannot carry them does not carry the
-figure.
+method carries, on that same page, these four statements: "information,
+not advice, and not an offer, a rate or a forecast"; "this ledger covers
+the long-tail listings market only and says nothing about hyperscaler
+fleets or sponsors whose capacity never lists"; "marketplace listings are
+the marginal market, not fleet utilisation"; and "listed prices are asks,
+not paid prices". A page that cannot carry them does not carry the figure.
 
 ## 5. Rules that do not change silently
 
