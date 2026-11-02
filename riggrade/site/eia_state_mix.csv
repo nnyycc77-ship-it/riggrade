@@ -1,0 +1,475 @@
+state,year,source,share
+AK,2024,Coal,0.1124
+AK,2024,Hydroelectric Conventional,0.2563
+AK,2024,Natural Gas,0.4685
+AK,2024,Other Biomass,0.0064
+AK,2024,Petroleum,0.1374
+AK,2024,Solar Thermal and Photovoltaic,0.0012
+AK,2024,Wind,0.0184
+AL,2024,Coal,0.1465
+AL,2024,Hydroelectric Conventional,0.0585
+AL,2024,Natural Gas,0.452
+AL,2024,Nuclear,0.3113
+AL,2024,Other,0.0
+AL,2024,Other Biomass,0.0003
+AL,2024,Other Gases,0.0
+AL,2024,Petroleum,0.0001
+AL,2024,Solar Thermal and Photovoltaic,0.0088
+AL,2024,Wood and Wood Derived Fuels,0.0226
+AR,2024,Coal,0.2545
+AR,2024,Hydroelectric Conventional,0.0509
+AR,2024,Natural Gas,0.4018
+AR,2024,Nuclear,0.2399
+AR,2024,Other,0.0001
+AR,2024,Other Biomass,0.0004
+AR,2024,Petroleum,0.0009
+AR,2024,Pumped Storage,0.0012
+AR,2024,Solar Thermal and Photovoltaic,0.0378
+AR,2024,Wood and Wood Derived Fuels,0.0124
+AZ,2024,Coal,0.0846
+AZ,2024,Hydroelectric Conventional,0.0458
+AZ,2024,Natural Gas,0.4748
+AZ,2024,Nuclear,0.2791
+AZ,2024,Other Biomass,0.0001
+AZ,2024,Petroleum,0.0003
+AZ,2024,Pumped Storage,0.0006
+AZ,2024,Solar Thermal and Photovoltaic,0.0933
+AZ,2024,Wind,0.0219
+AZ,2024,Wood and Wood Derived Fuels,0.0014
+CA,2024,Coal,0.0011
+CA,2024,Geothermal,0.0491
+CA,2024,Hydroelectric Conventional,0.1375
+CA,2024,Natural Gas,0.4046
+CA,2024,Nuclear,0.0858
+CA,2024,Other Biomass,0.0106
+CA,2024,Other Gases,0.0056
+CA,2024,Petroleum,0.0003
+CA,2024,Solar Thermal and Photovoltaic,0.2261
+CA,2024,Wind,0.0731
+CA,2024,Wood and Wood Derived Fuels,0.0116
+CO,2024,Coal,0.2802
+CO,2024,Hydroelectric Conventional,0.0282
+CO,2024,Natural Gas,0.3049
+CO,2024,Other Biomass,0.0013
+CO,2024,Petroleum,0.0007
+CO,2024,Pumped Storage,0.0011
+CO,2024,Solar Thermal and Photovoltaic,0.084
+CO,2024,Wind,0.2994
+CO,2024,Wood and Wood Derived Fuels,0.0002
+CT,2024,Hydroelectric Conventional,0.0082
+CT,2024,Natural Gas,0.5817
+CT,2024,Nuclear,0.3769
+CT,2024,Other,0.0095
+CT,2024,Other Biomass,0.0079
+CT,2024,Petroleum,0.0004
+CT,2024,Pumped Storage,0.0001
+CT,2024,Solar Thermal and Photovoltaic,0.0106
+CT,2024,Wind,0.0002
+CT,2024,Wood and Wood Derived Fuels,0.0044
+DC,2024,Natural Gas,0.532
+DC,2024,Other Biomass,0.2987
+DC,2024,Petroleum,0.0002
+DC,2024,Solar Thermal and Photovoltaic,0.1691
+DE,2024,Coal,0.03
+DE,2024,Natural Gas,0.8763
+DE,2024,Other Biomass,0.0087
+DE,2024,Other Gases,0.0461
+DE,2024,Petroleum,0.0038
+DE,2024,Solar Thermal and Photovoltaic,0.0345
+DE,2024,Wind,0.0005
+FL,2024,Coal,0.0295
+FL,2024,Hydroelectric Conventional,0.0007
+FL,2024,Natural Gas,0.7685
+FL,2024,Nuclear,0.1092
+FL,2024,Other,0.0079
+FL,2024,Other Biomass,0.0063
+FL,2024,Other Gases,0.0
+FL,2024,Petroleum,0.0031
+FL,2024,Solar Thermal and Photovoltaic,0.0701
+FL,2024,Wood and Wood Derived Fuels,0.0048
+GA,2024,Coal,0.1276
+GA,2024,Hydroelectric Conventional,0.021
+GA,2024,Natural Gas,0.4073
+GA,2024,Nuclear,0.3432
+GA,2024,Other,0.0006
+GA,2024,Other Biomass,0.0021
+GA,2024,Petroleum,0.0017
+GA,2024,Solar Thermal and Photovoltaic,0.0657
+GA,2024,Wood and Wood Derived Fuels,0.0363
+HI,2024,Geothermal,0.0283
+HI,2024,Hydroelectric Conventional,0.011
+HI,2024,Other,0.0175
+HI,2024,Other Biomass,0.0239
+HI,2024,Petroleum,0.77
+HI,2024,Solar Thermal and Photovoltaic,0.077
+HI,2024,Wind,0.0724
+HI,2024,Wood and Wood Derived Fuels,0.0
+IA,2024,Coal,0.2053
+IA,2024,Hydroelectric Conventional,0.0146
+IA,2024,Natural Gas,0.1386
+IA,2024,Other Biomass,0.0031
+IA,2024,Petroleum,0.0007
+IA,2024,Solar Thermal and Photovoltaic,0.0094
+IA,2024,Wind,0.6284
+IA,2024,Wood and Wood Derived Fuels,0.0
+ID,2024,Geothermal,0.0046
+ID,2024,Hydroelectric Conventional,0.4567
+ID,2024,Natural Gas,0.3137
+ID,2024,Other,0.0034
+ID,2024,Other Biomass,0.0048
+ID,2024,Petroleum,0.0
+ID,2024,Solar Thermal and Photovoltaic,0.0508
+ID,2024,Wind,0.1505
+ID,2024,Wood and Wood Derived Fuels,0.0154
+IL,2024,Coal,0.1457
+IL,2024,Hydroelectric Conventional,0.0004
+IL,2024,Natural Gas,0.1629
+IL,2024,Nuclear,0.5362
+IL,2024,Other,0.0013
+IL,2024,Other Biomass,0.0012
+IL,2024,Other Gases,0.001
+IL,2024,Petroleum,0.0001
+IL,2024,Solar Thermal and Photovoltaic,0.0165
+IL,2024,Wind,0.1346
+IN,2024,Coal,0.4177
+IN,2024,Hydroelectric Conventional,0.0039
+IN,2024,Natural Gas,0.4109
+IN,2024,Other,0.0045
+IN,2024,Other Biomass,0.0019
+IN,2024,Other Gases,0.0218
+IN,2024,Petroleum,0.0012
+IN,2024,Solar Thermal and Photovoltaic,0.0319
+IN,2024,Wind,0.1063
+KS,2024,Coal,0.2267
+KS,2024,Hydroelectric Conventional,0.0003
+KS,2024,Natural Gas,0.0922
+KS,2024,Nuclear,0.1595
+KS,2024,Other,0.0001
+KS,2024,Other Biomass,0.001
+KS,2024,Petroleum,0.0017
+KS,2024,Solar Thermal and Photovoltaic,0.0021
+KS,2024,Wind,0.5164
+KY,2024,Coal,0.6696
+KY,2024,Hydroelectric Conventional,0.0614
+KY,2024,Natural Gas,0.2579
+KY,2024,Other,0.0002
+KY,2024,Other Biomass,0.0015
+KY,2024,Petroleum,0.0009
+KY,2024,Solar Thermal and Photovoltaic,0.0041
+KY,2024,Wood and Wood Derived Fuels,0.0044
+LA,2024,Coal,0.0371
+LA,2024,Hydroelectric Conventional,0.0089
+LA,2024,Natural Gas,0.7555
+LA,2024,Nuclear,0.1471
+LA,2024,Other,0.0045
+LA,2024,Other Biomass,0.0008
+LA,2024,Other Gases,0.0145
+LA,2024,Petroleum,0.0005
+LA,2024,Solar Thermal and Photovoltaic,0.012
+LA,2024,Wood and Wood Derived Fuels,0.0191
+MA,2024,Hydroelectric Conventional,0.0421
+MA,2024,Natural Gas,0.7747
+MA,2024,Other,0.0438
+MA,2024,Other Biomass,0.0414
+MA,2024,Petroleum,0.0085
+MA,2024,Solar Thermal and Photovoltaic,0.1017
+MA,2024,Wind,0.0081
+MA,2024,Wood and Wood Derived Fuels,0.0029
+MD,2024,Coal,0.0696
+MD,2024,Hydroelectric Conventional,0.0522
+MD,2024,Natural Gas,0.3927
+MD,2024,Nuclear,0.4156
+MD,2024,Other,0.0095
+MD,2024,Other Biomass,0.0094
+MD,2024,Petroleum,0.006
+MD,2024,Solar Thermal and Photovoltaic,0.0293
+MD,2024,Wind,0.0158
+ME,2024,Coal,0.002
+ME,2024,Hydroelectric Conventional,0.1946
+ME,2024,Natural Gas,0.4366
+ME,2024,Other,0.0191
+ME,2024,Other Biomass,0.0049
+ME,2024,Petroleum,0.0041
+ME,2024,Solar Thermal and Photovoltaic,0.0645
+ME,2024,Wind,0.1669
+ME,2024,Wood and Wood Derived Fuels,0.1072
+MI,2024,Coal,0.2072
+MI,2024,Hydroelectric Conventional,0.0101
+MI,2024,Natural Gas,0.4487
+MI,2024,Nuclear,0.2116
+MI,2024,Other,0.0008
+MI,2024,Other Biomass,0.0054
+MI,2024,Other Gases,0.0076
+MI,2024,Petroleum,0.012
+MI,2024,Solar Thermal and Photovoltaic,0.015
+MI,2024,Wind,0.0792
+MI,2024,Wood and Wood Derived Fuels,0.0102
+MN,2024,Coal,0.1951
+MN,2024,Hydroelectric Conventional,0.0148
+MN,2024,Natural Gas,0.2712
+MN,2024,Nuclear,0.2021
+MN,2024,Other,0.0053
+MN,2024,Other Biomass,0.0049
+MN,2024,Petroleum,0.0004
+MN,2024,Solar Thermal and Photovoltaic,0.039
+MN,2024,Wind,0.2523
+MN,2024,Wood and Wood Derived Fuels,0.015
+MO,2024,Coal,0.5807
+MO,2024,Hydroelectric Conventional,0.0153
+MO,2024,Natural Gas,0.1361
+MO,2024,Nuclear,0.1574
+MO,2024,Other Biomass,0.0009
+MO,2024,Petroleum,0.0022
+MO,2024,Pumped Storage,0.0022
+MO,2024,Solar Thermal and Photovoltaic,0.0031
+MO,2024,Wind,0.1015
+MO,2024,Wood and Wood Derived Fuels,0.0007
+MS,2024,Coal,0.0431
+MS,2024,Natural Gas,0.7762
+MS,2024,Nuclear,0.1378
+MS,2024,Other Biomass,0.0001
+MS,2024,Petroleum,0.0001
+MS,2024,Solar Thermal and Photovoltaic,0.0219
+MS,2024,Wind,0.0045
+MS,2024,Wood and Wood Derived Fuels,0.0165
+MT,2024,Coal,0.3641
+MT,2024,Hydroelectric Conventional,0.3431
+MT,2024,Natural Gas,0.037
+MT,2024,Other,0.0095
+MT,2024,Other Biomass,0.0007
+MT,2024,Other Gases,0.0002
+MT,2024,Petroleum,0.0147
+MT,2024,Solar Thermal and Photovoltaic,0.0136
+MT,2024,Wind,0.2164
+MT,2024,Wood and Wood Derived Fuels,0.0006
+NC,2024,Coal,0.1265
+NC,2024,Hydroelectric Conventional,0.0358
+NC,2024,Natural Gas,0.4112
+NC,2024,Nuclear,0.3212
+NC,2024,Other,0.0016
+NC,2024,Other Biomass,0.0027
+NC,2024,Petroleum,0.0012
+NC,2024,Solar Thermal and Photovoltaic,0.0878
+NC,2024,Wind,0.0039
+NC,2024,Wood and Wood Derived Fuels,0.008
+ND,2024,Coal,0.5448
+ND,2024,Hydroelectric Conventional,0.0484
+ND,2024,Natural Gas,0.0574
+ND,2024,Other,0.0009
+ND,2024,Other Gases,0.0006
+ND,2024,Petroleum,0.001
+ND,2024,Wind,0.3469
+NE,2024,Coal,0.4392
+NE,2024,Hydroelectric Conventional,0.0318
+NE,2024,Natural Gas,0.0371
+NE,2024,Nuclear,0.1637
+NE,2024,Other Biomass,0.0022
+NE,2024,Petroleum,0.0013
+NE,2024,Solar Thermal and Photovoltaic,0.0053
+NE,2024,Wind,0.3194
+NH,2024,Coal,0.0132
+NH,2024,Hydroelectric Conventional,0.0833
+NH,2024,Natural Gas,0.2609
+NH,2024,Nuclear,0.5712
+NH,2024,Other,0.0029
+NH,2024,Other Biomass,0.008
+NH,2024,Petroleum,0.0027
+NH,2024,Solar Thermal and Photovoltaic,0.0002
+NH,2024,Wind,0.0262
+NH,2024,Wood and Wood Derived Fuels,0.0312
+NJ,2024,Hydroelectric Conventional,0.0001
+NJ,2024,Natural Gas,0.4927
+NJ,2024,Nuclear,0.4599
+NJ,2024,Other,0.0101
+NJ,2024,Other Biomass,0.0109
+NJ,2024,Other Gases,0.0028
+NJ,2024,Petroleum,0.0005
+NJ,2024,Solar Thermal and Photovoltaic,0.0265
+NJ,2024,Wind,0.0003
+NM,2024,Coal,0.2124
+NM,2024,Geothermal,0.0007
+NM,2024,Hydroelectric Conventional,0.0039
+NM,2024,Natural Gas,0.2934
+NM,2024,Other Biomass,0.0006
+NM,2024,Petroleum,0.0
+NM,2024,Solar Thermal and Photovoltaic,0.108
+NM,2024,Wind,0.3813
+NV,2024,Coal,0.051
+NV,2024,Geothermal,0.0853
+NV,2024,Hydroelectric Conventional,0.0353
+NV,2024,Natural Gas,0.5491
+NV,2024,Other Biomass,0.0011
+NV,2024,Petroleum,0.0001
+NV,2024,Solar Thermal and Photovoltaic,0.2736
+NV,2024,Wind,0.007
+NY,2024,Hydroelectric Conventional,0.2166
+NY,2024,Natural Gas,0.4832
+NY,2024,Nuclear,0.2098
+NY,2024,Other,0.0077
+NY,2024,Other Biomass,0.0112
+NY,2024,Petroleum,0.0024
+NY,2024,Solar Thermal and Photovoltaic,0.0242
+NY,2024,Wind,0.0467
+NY,2024,Wood and Wood Derived Fuels,0.0012
+OH,2024,Coal,0.2107
+OH,2024,Hydroelectric Conventional,0.0033
+OH,2024,Natural Gas,0.5964
+OH,2024,Nuclear,0.1257
+OH,2024,Other,0.0
+OH,2024,Other Biomass,0.001
+OH,2024,Other Gases,0.006
+OH,2024,Petroleum,0.008
+OH,2024,Solar Thermal and Photovoltaic,0.028
+OH,2024,Wind,0.0198
+OH,2024,Wood and Wood Derived Fuels,0.0011
+OK,2024,Coal,0.0652
+OK,2024,Hydroelectric Conventional,0.0168
+OK,2024,Natural Gas,0.5075
+OK,2024,Other,0.0002
+OK,2024,Other Biomass,0.0009
+OK,2024,Petroleum,0.0003
+OK,2024,Solar Thermal and Photovoltaic,0.0033
+OK,2024,Wind,0.4036
+OK,2024,Wood and Wood Derived Fuels,0.0026
+OR,2024,Geothermal,0.0026
+OR,2024,Hydroelectric Conventional,0.4165
+OR,2024,Natural Gas,0.3855
+OR,2024,Other,0.0002
+OR,2024,Other Biomass,0.0042
+OR,2024,Petroleum,0.0002
+OR,2024,Solar Thermal and Photovoltaic,0.031
+OR,2024,Wind,0.1472
+OR,2024,Wood and Wood Derived Fuels,0.0127
+PA,2024,Coal,0.054
+PA,2024,Hydroelectric Conventional,0.0113
+PA,2024,Natural Gas,0.5959
+PA,2024,Nuclear,0.3122
+PA,2024,Other,0.0036
+PA,2024,Other Biomass,0.0052
+PA,2024,Other Gases,0.0022
+PA,2024,Petroleum,0.0004
+PA,2024,Solar Thermal and Photovoltaic,0.0045
+PA,2024,Wind,0.0135
+PA,2024,Wood and Wood Derived Fuels,0.001
+RI,2024,Hydroelectric Conventional,0.0003
+RI,2024,Natural Gas,0.8992
+RI,2024,Other Biomass,0.0201
+RI,2024,Petroleum,0.0009
+RI,2024,Solar Thermal and Photovoltaic,0.0614
+RI,2024,Wind,0.0182
+SC,2024,Coal,0.1676
+SC,2024,Hydroelectric Conventional,0.024
+SC,2024,Natural Gas,0.227
+SC,2024,Nuclear,0.5351
+SC,2024,Other,0.0005
+SC,2024,Other Biomass,0.0006
+SC,2024,Petroleum,0.001
+SC,2024,Solar Thermal and Photovoltaic,0.0291
+SC,2024,Wood and Wood Derived Fuels,0.0176
+SD,2024,Coal,0.0749
+SD,2024,Hydroelectric Conventional,0.2204
+SD,2024,Natural Gas,0.1083
+SD,2024,Other Biomass,0.0
+SD,2024,Petroleum,0.0008
+SD,2024,Solar Thermal and Photovoltaic,0.0162
+SD,2024,Wind,0.5785
+SD,2024,Wood and Wood Derived Fuels,0.0009
+TN,2024,Coal,0.2289
+TN,2024,Hydroelectric Conventional,0.117
+TN,2024,Natural Gas,0.2164
+TN,2024,Nuclear,0.4226
+TN,2024,Other,0.0
+TN,2024,Other Biomass,0.0012
+TN,2024,Other Gases,0.0002
+TN,2024,Petroleum,0.0016
+TN,2024,Solar Thermal and Photovoltaic,0.0145
+TN,2024,Wind,0.0002
+TN,2024,Wood and Wood Derived Fuels,0.005
+TX,2024,Coal,0.1157
+TX,2024,Hydroelectric Conventional,0.0014
+TX,2024,Natural Gas,0.5176
+TX,2024,Nuclear,0.0682
+TX,2024,Other Biomass,0.0004
+TX,2024,Other Gases,0.0045
+TX,2024,Petroleum,0.0004
+TX,2024,Solar Thermal and Photovoltaic,0.0716
+TX,2024,Wind,0.2194
+TX,2024,Wood and Wood Derived Fuels,0.0013
+US-Total,2024,Coal,0.1514
+US-Total,2024,Geothermal,0.0036
+US-Total,2024,Hydroelectric Conventional,0.0564
+US-Total,2024,Natural Gas,0.434
+US-Total,2024,Nuclear,0.1815
+US-Total,2024,Other,0.0019
+US-Total,2024,Other Biomass,0.0034
+US-Total,2024,Other Gases,0.0025
+US-Total,2024,Petroleum,0.0035
+US-Total,2024,Solar Thermal and Photovoltaic,0.051
+US-Total,2024,Wind,0.1049
+US-Total,2024,Wood and Wood Derived Fuels,0.0073
+UT,2024,Coal,0.4544
+UT,2024,Geothermal,0.0128
+UT,2024,Hydroelectric Conventional,0.0216
+UT,2024,Natural Gas,0.3313
+UT,2024,Other,0.0043
+UT,2024,Other Biomass,0.002
+UT,2024,Other Gases,0.0
+UT,2024,Petroleum,0.001
+UT,2024,Solar Thermal and Photovoltaic,0.1512
+UT,2024,Wind,0.0213
+VA,2024,Coal,0.0192
+VA,2024,Hydroelectric Conventional,0.0122
+VA,2024,Natural Gas,0.594
+VA,2024,Nuclear,0.2818
+VA,2024,Other,0.0041
+VA,2024,Other Biomass,0.0077
+VA,2024,Petroleum,0.002
+VA,2024,Solar Thermal and Photovoltaic,0.0681
+VA,2024,Wind,0.0005
+VA,2024,Wood and Wood Derived Fuels,0.0253
+VT,2024,Hydroelectric Conventional,0.5684
+VT,2024,Natural Gas,0.0005
+VT,2024,Other,0.0004
+VT,2024,Other Biomass,0.0219
+VT,2024,Petroleum,0.0014
+VT,2024,Solar Thermal and Photovoltaic,0.096
+VT,2024,Wind,0.1573
+VT,2024,Wood and Wood Derived Fuels,0.1542
+WA,2024,Coal,0.0278
+WA,2024,Hydroelectric Conventional,0.5931
+WA,2024,Natural Gas,0.1767
+WA,2024,Nuclear,0.0973
+WA,2024,Other,0.0007
+WA,2024,Other Biomass,0.0011
+WA,2024,Other Gases,0.0022
+WA,2024,Petroleum,0.0004
+WA,2024,Pumped Storage,0.0
+WA,2024,Solar Thermal and Photovoltaic,0.0043
+WA,2024,Wind,0.0866
+WA,2024,Wood and Wood Derived Fuels,0.0098
+WI,2024,Coal,0.3181
+WI,2024,Hydroelectric Conventional,0.0317
+WI,2024,Natural Gas,0.4021
+WI,2024,Nuclear,0.1554
+WI,2024,Other,0.0003
+WI,2024,Other Biomass,0.0058
+WI,2024,Petroleum,0.001
+WI,2024,Solar Thermal and Photovoltaic,0.0441
+WI,2024,Wind,0.0305
+WI,2024,Wood and Wood Derived Fuels,0.0108
+WV,2024,Coal,0.8518
+WV,2024,Hydroelectric Conventional,0.0269
+WV,2024,Natural Gas,0.0748
+WV,2024,Other Biomass,0.0002
+WV,2024,Other Gases,0.0008
+WV,2024,Petroleum,0.0025
+WV,2024,Solar Thermal and Photovoltaic,0.0037
+WV,2024,Wind,0.0396
+WY,2024,Coal,0.5989
+WY,2024,Hydroelectric Conventional,0.025
+WY,2024,Natural Gas,0.1333
+WY,2024,Other,0.0022
+WY,2024,Other Gases,0.008
+WY,2024,Petroleum,0.0011
+WY,2024,Solar Thermal and Photovoltaic,0.0104
+WY,2024,Wind,0.2211
