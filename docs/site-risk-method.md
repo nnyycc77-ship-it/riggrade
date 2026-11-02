@@ -48,6 +48,14 @@ rating word, fewer than 3,000 counties, fewer than 50 states.
 | price | EIA average retail price by state and sector | eia.gov/electricity/data/state/avgprice_annual.xlsx |
 | mix | EIA net generation by state and energy source | eia.gov/electricity/data/state/annual_generation_state.xls |
 
+FEMA's download address for the county table now forwards to its Resilience Analysis and Planning Tool page
+(observed 2 November 2026). The fetcher tries the download first, then the same county table served as a
+hosted ArcGIS layer, and uses that layer only when the organisation owning it names itself as FEMA. The
+owner's name, the layer name and its last-edit time are recorded in `SOURCES.json`. If neither route
+answers, the physical section reads "not yet fetched" and the run is red.
+
+EIA workbooks are read sheet by sheet, and the sheet reaching the latest year is used; its name is recorded.
+
 The two hand-kept tables follow the board's primary-read rule: a row is added only after a reader who carries
 the decision reads the source at its own address, and the row records who read it and when. A copy fetched by
 someone else is not a primary read. Both tables ship empty. An empty table prints "nothing read yet".

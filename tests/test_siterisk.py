@@ -5,6 +5,7 @@ import contextlib
 import csv
 import io
 import json
+import re
 import tempfile
 import unittest
 import zipfile
@@ -92,9 +93,9 @@ class FetcherRunTests(unittest.TestCase):
         import tempfile as tf
 
         def fake_fetch(url, timeout=120):
-            if url == ss.URLS["nri"]:
-                ss.fail(f"{url}: HTTP 403 at https://moved.example/x; redirects: ['302 -> https://moved.example/x']")
-            return b"sheet"
+            if url in (ss.URLS["price"], ss.URLS["mix"]):
+                return b"sheet"
+            ss.fail(f"{url}: HTTP 403 at https://moved.example/x; redirects: ['302 -> https://moved.example/x']")
 
         price_rows = [["Year", "State", "Industry Sector Category", "Commercial", "Industrial"]]
         price_rows += [[2024, f"S{i}", "Total Electric Industry", 11.0, 7.0] for i in range(50)]
@@ -102,9 +103,9 @@ class FetcherRunTests(unittest.TestCase):
         for i in range(50):
             mix_rows += [[2024, f"S{i}", "Total Electric Power Industry", "Total", 10.0],
                          [2024, f"S{i}", "Total Electric Power Industry", "Wind", 10.0]]
-        saved = ss.fetch, ss.excel_rows
+        saved = ss.fetch, ss.excel_sheets
         ss.fetch = fake_fetch
-        ss.excel_rows = lambda data, name: price_rows if name.endswith(".xlsx") else mix_rows
+        ss.excel_sheets = lambda data, name: [("Sheet1", price_rows if name.endswith(".xlsx") else mix_rows)]
         try:
             with tf.TemporaryDirectory() as d:
                 Path(d, "SOURCES.json").write_text(json.dumps({"nri": {"fetched_at": "2026-10-01T00:00:00Z"}}))
@@ -118,7 +119,65 @@ class FetcherRunTests(unittest.TestCase):
                 self.assertIn("1 of 3 sources failed", str(cm.exception))
                 self.assertIn("redirects: ['302 -> https://moved.example/x']", out.getvalue())
         finally:
-            ss.fetch, ss.excel_rows = saved
+            ss.fetch, ss.excel_sheets = saved
+
+
+class HostedLayerTests(unittest.TestCase):
+    def answers(self, owner="Federal Emergency Management Agency (FEMA)", n=3005, page=1000):
+        fields = ["OBJECTID", "STCOFIPS", "STATEABBRV", "COUNTY", "RISK_RATNG", "SOVI_RATNG", "RESL_RATNG"]
+        fields += [f"{h}_RISKR" for h in ss.HAZARDS]
+        recs = []
+        for i in range(n):
+            r = {f: "Relatively Low" for f in fields}
+            r.update({"OBJECTID": i, "STCOFIPS": f"{1001 + i:05d}", "STATEABBRV": "AL", "COUNTY": f"C{i}",
+                      "WFIR_RISKR": "Very High"})
+            recs.append(r)
+        calls = []
+
+        def get(url):
+            calls.append(url)
+            if url == ss.NRI_PORTAL:
+                return {"name": owner}
+            if url.endswith("/0?f=json"):
+                return {"name": "NRI_Counties", "maxRecordCount": page, "fields": [{"name": f} for f in fields],
+                        "editingInfo": {"lastEditDate": 1760000000000}}
+            off = int(re.search(r"resultOffset=(\d+)", url).group(1))
+            chunk = recs[off:off + page]
+            return {"features": [{"attributes": r} for r in chunk], "exceededTransferLimit": off + page < n}
+        return get, calls
+
+    def test_pages_the_layer_and_records_the_owner(self):
+        get, calls = self.answers()
+        rows, meta = ss.fetch_nri_service(get)
+        self.assertEqual(len(rows), 3005)
+        self.assertEqual(rows[0][:3], ["01001", "AL", "C0"])
+        self.assertEqual(dict(zip(ss.HAZARDS, rows[0][6:], strict=True))["WFIR"], "VH")
+        self.assertEqual(meta["owner"], "Federal Emergency Management Agency (FEMA)")
+        self.assertEqual(meta["via"], "hosted layer")
+        self.assertEqual(sum("resultOffset" in c for c in calls), 4)
+        self.assertTrue(all("returnGeometry=false" in c for c in calls if "query" in c))
+
+    def test_a_layer_not_owned_by_fema_is_refused(self):
+        get, _ = self.answers(owner="Someone's copy")
+        with self.assertRaises(SystemExit) as cm:
+            ss.fetch_nri_service(get)
+        self.assertIn("not FEMA", str(cm.exception))
+
+
+class SheetTests(unittest.TestCase):
+    def test_year_cells_and_latest_sheet(self):
+        self.assertEqual([ss.year_of(v) for v in (2023, 2023.0, "2024P", " 2022 ", None, "Year")],
+                         [2023, 2023, 2024, 2022, None, None])
+
+        def sheet(year):
+            rows = [["Year", "State", "Industry Sector Category", "Commercial", "Industrial"]]
+            return rows + [[year, f"S{i}", "Total Electric Industry", 11.0, 7.0] for i in range(50)]
+        rows, name, seen = ss.best_sheet([("old", sheet(2020)), ("junk", [["x"]]), ("new", sheet("2024P"))],
+                                         ss.parse_prices)
+        self.assertEqual(name, "new")
+        self.assertEqual(rows[0][1], 2024)
+        self.assertEqual(seen["old"], 2020)
+        self.assertIn("no header row", seen["junk"])
 
 
 class FindNriTests(unittest.TestCase):

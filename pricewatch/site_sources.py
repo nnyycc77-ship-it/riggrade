@@ -16,6 +16,7 @@ import csv
 import hashlib
 import io
 import json
+import re
 import sys
 import time
 import urllib.error
@@ -92,32 +93,97 @@ def rating(value, where):
     return RATINGS[value]
 
 
-def parse_nri(zip_bytes):
-    """Rows of (fips, state, county, overall, sovi, resl, *hazard codes) and the
-    name of the CSV read inside the zip."""
-    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
-        names = [n for n in zf.namelist() if n.lower().endswith(".csv")
-                 and "dictionary" not in n.lower() and "metadata" not in n.lower()]
-        require(len(names) == 1, f"expected one county CSV in the NRI zip, found {names}")
-        text = zf.read(names[0]).decode("utf-8-sig")
-    reader = csv.DictReader(io.StringIO(text))
-    cols = set(reader.fieldnames or [])
+def parse_nri_records(fieldnames, records):
+    """Rows of (fips, state, county, overall, sovi, resl, *hazard codes) from the
+    county table's own field names, whether read from the CSV or the service."""
+    cols = set(fieldnames or [])
     need = {"STCOFIPS", "STATEABBRV", "COUNTY", "RISK_RATNG", "SOVI_RATNG", "RESL_RATNG"}
     need |= {f"{h}_RISKR" for h in HAZARDS}
     missing = sorted(need - cols)
     require(not missing, f"NRI columns missing: {missing}; rating columns present: "
                          f"{sorted(c for c in cols if c.endswith('_RISKR'))}")
     rows = []
-    for r in reader:
-        fips = r["STCOFIPS"].strip().zfill(5)
+    for r in records:
+        fips = str(r["STCOFIPS"]).strip().zfill(5)
         require(fips.isdigit() and len(fips) == 5, f"bad county FIPS {r['STCOFIPS']!r}")
-        rows.append([fips, r["STATEABBRV"].strip(), r["COUNTY"].strip(),
+        rows.append([fips, str(r["STATEABBRV"]).strip(), str(r["COUNTY"]).strip(),
                      rating(r["RISK_RATNG"], fips), rating(r["SOVI_RATNG"], fips),
                      rating(r["RESL_RATNG"], fips)]
                     + [rating(r[f"{h}_RISKR"], fips) for h in HAZARDS])
     require(len(rows) >= NRI_MIN_ROWS, f"NRI county table has {len(rows)} rows, expected {NRI_MIN_ROWS}+")
     require(len({r[0] for r in rows}) == len(rows), "duplicate county FIPS in the NRI table")
-    return rows, names[0]
+    rows.sort()
+    return rows
+
+
+def parse_nri(zip_bytes):
+    """The county table from FEMA's download zip, and the CSV name read inside it."""
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+        names = [n for n in zf.namelist() if n.lower().endswith(".csv")
+                 and "dictionary" not in n.lower() and "metadata" not in n.lower()]
+        require(len(names) == 1, f"expected one county CSV in the NRI zip, found {names}")
+        text = zf.read(names[0]).decode("utf-8-sig")
+    reader = csv.DictReader(io.StringIO(text))
+    return parse_nri_records(reader.fieldnames, reader), names[0]
+
+
+# Since late 2026 the download above forwards to FEMA's planning-tool page.
+# The same county table is served as a hosted layer; it is used only when the
+# organisation that owns it names itself as FEMA.
+NRI_ORG = "XG15cJAlne2vxtgt"
+NRI_SERVICE = f"https://services.arcgis.com/{NRI_ORG}/arcgis/rest/services/National_Risk_Index_Counties/FeatureServer"
+NRI_PORTAL = f"https://www.arcgis.com/sharing/rest/portals/{NRI_ORG}?f=json"
+
+
+def _json(url, timeout=60):
+    try:
+        doc = json.loads(fetch(url, timeout=timeout))
+    except ValueError as exc:
+        fail(f"{url}: not JSON ({exc})")
+    require(isinstance(doc, dict) and "error" not in doc, f"{url}: {doc.get('error') if isinstance(doc, dict) else doc}")
+    return doc
+
+
+def nri_owner(portal):
+    name = str(portal.get("name") or "")
+    require("fema" in name.lower() or "federal emergency management" in name.lower(),
+            f"the hosted county layer's organisation is {name!r}, not FEMA; not used")
+    return name
+
+
+def fetch_nri_service(get=None, page=None):
+    """The county table from the hosted layer, paged; returns rows and provenance."""
+    get = get or _json
+    owner = nri_owner(get(NRI_PORTAL))
+    layer = get(f"{NRI_SERVICE}/0?f=json")
+    fields = [f.get("name") for f in layer.get("fields", [])]
+    need = ["STCOFIPS", "STATEABBRV", "COUNTY", "RISK_RATNG", "SOVI_RATNG", "RESL_RATNG"]
+    need += [f"{h}_RISKR" for h in HAZARDS]
+    missing = [f for f in need if f not in fields]
+    require(not missing, f"hosted layer fields missing: {missing}")
+    size = page or min(int(layer.get("maxRecordCount") or 1000), 2000)
+    records, offset = [], 0
+    while True:
+        q = (f"{NRI_SERVICE}/0/query?where=1%3D1&outFields={','.join(need)}&returnGeometry=false"
+             f"&orderByFields=STCOFIPS&resultOffset={offset}&resultRecordCount={size}&f=json")
+        doc = get(q)
+        feats = [f.get("attributes") or {} for f in doc.get("features", [])]
+        records += feats
+        offset += len(feats)
+        if not feats or (len(feats) < size and not doc.get("exceededTransferLimit")):
+            break
+        require(offset < 10000, "hosted layer paging did not end")
+    rows = parse_nri_records(need, records)
+    edited = (layer.get("editingInfo") or {}).get("lastEditDate") or (layer.get("editingInfo") or {}).get("dataLastEditDate")
+    meta = {"via": "hosted layer", "service": NRI_SERVICE, "owner": owner, "layer": layer.get("name"),
+            "layer_last_edit_ms": edited}
+    return rows, meta
+
+
+def year_of(value):
+    """A year from a cell such as 2023, 2023.0 or '2023P'; None if none."""
+    m = re.match(r"\s*(\d{4})", str(value if value is not None else ""))
+    return int(m.group(1)) if m else None
 
 
 def header_index(rows, *words):
@@ -147,10 +213,12 @@ def parse_prices(rows, span=5):
     for r in rows[h + 1:]:
         if len(r) <= max(iy, ist, isec, iind, icom) or "total electric industry" not in str(r[isec]).lower():
             continue
+        year = year_of(r[iy])
         try:
-            year = int(float(r[iy]))
             ind, com = float(r[iind]), float(r[icom])
         except (TypeError, ValueError):
+            continue
+        if year is None:
             continue
         by[(str(r[ist]).strip(), year)] = (ind, com)
     require(by, "no 'Total Electric Industry' price rows")
@@ -178,9 +246,12 @@ def parse_mix(rows):
     for r in rows[h + 1:]:
         if len(r) <= max(iy, ist, itp, isrc, igen) or str(r[itp]).strip() != "Total Electric Power Industry":
             continue
+        year = year_of(r[iy])
         try:
-            year, mwh = int(float(r[iy])), float(r[igen])
+            mwh = float(r[igen])
         except (TypeError, ValueError):
+            continue
+        if year is None:
             continue
         gen[(str(r[ist]).strip(), year, str(r[isrc]).strip())] = mwh
     require(gen, "no 'Total Electric Power Industry' generation rows")
@@ -197,10 +268,29 @@ def parse_mix(rows):
     return out
 
 
-def excel_rows(data, name):
+def excel_sheets(data, name):
+    """[(sheet name, rows)] for every sheet in the workbook."""
     import pandas as pd  # CI only: the service and the CLI never import this module
-    frame = pd.read_excel(io.BytesIO(data), header=None, engine="xlrd" if name.endswith(".xls") else "openpyxl")
-    return frame.where(frame.notna(), None).values.tolist()
+    book = pd.read_excel(io.BytesIO(data), header=None, sheet_name=None,
+                         engine="xlrd" if name.endswith(".xls") else "openpyxl")
+    return [(sheet, frame.where(frame.notna(), None).values.tolist()) for sheet, frame in book.items()]
+
+
+def best_sheet(sheets, parse):
+    """Parse each sheet that parses; keep the one reaching the latest year.
+    Returns (rows, sheet name, {sheet: latest year or the reason it did not parse})."""
+    seen, best = {}, None
+    for sheet, rows in sheets:
+        try:
+            out = parse(rows)
+        except SystemExit as exc:
+            seen[sheet] = str(exc)[:80]
+            continue
+        seen[sheet] = out[0][1]
+        if best is None or out[0][1] > best[0][0][1]:
+            best = (out, sheet)
+    require(best is not None, f"no sheet parsed: {seen}")
+    return best[0], best[1], seen
 
 
 def write_csv(path, header, rows):
@@ -256,38 +346,50 @@ def main(argv=None):
     failures = []
 
     def nri():
-        data = fetch(URLS["nri"])
+        try:
+            data = fetch(URLS["nri"])
+        except SystemExit as exc:
+            sys.stdout.write(f"nri: download refused ({exc}); trying the hosted layer\n")
+            rows, meta = fetch_nri_service()
+            write_csv(out / "nri_counties.csv", ["fips", "state", "county", "risk", "sovi", "resl", *HAZARDS], rows)
+            blob = json.dumps(rows).encode()
+            meta.update({"name": "FEMA National Risk Index, county table", "rows": len(rows),
+                         "note": "sha256 and bytes are of the extracted rows; the layer has no file to hash"})
+            return blob, meta, NRI_SERVICE
         rows, inner = parse_nri(data)
         write_csv(out / "nri_counties.csv", ["fips", "state", "county", "risk", "sovi", "resl", *HAZARDS], rows)
-        return data, {"name": "FEMA National Risk Index, county table", "file": inner, "rows": len(rows)}
+        return data, {"name": "FEMA National Risk Index, county table", "file": inner, "rows": len(rows),
+                      "via": "download"}, URLS["nri"]
 
     def price():
         data = fetch(URLS["price"])
-        rows = parse_prices(excel_rows(data, URLS["price"]))
+        rows, sheet, seen = best_sheet(excel_sheets(data, URLS["price"]), parse_prices)
+        sys.stdout.write(f"price: sheets {seen}; using {sheet!r}\n")
         write_csv(out / "eia_state_prices.csv",
                   ["state", "year", "industrial_cents_kwh", "commercial_cents_kwh", "base_year",
                    "industrial_base_cents_kwh"], rows)
         return data, {"name": "EIA average retail price of electricity by state and sector",
-                      "year": rows[0][1], "rows": len(rows)}
+                      "year": rows[0][1], "rows": len(rows), "sheet": str(sheet)}, URLS["price"]
 
     def mix():
         data = fetch(URLS["mix"])
-        rows = parse_mix(excel_rows(data, URLS["mix"]))
+        rows, sheet, seen = best_sheet(excel_sheets(data, URLS["mix"]), parse_mix)
+        sys.stdout.write(f"mix: sheets {seen}; using {sheet!r}\n")
         write_csv(out / "eia_state_mix.csv", ["state", "year", "source", "share"], rows)
         return data, {"name": "EIA net generation by state and energy source, all producers",
-                      "year": rows[0][1], "rows": len(rows)}
+                      "year": rows[0][1], "rows": len(rows), "sheet": str(sheet)}, URLS["mix"]
 
     # Each source stands alone: one refusing does not stop the others, and a
     # failed source keeps its last good snapshot and SOURCES entry. Any
     # failure still ends the run red.
     for key, job in (("nri", nri), ("price", price), ("mix", mix)):
         try:
-            blob, meta = job()
+            blob, meta, url = job()
         except SystemExit as exc:
             failures.append(str(exc))
             sys.stdout.write(f"{key}: FAILED: {exc}\n")
             continue
-        meta.update({"url": URLS[key], "fetched_at": stamp, "licence": LICENCE,
+        meta.update({"url": url, "fetched_at": stamp, "licence": LICENCE,
                      "sha256": hashlib.sha256(blob).hexdigest(), "bytes": len(blob)})
         sources[key] = meta
         sys.stdout.write(f"{key}: {meta['rows']} rows, {meta['bytes']} bytes, sha256 {meta['sha256'][:16]}\n")
