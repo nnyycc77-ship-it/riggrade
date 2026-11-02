@@ -6,7 +6,7 @@ and, when given preflight reports from rigs at the site, the measured site
 signals in those reports. Every line names its source and date. No score, no
 weighting: the ratings printed are the sources' own.
 
-Off in the service until Phase 2; usable now from the command line:
+No route serves it; usable now from the command line:
 
     python -m riggrade.siterisk --state TX --county Travis [--report preflight-report.json ...]
 """
@@ -24,8 +24,9 @@ SITE_DIR = Path(__file__).resolve().parent / "site"
 POSTURE = (
     "Site context, not a grade: nothing here changes a grade, a certificate, a record or a price.",
     "Each line names its public source and the date that source was fetched or read.",
-    "The location is declared by the host, at county level, and is never inferred from a network address.",
+    "The location is declared by the host, at county or state level, and is never inferred from a network address.",
     "Ratings are the source's own, relative to other US counties; RigGrade adds no score and no weighting.",
+    "Information only: not advice, and not a lending, credit, insurance or investment judgement.",
 )
 READ_LAST = "A missing line is a missing read, not a clean bill."
 
@@ -47,12 +48,13 @@ BEARS_ON = {
     "physical": "Outage, cooling load and physical damage at the site; insurability.",
     "energy": "Running cost and its exposure to fuel prices; the source mix behind the grid.",
     "local": "Permits, moratoria, zoning, large-load tariffs and incentives that can stop or reprice a site.",
-    "country": "Sanctions and export rules that decide whether the hardware may sit or be paid for there.",
+    "country": ("Sanctions and export rules that decide whether the hardware may sit or be paid for there. "
+                "Information only; these lines never replace the payer screening and logging on every paid call."),
     "measured": "What rigs at the site actually showed: cooling headroom and power events under load.",
 }
 NOT_COVERED = (
-    "Water stress for cooling (a public dataset is named for v1; drought above is the nearest line).",
-    "Grid reliability at the utility level (outage duration and frequency).",
+    "Grid reliability at the utility level (outage duration and frequency); first for v1.",
+    "Water stress for cooling; second for v1, after its licence is read at the source (drought above is the nearest line).",
     "Fibre route diversity and carrier count.",
     "Operator financial health and concentration.",
     "Insurance terms, physical security and spare-parts turnaround.",
@@ -88,7 +90,9 @@ def _norm(county):
 
 def resolve(site, nri):
     """The NRI county row for a declared site: {"state": "TX", "county": "Travis"}
-    or {"fips": "48453"}. Raises SiteError on no match or an ambiguous name."""
+    or {"fips": "48453"}; None for a state-only declaration (the county lines
+    then read "county not declared"). Raises SiteError on no match or an
+    ambiguous name."""
     if (site.get("country") or "US").upper() != "US":
         return None
     fips = str(site.get("fips") or "").strip()
@@ -96,8 +100,10 @@ def resolve(site, nri):
         hit = [r for r in nri if r["fips"] == fips.zfill(5)]
     else:
         state, county = (site.get("state") or "").upper(), site.get("county") or ""
-        if not state or not county:
-            raise SiteError("declare a site as state and county, or a five-digit county FIPS")
+        if not state:
+            raise SiteError("declare a site as a state, a state and county, or a five-digit county FIPS")
+        if not county:
+            return None
         hit = [r for r in nri if r["state"] == state and _norm(r["county"]) == _norm(county)]
     if not hit:
         raise SiteError(f"no US county matches {site}")
@@ -110,8 +116,11 @@ def resolve(site, nri):
 def physical(row, src):
     if row is None:
         return {"status": "not covered", "lines": []}
+    if row == "not declared":
+        return {"status": "county not declared", "lines": []}
     when = (src or {}).get("fetched_at", "date unknown")
     lines = [{"item": HAZARDS[h], "rating": RATING_WORDS[row[h]], "code": row[h]} for h in HAZARDS if h in row]
+    watch = [ln["item"] for ln in lines if ln["code"] in WATCH]
     name = (src or {}).get("name", "FEMA National Risk Index")
     if (src or {}).get("via") == "hosted layer":
         edited = (src or {}).get("layer_last_edit_ms")
@@ -124,7 +133,9 @@ def physical(row, src):
             "overall_risk": RATING_WORDS[row["risk"]],
             "social_vulnerability": RATING_WORDS[row["sovi"]],
             "community_resilience": RATING_WORDS[row["resl"]],
-            "watch": [ln["item"] for ln in lines if ln["code"] in WATCH],
+            "watch": watch,
+            "watch_note": (f"{len(watch)} of the {len(lines)} rated hazards are listed. Hazards not listed were "
+                           "rated lower by the source; they are not absent."),
             "lines": lines}
 
 
@@ -164,10 +175,14 @@ def hand_kept(rows, match):
     return {"status": "read" if hit else "nothing read yet", "lines": hit}
 
 
-def measured(reports):
-    """Site signals from preflight reports of rigs at the site."""
+def measured(reports, exact=False):
+    """Site signals from preflight reports of rigs whose host declared this
+    site for this use (never the anonymised pool). Counts carry the GPU
+    record's protection unless exact=True, which is for our own decisions only."""
     if not reports:
         return {"status": "no reports given", "lines": []}
+    from .record import protect
+
     cards, temps, thermal, brake, hw, shared = 0, [], 0, 0, 0, 0
     warn = 85
     for rep in reports:
@@ -185,29 +200,39 @@ def measured(reports):
         brake += "hw_power_brake_slowdown" in seen
         hw += "hw_slowdown" in seen
         shared += not rep.get("exclusive_box_assumed", True)
-    lines = [{"item": "Reports and cards", "value": f"{len(reports)} reports, {cards} cards"}]
+
+    def n(v):
+        return v if exact else protect(v, cards)
+
+    lines = [{"item": "Reports and cards", "value": f"{n(len(reports))} reports, {n(cards)} cards"}]
     if temps:
         lines.append({"item": "Hottest card under load", "value": f"{max(temps):.0f} C",
-                      "headroom": f"{warn - max(temps):.0f} C to RigGrade's {warn} C warning line"})
+                      "headroom": f"{warn - max(temps):.0f} C to RigGrade's {warn} C warning line, not the card's own limit"})
     lines += [
-        {"item": "Reports with a thermal slowdown under load", "value": thermal},
-        {"item": "Reports with an external power brake under load", "value": brake},
-        {"item": "Reports with a hardware slowdown under load", "value": hw},
+        {"item": "Reports with a thermal slowdown under load", "value": n(thermal), "note": "a cooling signal"},
+        {"item": "Reports with a power brake asserted from outside the card", "value": n(brake),
+         "note": "site or chassis power is a possible source only; the cause is not separable on this line"},
+        {"item": "Reports with a hardware slowdown under load", "value": n(hw),
+         "note": "the cause is not separable from the card"},
     ]
     if shared:
-        lines.append({"item": "Reports from shared or sliced boxes", "value": shared})
-    note = ("These lines describe these runs. "
+        lines.append({"item": "Reports from shared or sliced boxes", "value": n(shared)})
+    note = ("From preflight reports of rigs whose host declared this site for this use; never the anonymised pool. "
+            "These lines describe these runs. "
             + (f"Fewer than {SAMPLE_MIN_CARDS} cards is below the minimum sample, so they are never a site claim."
                if cards < SAMPLE_MIN_CARDS else
                "A site claim still needs the nonce-drawn sample of docs/gpu-record-method.md section 4a."))
-    return {"status": "read", "lines": lines, "note": note}
+    if exact:
+        note = "Internal: exact counts, not for publication. " + note
+    return {"status": "read", "lines": lines, "note": note, "protected": not exact}
 
 
-def context(site, reports=(), site_dir=SITE_DIR):
+def context(site, reports=(), site_dir=SITE_DIR, exact=False):
     nri = _rows("nri_counties.csv", site_dir)
     src = _sources(site_dir)
     country = (site.get("country") or "US").upper()
     row = resolve(site, nri) if nri is not None and country == "US" else None
+    state_only = country == "US" and not site.get("fips") and not site.get("county")
     state = row["state"] if row else (site.get("state") or "").upper() or None
     fips = row["fips"] if row else None
     doc = {
@@ -215,12 +240,13 @@ def context(site, reports=(), site_dir=SITE_DIR):
         "read_this_first": list(POSTURE),
         "site": {"country": country, "state": state, "county": row["county"] if row else site.get("county"),
                  "fips": fips, "declared": True},
-        "physical": physical(row, src.get("nri")) if nri is not None else {"status": "not yet fetched", "lines": []},
+        "physical": ({"status": "county not declared", "lines": []} if state_only else
+                     physical(row, src.get("nri")) if nri is not None else {"status": "not yet fetched", "lines": []}),
         "energy": energy(state, _rows("eia_state_prices.csv", site_dir), _rows("eia_state_mix.csv", site_dir), src),
         "local": hand_kept(_rows("local_actions.csv", site_dir),
                            lambda r: r["state"] == state and (not r["county_fips"] or r["county_fips"] == fips)),
         "country": hand_kept(_rows("countries.csv", site_dir), lambda r: r["country"].upper() == country),
-        "measured": measured(list(reports)),
+        "measured": measured(list(reports), exact=exact),
         "bears_on": BEARS_ON,
         "not_covered": list(NOT_COVERED),
         "read_this_last": READ_LAST,
@@ -240,7 +266,7 @@ def render(doc):
         out.append(f"Source: {p['source']}, fetched {p['fetched_at']}.")
         out.append(f"Overall risk {p['overall_risk']}; social vulnerability {p['social_vulnerability']}; "
                    f"community resilience {p['community_resilience']}.")
-        out.append("Rated Relatively High or Very High: " + (", ".join(p["watch"]) or "none") + ".")
+        out.append("Rated Relatively High or Very High: " + (", ".join(p["watch"]) or "none") + ". " + p["watch_note"])
         out += [f"- {ln['item']}: {ln['rating']}" for ln in p["lines"]]
     else:
         out.append(f"Status: {p['status']}.")
@@ -262,7 +288,8 @@ def render(doc):
     m = doc["measured"]
     out += ["", "## Measured at the site", f"_{BEARS_ON['measured']}_", f"Status: {m['status']}."]
     for ln in m["lines"]:
-        out.append(f"- {ln['item']}: {ln['value']}" + (f" ({ln['headroom']})" if ln.get("headroom") else ""))
+        extra = ln.get("headroom") or ln.get("note")
+        out.append(f"- {ln['item']}: {ln['value']}" + (f" ({extra})" if extra else ""))
     if m.get("note"):
         out.append(m["note"])
     out += ["", "## Not covered in v0"] + [f"- {x}" for x in doc["not_covered"]]
@@ -278,12 +305,14 @@ def main(argv=None):
     ap.add_argument("--country", default="US")
     ap.add_argument("--report", action="append", default=[], help="a preflight-report.json from a rig at the site")
     ap.add_argument("--json", action="store_true", help="print the JSON document instead of the page")
+    ap.add_argument("--internal-exact", action="store_true",
+                    help="exact measured counts, for our own decisions only; never for publication")
     ap.add_argument("--site-dir", default=str(SITE_DIR))
     args = ap.parse_args(argv)
     reports = [json.loads(Path(p).read_text(encoding="utf-8")) for p in args.report]
     try:
         doc = context({"country": args.country, "state": args.state, "county": args.county, "fips": args.fips},
-                      reports, args.site_dir)
+                      reports, args.site_dir, exact=args.internal_exact)
     except SiteError as exc:
         ap.error(str(exc))
     sys.stdout.write(json.dumps(doc, indent=2, sort_keys=True) + "\n" if args.json else render(doc))

@@ -251,7 +251,7 @@ class FindNriTests(unittest.TestCase):
 
 def snapshot(d):
     d = Path(d)
-    hz = list(sr.HAZARDS)
+    hz = [h for h in sr.HAZARDS if h != "IFLD"]  # a snapshot carries one flooding column, here the older name
     with open(d / "nri_counties.csv", "w", newline="") as fh:
         w = csv.writer(fh)
         w.writerow(["fips", "state", "county", "risk", "sovi", "resl", *hz])
@@ -333,7 +333,13 @@ class ContextTests(unittest.TestCase):
         with self.assertRaises(sr.SiteError):
             self.ctx({"state": "TX", "county": "Atlantis"})
         with self.assertRaises(sr.SiteError):
-            self.ctx({"state": "TX"})
+            self.ctx({"county": "Travis"})
+
+    def test_state_only_declaration_leaves_county_lines_undeclared(self):
+        d = self.ctx({"state": "TX"})
+        self.assertEqual(d["physical"]["status"], "county not declared")
+        self.assertEqual(d["energy"]["status"], "read")
+        self.assertEqual(d["local"]["lines"][0]["kind"], "large-load tariff")  # state-wide rows still apply
 
     def test_energy_is_state_level_with_change_and_us_average(self):
         e = self.ctx({"fips": "48453"})["energy"]
@@ -365,23 +371,44 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(d["local"]["status"], "table missing")
 
     def test_measured_signals_and_the_sample_floor(self):
-        m = self.ctx({"fips": "48453"}, [report(peak=82, reasons=("hw_power_brake_slowdown",)),
-                                         report(peak=70, reasons=("sw_thermal_slowdown",), shared=True)])["measured"]
+        reps = [report(peak=82, reasons=("hw_power_brake_slowdown",)),
+                report(peak=70, reasons=("sw_thermal_slowdown",), shared=True)]
+        m = sr.context({"fips": "48453"}, reps, self.tmp.name, exact=True)["measured"]
         lines = {ln["item"]: ln for ln in m["lines"]}
         self.assertEqual(lines["Reports and cards"]["value"], "2 reports, 4 cards")
-        self.assertEqual(lines["Hottest card under load"]["headroom"], "3 C to RigGrade's 85 C warning line")
-        self.assertEqual(lines["Reports with an external power brake under load"]["value"], 1)
+        self.assertEqual(lines["Hottest card under load"]["headroom"],
+                         "3 C to RigGrade's 85 C warning line, not the card's own limit")
+        brake = lines["Reports with a power brake asserted from outside the card"]
+        self.assertEqual(brake["value"], 1)
+        self.assertIn("possible source only", brake["note"])
+        self.assertIn("not separable", brake["note"])
         self.assertEqual(lines["Reports with a thermal slowdown under load"]["value"], 1)
         self.assertIn("never a site claim", m["note"])
+        self.assertTrue(m["note"].startswith("Internal: exact counts, not for publication."))
+        self.assertIn("never the anonymised pool", m["note"])
+
+    def test_measured_counts_carry_the_record_protection_by_default(self):
+        m = self.ctx({"fips": "48453"}, [report(cards=2), report(cards=2)])["measured"]
+        lines = {ln["item"]: ln for ln in m["lines"]}
+        self.assertTrue(m["protected"])
+        self.assertEqual(lines["Reports and cards"]["value"], "fewer than 5 reports, fewer than 5 cards")
+        big = self.ctx({"fips": "48453"}, [report(cards=6, reasons=("sw_thermal_slowdown",))] * 2)["measured"]
+        big_lines = {ln["item"]: ln for ln in big["lines"]}
+        self.assertEqual(big_lines["Reports and cards"]["value"], "fewer than 5 reports, 10 cards")
         many = self.ctx({"fips": "48453"}, [report(cards=5), report(cards=5)])["measured"]
         self.assertIn("section 4a", many["note"])
 
     def test_page_names_sources_and_keeps_posture_first_and_last(self):
         page = sr.render(self.ctx({"fips": "48113"}, [report()]))
         self.assertTrue(page.splitlines()[2].startswith("> Site context, not a grade"))
+        self.assertIn("> Information only: not advice, and not a lending, credit, insurance or investment judgement.",
+                      page)
+        self.assertIn("never replace the payer screening and logging on every paid call", page)
+        self.assertIn("1 of the 15 rated hazards are listed. Hazards not listed were rated lower by the source; "
+                      "they are not absent.", page)
         self.assertTrue(page.rstrip().endswith("not a clean bill."))
         self.assertIn("Source: FEMA National Risk Index, county table, fetched 2026-11-03T04:00:00Z.", page)
-        self.assertIn("Rated Relatively High or Very High: Heat wave.", page)
+        self.assertIn("Rated Relatively High or Very High: Heat wave. ", page)
         self.assertIn("read 2026-11-03 by Coordinator at https://example.invalid/m", page)
 
     def test_cli_prints_page_and_json(self):
