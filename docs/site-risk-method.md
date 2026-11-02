@@ -61,6 +61,13 @@ and that a site's own feed can differ. Utilities that serve the county but repor
 hidden. The US median is arithmetic on the same table, labelled as such. Up to eight utilities are listed by
 name; any more are counted.
 
+The fetcher takes the newest EIA-861 year published, trying this year and the three before it; EIA answers a
+year it has not published with a web page, which counts as not published. The workbook's three header rows
+(standard, event basis, measure) are read so that exactly one IEEE column is taken per measure for "All
+Events" and for "Without Major Event Days"; the "Loss of Supply Removed" columns are never read. The first
+complete fetch (2 November 2026) read data year 2025: 757 utility-state rows with figures and 11,803
+utility-county links. Many utilities that serve a county report no figures; the page counts them.
+
 FEMA's download address for the county table now forwards to its Resilience Analysis and Planning Tool page
 (observed 2 November 2026). The fetcher tries the download first, then the same county table served as a
 hosted ArcGIS layer, and uses that layer only when the organisation owning it names itself as FEMA. The
