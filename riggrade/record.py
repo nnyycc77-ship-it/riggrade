@@ -19,15 +19,17 @@ RIG_ID = re.compile(r"^rg_[0-9a-f]{16}$")
 SERIAL = re.compile(r"^[A-Za-z0-9-]{4,32}$")
 MAX_CARDS = 64
 CONSENT = (
-    "Recording sends, with your explicit opt-in, an entry to the public RigGrade GPU record: the "
-    "per-card identity (a hash of each card's driver UUID, never the UUID itself, and the board "
-    "serial where the driver exposes it), the rig identity hash, the GPU model, count, memory and "
-    "driver, the verdict, each check's status, the measured numbers, whether the box was declared "
-    "exclusive, shared or virtualised, and who you declared as the runner (host, buyer or riggrade). "
-    "Nothing else is sent: no hostname, path, address, wallet, owner, location or free text. The "
-    "entry is public once accepted and cannot be withdrawn: the record is append-only, a later run "
-    "supersedes, nothing is deleted. An entry declared as a buyer's run on someone else's rig is held "
-    "and not served until the rig's host consents. Method: "
+    "Recording sends, with your explicit opt-in, an entry to the public RigGrade GPU record. Sent: "
+    "the per-card identity, which is a hash of each card's driver UUID (never the UUID itself) and "
+    "the card's board serial number where the driver exposes it (data-centre cards usually do; this "
+    "serial is a persistent plain identifier of the card); the rig identity hash; the GPU model, "
+    "count, memory and driver; the verdict, each check's status and the measured numbers; whether "
+    "the box was declared exclusive, shared or virtualised; and who you declared as the runner "
+    "(host, buyer or riggrade). Not sent: hostname, path, address, wallet, owner, location or any "
+    "free text. Once accepted the entry is public through the record lookup, is kept for 24 months, "
+    "and cannot be withdrawn: the record is append-only, a later run supersedes, nothing is deleted. "
+    "An entry declared as a buyer's run on someone else's rig is held and not served until the rig's "
+    "host consents. Method: "
     "https://github.com/nnyycc77-ship-it/riggrade/blob/main/docs/gpu-record-method.md"
 )
 
@@ -89,22 +91,50 @@ def read(path):
     return out
 
 
+def is_operator_series(entry):
+    """[condition 5] Operator free-compute runs (declared_runner riggrade) and
+    virtualised runs form a separate labelled series; they never merge into
+    the history of a physical card."""
+    return entry.get("declared_runner") == "riggrade" or bool(entry.get("virtualised"))
+
+
 def history(rows, card_id):
     """Served entries for one card, oldest first; held entries are counted
-    but not served."""
+    but not served; operator and virtualised entries are listed apart."""
     mine = [r for r in rows if any(c.get("card_id") == card_id for c in r.get("cards") or [])]
-    served = sorted((r for r in mine if not r.get("held")), key=lambda r: r.get("at", 0))
-    return {"card_id": card_id, "records": len(served), "held": len(mine) - len(served),
-            "entries": [{k: v for k, v in r.items() if k != "held"} for r in served],
+    unheld = sorted((r for r in mine if not r.get("held")), key=lambda r: r.get("at", 0))
+    physical = [r for r in unheld if not is_operator_series(r)]
+    operator = [r for r in unheld if is_operator_series(r)]
+    strip = lambda r: {k: v for k, v in r.items() if k != "held"}  # noqa: E731
+    return {"card_id": card_id, "records": len(physical), "held": len(mine) - len(unheld),
+            "entries": [strip(r) for r in physical],
+            "operator_series": {"records": len(operator), "entries": [strip(r) for r in operator],
+                                "note": "Operator free-compute and virtualised runs: a separate series, "
+                                        "never merged into the physical card's history."},
             "note": "Counts are records, not cards owned or hosts. Each entry carries its evidence "
                     "tag; an unattested entry's identity is readable, not provable. History is "
                     "append-only; a later entry supersedes, nothing is deleted."}
 
 
+SMALL = 5
+
+
+def protect(n):
+    """[condition 4] Locked-counts protection for published counts: any cell
+    under SMALL reads "fewer than 5"; larger totals are rounded to the
+    nearest five (the rounding rule of Revision 5 discussion decision 5
+    governs; confirmed at the coordinator's read)."""
+    if n < SMALL:
+        return "fewer than 5"
+    return int(SMALL * round(n / SMALL))
+
+
 def counts(rows):
-    """Per peer class: served records and held entries."""
-    out = {}
+    """Per peer class, for publication: protected counts of served records,
+    held entries and operator-series entries."""
+    raw = {}
     for r in rows:
-        c = out.setdefault(r.get("peer_class") or "unknown_class", {"records": 0, "held": 0})
-        c["held" if r.get("held") else "records"] += 1
-    return out
+        c = raw.setdefault(r.get("peer_class") or "unknown_class", {"records": 0, "held": 0, "operator": 0})
+        key = "held" if r.get("held") else ("operator" if is_operator_series(r) else "records")
+        c[key] += 1
+    return {cid: {k: protect(v) for k, v in c.items()} for cid, c in raw.items()}

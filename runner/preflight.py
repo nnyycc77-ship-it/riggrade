@@ -697,15 +697,17 @@ CONSENT = (
 
 # The record's consent text; riggrade.record.CONSENT must read the same (a test holds it).
 RECORD_CONSENT = (
-    "Recording sends, with your explicit opt-in, an entry to the public RigGrade GPU record: the "
-    "per-card identity (a hash of each card's driver UUID, never the UUID itself, and the board "
-    "serial where the driver exposes it), the rig identity hash, the GPU model, count, memory and "
-    "driver, the verdict, each check's status, the measured numbers, whether the box was declared "
-    "exclusive, shared or virtualised, and who you declared as the runner (host, buyer or riggrade). "
-    "Nothing else is sent: no hostname, path, address, wallet, owner, location or free text. The "
-    "entry is public once accepted and cannot be withdrawn: the record is append-only, a later run "
-    "supersedes, nothing is deleted. An entry declared as a buyer's run on someone else's rig is held "
-    "and not served until the rig's host consents. Method: "
+    "Recording sends, with your explicit opt-in, an entry to the public RigGrade GPU record. Sent: "
+    "the per-card identity, which is a hash of each card's driver UUID (never the UUID itself) and "
+    "the card's board serial number where the driver exposes it (data-centre cards usually do; this "
+    "serial is a persistent plain identifier of the card); the rig identity hash; the GPU model, "
+    "count, memory and driver; the verdict, each check's status and the measured numbers; whether "
+    "the box was declared exclusive, shared or virtualised; and who you declared as the runner "
+    "(host, buyer or riggrade). Not sent: hostname, path, address, wallet, owner, location or any "
+    "free text. Once accepted the entry is public through the record lookup, is kept for 24 months, "
+    "and cannot be withdrawn: the record is append-only, a later run supersedes, nothing is deleted. "
+    "An entry declared as a buyer's run on someone else's rig is held and not served until the rig's "
+    "host consents. Method: "
     "https://github.com/nnyycc77-ship-it/riggrade/blob/main/docs/gpu-record-method.md"
 )
 
