@@ -17,9 +17,12 @@ from riggrade.ledger import (  # noqa: F401 - re-exported for the note's callers
     BANDS,
     FLAT_BAND_PCT,
     FLAT_END_PCT,
+    FLAT_RULE,
     HOURS_PER_YEAR,
+    INDEX_METHOD_CITATION,
     METHOD_VERSION,
     POSTURE,
+    flat_reading,
     implied_revenue,
     is_flat,
     series_window,
@@ -32,11 +35,17 @@ def build(doc, date):
     classes = doc.get("classes") or {}
     src = doc.get("source") or {}
     lines = [f"# Compute supply ledger, weekly note, {date}", "",
-             f"Method {METHOD_VERSION} (docs/compute-supply-method.md); reconstructed index method {doc.get('method')}.",
+             (
+                 f"Method {METHOD_VERSION} (docs/compute-supply-method.md). Link 4 is the **reconstructed** index "
+                 f"series under {INDEX_METHOD_CITATION}; the series' method field reads \"{doc.get('method')}\"."
+             ),
              ""]
     lines += ["**Read this first.** " + " ".join(POSTURE), ""]
-    lines += ["## Link 4, marketplace: listed on-demand price per peer class, latest week", "",
-              f"Source: {src.get('title')}, {src.get('licence')}, with attribution: {src.get('attribution')}", "",
+    lines += ["## Link 4, marketplace (reconstructed series): listed on-demand price per peer class, latest week", "",
+              (
+                  f"Series: reconstructed, from {src.get('title')}, {src.get('licence')}, with attribution: "
+                  f"{src.get('attribution')} A reconstructed history is never joined to a live series."
+              ), "",
               "| Class | Week | Median USD/GPU-h | Provider median | Min | Max | Spread (max/min) | Providers | Offerings |",
               "|---|---|---|---|---|---|---|---|---|"]
     rows = []
@@ -70,20 +79,19 @@ def build(doc, date):
                   "sponsors, secondary)**. The delivery gap signal is **no signal (missing series: rig, under five "
                   "records per class)**."
               ), "",
-              "The one computation possible on link 4 alone, shown so the tolerance is seen in use (it is not a signal by itself):", ""]
+              "The one computation possible on link 4 alone, shown so the tolerance is seen in use (it is not a signal by itself).",
+              "", f"Flat rule: {FLAT_RULE}", ""]
     for cid, c in sorted(classes.items()):
         win = series_window(c.get("weeks") or {}, 8)
         if len(win) < 2:
             continue
-        medians = [v["median_price"] for _, v in win]
-        offers = [v["offering_count"] for _, v in win]
-        f1, d1 = is_flat(medians)
-        f2, d2 = is_flat([float(o) for o in offers])
-        w1 = "flat" if f1 else "not flat"
-        w2 = "flat" if f2 else "not flat"
+        r1 = flat_reading([(k, v["median_price"]) for k, v in win])
+        r2 = flat_reading([(k, float(v["offering_count"])) for k, v in win])
+        w1 = "flat" if r1["flat"] else "not flat"
+        w2 = "flat" if r2["flat"] else "not flat"
         lines.append(
-            f"- {cid}, window {win[0][0]} to {win[-1][0]} ({len(win)} weeks): median listed price {w1} ({d1}); "
-            f"offerings {w2} ({d2})."
+            f"- {cid}, window {win[0][0]} to {win[-1][0]} ({len(win)} weeks): median listed price {w1} "
+            f"({r1['detail']}); offerings {w2} ({r2['detail']})."
         )
     imports = doc.get("imports") or []
     last = imports[-1] if imports else {}

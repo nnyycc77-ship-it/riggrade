@@ -20,6 +20,17 @@ POSTURE = (
 )
 FLAT_END_PCT = 5.0
 FLAT_BAND_PCT = 10.0
+FLAT_RULE = (
+    f"A series is flat over its window only when both hold: the end value is within {FLAT_END_PCT:.0f}% "
+    f"of the start value, and no week in the window lies outside a {FLAT_BAND_PCT:.0f}% band around the "
+    "start value. Either failing makes it not flat; the figure and the week that settle the label are "
+    "printed beside it."
+)
+INDEX_METHOD_CITATION = (
+    "docs/index-reconstructed-method.md, method v0, accepted for publication on 1 November 2026 under "
+    "the version string the series carries (that string keeps the word draft because the method's own "
+    "status line does, and the series' method field is append-only history)"
+)
 DEFAULT_WEEKS = 8
 MAX_WEEKS = 52
 # Section 4 signals and the series each needs; a signal is produced only
@@ -51,20 +62,40 @@ def series_window(weeks, n=DEFAULT_WEEKS):
     return [(k, weeks[k]) for k in keys]
 
 
-def is_flat(values):
-    """Section 4: end within FLAT_END_PCT of start, no value outside a
-    FLAT_BAND_PCT band around the start. Returns (flat, detail)."""
-    if len(values) < 2 or not values[0]:
-        return None, "fewer than two values"
-    start, end = values[0], values[-1]
+def flat_reading(window):
+    """Section 4 flat rule (FLAT_RULE) on a window of (week, value) pairs.
+    Returns the label with every figure that settles it: start, end, end
+    move, and the widest band departure with its week when one breaches."""
+    pairs = [(w, v) for w, v in window if v is not None]
+    if len(pairs) < 2 or not pairs[0][1]:
+        return {"flat": None, "detail": "fewer than two values"}
+    (w0, start), (w1, end) = pairs[0], pairs[-1]
     end_move = (end - start) / start * 100
-    band_breach = any(abs(v - start) / start * 100 > FLAT_BAND_PCT for v in values)
-    flat = abs(end_move) <= FLAT_END_PCT and not band_breach
-    breach = "yes" if band_breach else "no"
-    return flat, (
-        f"start {start:.4g}, end {end:.4g}, end move {end_move:+.1f}% (tolerance {FLAT_END_PCT:.0f}%), "
-        f"band breach {breach} (band {FLAT_BAND_PCT:.0f}%)"
-    )
+    moves = [(abs(v - start) / start * 100, (v - start) / start * 100, w, v) for w, v in pairs]
+    widest = max(moves)
+    breach = widest[0] > FLAT_BAND_PCT
+    flat = abs(end_move) <= FLAT_END_PCT and not breach
+    out = {"flat": flat, "start_week": w0, "start": start, "end_week": w1, "end": end,
+           "end_move_pct": round(end_move, 1), "end_tolerance_pct": FLAT_END_PCT,
+           "band_pct": FLAT_BAND_PCT, "band_breach": breach,
+           "widest_departure_pct": round(widest[1], 1), "widest_departure_week": widest[2],
+           "widest_departure_value": widest[3]}
+    detail = (f"start {start:.4g} ({w0}), end {end:.4g} ({w1}), end move {end_move:+.1f}% "
+              f"(tolerance {FLAT_END_PCT:.0f}%)")
+    if breach:
+        detail += (f"; band breach: {widest[3]:.4g} in week {widest[2]} is {widest[1]:+.1f}% from the "
+                   f"start (band {FLAT_BAND_PCT:.0f}%)")
+    else:
+        detail += f"; no week outside the {FLAT_BAND_PCT:.0f}% band"
+    out["detail"] = detail
+    return out
+
+
+def is_flat(values):
+    """flat_reading on bare values: (flat, detail). Kept for callers that
+    hold no week keys."""
+    r = flat_reading([(f"#{i}", v) for i, v in enumerate(values)])
+    return r["flat"], r["detail"]
 
 
 def signals():
@@ -94,8 +125,12 @@ def feed(doc, weeks=DEFAULT_WEEKS, classes=None):
     have = doc.get("classes") or {}
     chosen = sorted(have) if not classes else [c for c in sorted(have) if c in set(classes)]
     out = {"product": PRODUCT, "method": METHOD_VERSION,
-           "index_method": doc.get("method"), "read_this_first": list(POSTURE),
-           "unit": "USD per GPU per hour, on-demand, listed not paid", "classes": {}}
+           "index_method": doc.get("method"), "index_method_citation": INDEX_METHOD_CITATION,
+           "read_this_first": list(POSTURE),
+           "series": "reconstructed (link 4): a reconstructed history from third-party records, never "
+                     "joined to a live series",
+           "unit": "USD per GPU per hour, on-demand, listed not paid", "flat_rule": FLAT_RULE,
+           "classes": {}}
     for cid in chosen:
         c = have[cid]
         win = series_window(c.get("weeks") or {}, weeks)
@@ -109,13 +144,10 @@ def feed(doc, weeks=DEFAULT_WEEKS, classes=None):
                 "arithmetic": "median listed USD/GPU-hour x 8760 x band; gross, before power, hosting, "
                               "support and the marketplace's cut; listed, not paid",
                 "bands": {f"{int(b * 100)}%": implied_revenue(m, b) for b in BANDS}}
-            medians = [r["median"] for r in rows]
-            offers = [float(r["offerings"]) for r in rows]
-            f1, d1 = is_flat(medians)
-            f2, d2 = is_flat(offers)
-            entry["flat_tolerance"] = {"note": "shown in use; not a signal by itself",
-                                       "median_price": {"flat": f1, "detail": d1},
-                                       "offerings": {"flat": f2, "detail": d2}}
+            entry["flat_tolerance"] = {
+                "note": "shown in use; not a signal by itself; rule in flat_rule",
+                "median_price": flat_reading([(r["week"], r["median"]) for r in rows]),
+                "offerings": flat_reading([(r["week"], float(r["offerings"])) for r in rows])}
         out["classes"][cid] = entry
     imports = doc.get("imports") or []
     last = imports[-1] if imports else {}
