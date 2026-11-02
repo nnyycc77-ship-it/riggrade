@@ -15,6 +15,7 @@ import argparse
 import csv
 import json
 import sys
+import time
 from pathlib import Path
 
 METHOD_VERSION = "site-context-v0-draft"
@@ -111,7 +112,14 @@ def physical(row, src):
         return {"status": "not covered", "lines": []}
     when = (src or {}).get("fetched_at", "date unknown")
     lines = [{"item": HAZARDS[h], "rating": RATING_WORDS[row[h]], "code": row[h]} for h in HAZARDS if h in row]
-    return {"status": "read", "source": (src or {}).get("name", "FEMA National Risk Index"),
+    name = (src or {}).get("name", "FEMA National Risk Index")
+    if (src or {}).get("via") == "hosted layer":
+        edited = (src or {}).get("layer_last_edit_ms")
+        when_edited = (time.strftime("%Y-%m-%d", time.gmtime(edited / 1000))
+                       if isinstance(edited, (int, float)) else "date unknown")
+        name += (f", from the hosted layer {src.get('layer')} owned by {src.get('owner')},"
+                 f" last edited {when_edited}")
+    return {"status": "read", "source": name,
             "fetched_at": when, "url": (src or {}).get("url"),
             "overall_risk": RATING_WORDS[row["risk"]],
             "social_vulnerability": RATING_WORDS[row["sovi"]],
