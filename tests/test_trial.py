@@ -1,0 +1,104 @@
+"""Free trial for the fix-it report and the point grade (owner decision 2 Nov
+2026, set only once the coordinator records his confirmation): 0 USDC
+authorisations, verified and never settled, logged free_trial; trial grades
+never add to the reference set; prices return on their own after the date."""
+
+import copy
+
+from riggrade import salelog
+from riggrade.endpoint import GradingApp
+from tests.test_endpoint import FakeAdapter, Harness, _with_references, call
+
+FIXIT_BODY = {"preflight_report": {"preflight": True, "findings": [
+    {"check": "pcie_link", "status": "warn", "detail": "x8 at gen3"}]}}
+UNTIL = "2027-01-15"            # the test clock reads 2027-01-15 04:00 UTC
+AFTER = 1_800_000_000 + 2 * 86400
+
+
+class TrialTests(Harness):
+    def app(self, trial="fixit,grade", until=UNTIL, products="fixit"):
+        env = dict(self.env, RIGGRADE_PRODUCTS=products)
+        if trial is not None:
+            env["RIGGRADE_TRIAL_PRODUCTS"] = trial
+        if until is not None:
+            env["RIGGRADE_TRIAL_UNTIL"] = until
+        self.adapter = FakeAdapter()
+        self.book = _with_references()
+        return GradingApp(env, self.clock, adapter=self.adapter, references=self.book)
+
+    def grade(self, app, payment=None):
+        sid, status, _b = self.run_session(app)
+        self.assertEqual(status, "200 OK")
+        return sid, call(app, "POST", f"/riggrade/v1/session/{sid}/grade", payment=payment)
+
+    def test_off_by_default_prices_stand(self):
+        app = self.app(trial=None, until=None)
+        _s, _h, doc = call(app, "POST", "/riggrade/v1/fixit", FIXIT_BODY)
+        self.assertEqual(doc["accepts"][0]["amount"], "2000000")
+        _sid, (status, _h, doc) = self.grade(app)
+        self.assertEqual((status, doc["accepts"][0]["amount"]), ("402 Payment Required", "3000000"))
+        _s, _h, desc = call(app, "GET", "/riggrade/v1")
+        self.assertNotIn("point_grade_free_trial", desc)
+        self.assertNotIn("trial", desc["products"]["fixit"])
+
+    def test_fixit_free_on_a_verified_zero_authorisation(self):
+        app = self.app()
+        _s, _h, desc = call(app, "GET", "/riggrade/v1")
+        self.assertEqual((desc["products"]["fixit"]["price_usdc"], desc["products"]["fixit"]["free_until"]),
+                         ("0", UNTIL))
+        self.assertIn("marked free_trial", desc["products"]["fixit"]["trial"])
+        status, _h, doc = call(app, "POST", "/riggrade/v1/fixit", FIXIT_BODY)
+        self.assertEqual((status, doc["accepts"][0]["amount"]), ("402 Payment Required", "0"))
+        self.assertIn("Free trial until 2027-01-15", doc["resource"]["description"])
+        status, _h, doc = call(app, "POST", "/riggrade/v1/fixit", FIXIT_BODY, payment="pay")
+        self.assertEqual(status, "200 OK", doc)
+        self.assertEqual([c[0] for c in self.adapter.calls], ["verify"])       # never settled
+        (entry,) = salelog.read_chain(self.log)
+        self.assertEqual((entry["amount_atomic"], entry["status"]), ("0", "free_trial"))
+
+    def test_trial_grade_is_free_marked_and_never_feeds_the_reference(self):
+        app = self.app()
+        before = copy.deepcopy(self.book.__dict__)
+        _s, _h, desc = call(app, "GET", "/riggrade/v1")
+        self.assertEqual(desc["point_grade_free_trial"]["until"], UNTIL)
+        self.assertIn("not added to the reference set", desc["point_grade_free_trial"]["note"])
+        _sid, (status, _h, doc) = self.grade(app)
+        self.assertEqual((status, doc["accepts"][0]["amount"]), ("402 Payment Required", "0"))
+        self.assertIn("never settled", doc["resource"]["description"])
+        _sid, (status, _h, doc) = self.grade(app, payment="pay")
+        self.assertEqual(status, "200 OK", doc)
+        self.assertTrue(doc["evidence_pack"]["free_trial"])
+        self.assertEqual({c[0] for c in self.adapter.calls}, {"verify"})       # never settled
+        (entry,) = salelog.read_chain(self.log)
+        self.assertEqual((entry["amount_atomic"], entry["status"]), ("0", "free_trial"))
+        self.assertEqual(self.book.__dict__, before)                          # reference set untouched
+        status, _h, doc = call(app, "POST", "/riggrade/v1/grade")
+        self.assertEqual(doc["accepts"][0]["amount"], "0")                     # the bare probe says free too
+
+    def test_a_paid_grade_still_feeds_the_reference_outside_the_trial(self):
+        app = self.app(trial="fixit")
+        before = copy.deepcopy(self.book.__dict__)
+        _sid, (status, _h, doc) = self.grade(app, payment="pay")
+        self.assertEqual(status, "200 OK", doc)
+        self.assertNotIn("free_trial", doc["evidence_pack"])
+        self.assertNotEqual(self.book.__dict__, before)
+
+    def test_prices_return_after_the_end_date(self):
+        app = self.app()
+        self.clock.t = AFTER
+        _s, _h, doc = call(app, "POST", "/riggrade/v1/fixit", FIXIT_BODY)
+        self.assertEqual(doc["accepts"][0]["amount"], "2000000")
+        _sid, (_st, _h, doc) = self.grade(app)
+        self.assertEqual(doc["accepts"][0]["amount"], "3000000")
+        _s, _h, desc = call(app, "GET", "/riggrade/v1")
+        self.assertNotIn("point_grade_free_trial", desc)
+
+    def test_only_eligible_products_and_a_valid_date_open_a_trial(self):
+        app = self.app(trial="cluster,ledger", products="fixit,cluster")
+        _s, _h, desc = call(app, "GET", "/riggrade/v1")
+        self.assertEqual(desc["products"]["cluster"]["price_usdc"], "25")
+        self.assertEqual(desc["products"]["fixit"]["price_usdc"], "2")
+        app = self.app(until="31/12/2026")
+        _s, _h, desc = call(app, "GET", "/riggrade/v1")
+        self.assertEqual(desc["products"]["fixit"]["price_usdc"], "2")
+        self.assertNotIn("point_grade_free_trial", desc)
