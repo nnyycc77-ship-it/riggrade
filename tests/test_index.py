@@ -16,7 +16,7 @@ ROW = {"gpu_slug": "nvidia-rtx-4090", "date": "2026-10-19", "billing_type": "ON_
 
 def payload(rows, licence="CC-BY-4.0"):
     return json.dumps({"meta": {"license": licence, "latest_week": "2026-10-26",
-                                "last_snapshot": "2026-11-01"}, "data": rows}).encode()
+                                "last_snapshot": "2026-11-01"}, "data": list(rows)}).encode()
 
 
 class ImporterTests(unittest.TestCase):
@@ -144,7 +144,7 @@ class AmendmentA1Tests(unittest.TestCase):
     """Chip-family series: own namespace, labelled, gated by the notice date,
     alongside and never inside the peer classes; section 3 unchanged."""
 
-    ROWS = [ROW, dict(ROW, gpu_slug="nvidia-h100", median_price=2.5), dict(ROW, gpu_slug="nvidia-a100", median_price=1.2)]
+    ROWS = (ROW, dict(ROW, gpu_slug="nvidia-h100", median_price=2.5), dict(ROW, gpu_slug="nvidia-a100", median_price=1.2))
 
     def test_nothing_published_before_the_notice_ends(self):
         doc = rec.build(payload(self.ROWS), now="2026-11-14T23:59:59Z")

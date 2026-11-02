@@ -174,7 +174,7 @@ def to_csv(doc):
     header = ("class,source_name,week,median_price,provider_median_price,min_price,max_price,"
               "provider_count,offering_count,licence,attribution")
     lines = [header]
-    rows = list(sorted(doc["classes"].items())) + list(sorted((doc.get("chip_families") or {}).items()))
+    rows = sorted(doc["classes"].items()) + sorted((doc.get("chip_families") or {}).items())
     for cid, c in rows:
         for week, v in c["weeks"].items():
             lines.append(",".join(str(x) for x in (
