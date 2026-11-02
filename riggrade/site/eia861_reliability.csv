@@ -1,0 +1,758 @@
+utility,state,name,year,saidi_all,saidi_no_med,saifi_all,saifi_no_med
+108,WI,Adams-Columbia Electric Coop,2025,107.9,66.1,0.873,0.686
+155,MN,Agralite Electric Coop,2025,255.44,73.278,1.988,1.285
+162,SC,Aiken Electric Coop Inc,2025,189.26,118.93,,
+207,CA,Alameda Municipal Power,2025,9.048,9.048,0.053,0.053
+213,AK,Alaska Electric Light & Power Co.,2025,435.9,368.63,7.73,6.2
+230,GA,Albany Utility Board,2025,199.064,140.577,1.88,1.582
+232,NC,City of Albemarle - (NC),2025,14.09,6.89,0.06,0.03
+295,MN,City of Alexandria - (MN),2025,15.5,9.3,0.27,0.22
+305,MI,Alger-Delta Coop Electric Assn,2025,1151.944,257.184,3.066,1.594
+407,GA,Altamaha Electric Member Corp,2025,374.794,259.629,2.131,1.339
+554,IA,City of Ames - (IA),2025,21.07,21.07,0.39,0.39
+562,GA,Amicalola Electric Member Corp,2025,727.908,531.106,3.847,3.438
+590,CA,City of Anaheim - (CA),2025,31.91,31.91,0.59,0.59
+636,IN,City of Anderson - (IN),2025,1376.22,264.06,3.0,1.7
+689,MN,Connexus Energy,2025,53.812,38.391,0.551,0.492
+691,MN,City of Anoka,2025,19.495,9.917,0.161,0.046
+719,NC,Town of Apex- (NC),2025,44.55,11.52,0.3,0.1
+727,TN,Appalachian Electric Coop,2025,301.4,214.8,3.2,2.7
+733,VA,Appalachian Power Co,2025,1115.5,327.6,2.359,1.617
+733,WV,Appalachian Power Co,2025,1034.5,546.3,2.982,2.481
+803,AZ,Arizona Public Service Co,2025,73.09,73.09,0.842,0.842
+814,AR,Entergy Arkansas LLC,2025,517.9,252.3,2.242,1.631
+817,AR,Arkansas Valley Elec Coop Corp,2025,321.66,249.48,2.85,2.59
+817,OK,Arkansas Valley Elec Coop Corp,2025,198.29,118.04,2.46,1.9
+963,NJ,Atlantic City Electric Co,2025,80.0,55.0,0.73,0.64
+994,IN,City of Auburn - (IN),2025,13.9,,,
+1009,MN,City of Austin - (MN),2025,7.693,5.225,0.184,0.086
+1015,TX,Austin Energy,2025,181.98,76.82,1.29,0.96
+1050,CA,City of Azusa,2025,,1.96,,0.01
+1149,AL,Baldwin County El Member Corp,2025,45.921,24.097,1.503,1.418
+1167,MD,Baltimore Gas & Electric Co,2025,175.133,65.403,0.869,0.639
+1175,TX,"Bandera Electric Coop, Inc",2025,153.58,55.063,0.874,0.592
+1179,ME,Versant Power,2025,500.0,223.0,2.38,1.91
+1251,WI,Barron Electric Coop,2025,306.516,125.74,2.176,1.177
+1273,TX,"Bartlett Electric Coop, Inc",2025,213.175,165.324,1.459,1.219
+1283,IN,Bartholomew County Rural E M C,2025,544.08,73.78,2.42,0.88
+1325,IL,City of Batavia - (IL),2025,90.61,46.61,0.61,0.31
+1366,MI,City of Bay City - (MI),2025,108.724,69.51,0.863,0.774
+1529,MN,"Beltrami Electric Coop, Inc",2025,,89.69,,0.916
+1579,WA,PUD No 1 of Benton County,2025,36.1,36.1,0.28,0.28
+1613,SC,Berkeley Electric Coop Inc,2025,113.7,92.9,1.38,1.1
+1708,KY,Big Sandy Rural Elec Coop Corp,2025,1898.3,1138.0,5.815,4.913
+1723,WA,"Big Bend Electric Coop, Inc",2025,448.949,105.566,1.296,0.826
+1763,SC,"Black River Electric Coop, Inc - (SC)",2025,95.995,95.995,1.092,1.092
+1769,SD,"Black Hills Electric Coop, Inc",2025,2486.8,120.1,3.408,0.856
+1775,MO,Black River Electric Coop - (MO),2025,2908.52,564.32,,
+1886,KY,Blue Grass Energy Coop Corp,2025,426.02,255.38,1.91,1.61
+1889,NC,Blue Ridge Elec Member Corp - (NC),2025,541.56,110.21,2.22,1.454
+1890,SC,Blue Ridge Electric Coop Inc - (SC),2025,204.85,160.29,,
+1891,GA,Blue Ridge Mountain EMC - (GA),2025,518.658,289.11,3.729,3.054
+1892,TX,"Bluebonnet Electric Coop, Inc",2025,113.583,88.328,1.305,1.18
+1936,TN,Bolivar Energy Authority,2025,564.061,187.805,2.388,1.872
+2001,MO,Boone Electric Coop,2025,66.87,51.01,0.65,0.58
+2008,NV,City of Boulder City - (NV),2025,345.14,33.78,0.95,0.64
+2054,OH,City of Bowling Green - (OH),2025,137.199,6.648,1.423,0.088
+2056,KY,City of Bowling Green - (KY),2025,45.6,19.5,0.524,0.113
+2089,CT,Bozrah Light & Power Company,2025,125.86,78.58,0.61,0.46
+2138,MN,Brainerd Public Utilities,2025,21.31,21.31,0.305,0.305
+2144,MA,Town of Braintree - (MA),2025,71.83,3.76,1.28,0.1
+2247,TN,City of Bristol - (TN),2025,59.15,0.0,0.79,0.0
+2248,VA,Bristol Virginia Utilities,2025,25.287,25.287,0.244,0.244
+2285,SD,City of Brookings - (SD),2025,13.192,13.192,0.084,0.084
+2409,TX,Brownsville Public Utilities Board,2025,152.002,138.613,2.991,2.976
+2502,OH,"Buckeye Rural Elec Coop, Inc",2025,995.378,995.024,3.195,3.191
+2507,CA,City of Burbank Water and Power - (CA),2025,174.4,12.82,0.811,0.192
+2651,OH,Butler Rural Electric Coop Inc - (OH),2025,171.97,102.99,1.59,1.39
+2652,IA,Butler County Rural Elec Coop - (IA),2025,96.928,84.764,1.453,1.272
+2812,GA,City of Calhoun - (GA),2025,116.61,44.22,1.04,0.53
+2911,OK,"Canadian Valley Elec Coop, Inc",2025,287.3,226.4,1.508,1.396
+3046,NC,Duke Energy Progress - (NC),2025,183.16,144.54,1.411,1.262
+3046,SC,Duke Energy Progress - (NC),2025,118.61,105.79,1.139,1.044
+3081,GA,Carroll Electric Member Corp - (GA),2025,359.9,136.79,2.336,1.444
+3093,AR,Carroll Electric Coop Corp - (AR),2025,224.01,142.45,2.43,1.98
+3093,MO,Carroll Electric Coop Corp - (AR),2025,128.88,118.51,2.0,1.93
+3107,NC,Carteret-Craven El Member Corp,2025,117.7,72.26,1.546,1.106
+3113,MO,City of Carthage - (MO),2025,321.39,37.41,3.85,1.07
+3222,AL,Central Alabama Electric Coop,2025,468.53,188.83,,
+3226,OK,"Central Rural Electric Cooperative, Inc",2025,274.82,137.68,1.579,1.28
+3245,FL,"Central Florida Elec Coop, Inc",2025,133.811,133.811,1.939,1.939
+3248,GA,Central Georgia El Member Corp,2025,167.52,76.47,1.834,1.205
+3249,NY,Central Hudson Gas & Elec Corp,2025,290.1,182.3,1.5,1.3
+3250,NC,Central Electric Membership Corp. - (NC),2025,267.728,148.187,,
+3264,OR,Central Lincoln People's Ut Dt,2025,515.599,,1.917,
+3266,ME,Central Maine Power Co,2025,318.3,177.0,2.11,1.74
+3268,MO,Central Missouri Elec Coop Inc,2025,422.6,85.6,1.545,1.025
+3278,TX,AEP Texas Central Company,2025,204.7,154.9,1.761,1.552
+3282,TX,"Central Texas Elec Coop, Inc",2025,220.3,192.6,1.97,1.82
+3287,NM,"Central Valley Elec Coop, Inc",2025,326.3,279.625,2.185,2.053
+3291,VA,Central Virginia Electric Coop,2025,796.0,501.0,5.03,3.47
+3295,WA,City of Centralia - (WA),2025,143.429,95.319,0.687,0.372
+3329,PA,Borough of Chambersburg - (PA),2025,38.87,14.25,0.41,0.18
+3413,WA,PUD No 1 of Chelan County - (WA),2025,327.07,76.9,0.82,0.632
+3436,MI,Cherryland Electric Coop Inc,2025,99.641,67.903,0.872,0.674
+3461,WY,Cheyenne Light Fuel & Power,2025,53.527,37.497,0.763,0.62
+3470,TX,Cherokee County Elec Coop Assn - (TX),2025,840.6,483.35,5.37,4.27
+3477,MA,City of Chicopee - (MA),2025,12.03,,0.105,
+3478,OK,Cimarron Electric Coop,2025,69.6,43.2,0.838,0.601
+3502,FL,"Choctawhatche Elec Coop, Inc",2025,88.121,80.793,0.949,0.894
+3503,MD,"Choptank Electric Cooperative, Inc",2025,216.5,120.6,1.8,1.47
+3522,AK,Chugach Electric Assn Inc,2025,300.41,144.01,1.98,1.56
+3542,OH,Duke Energy Ohio Inc,2025,177.76,108.39,1.015,0.871
+3600,MO,Citizens Electric Corporation - (MO),2025,1687.582,128.094,3.859,1.594
+3647,OK,City of Claremore,2025,172.936,171.854,1.991,1.983
+3660,WA,PUD No 1 of Clark County - (WA),2025,298.38,51.45,1.63,0.98
+3687,KY,Clark Energy Coop Inc - (KY),2025,918.22,324.31,3.45,2.8
+3704,TN,City of Clarksville - (TN),2025,117.16,100.45,1.18,1.05
+3755,OH,Cleveland Electric Illum Co,2025,195.46,136.0,1.369,1.216
+3757,FL,"Clay Electric Cooperative, Inc - (FL)",2025,204.9,204.9,2.6,2.6
+3758,TN,City of Cleveland - (TN),2025,56.459,36.127,0.877,0.745
+3762,OH,City of Cleveland - (OH),2025,224.79,191.1,0.69,0.646
+3812,TN,City of Clinton - (TN),2025,158.59,117.766,1.967,1.673
+3828,MI,Cloverland Electric Co-op,2025,1020.3,356.9,4.41,3.13
+3841,MS,Coast Electric Power Assn - (MS),2025,120.451,83.2,1.7,1.24
+3843,GA,Coastal Electric Member Corp - (GA),2025,227.95,198.49,2.47,2.3
+3855,TN,Columbia Power System - (TN),2025,142.513,86.247,1.95,1.399
+3892,KS,City of Coffeyville - (KS),2025,45.415,12.721,0.235,0.141
+3915,MI,Coldwater Board of Public Util,2025,309.536,18.82,0.939,0.15
+3916,GA,Cobb Electric Membership Corp,2025,47.71,31.99,0.86,0.78
+3940,TX,City of College Station - (TX),2025,22.8,13.3,0.59,0.22
+3989,CO,City of Colorado Springs - (CO),2025,40.76,40.76,0.68,0.68
+4041,WA,"Columbia Rural Elec Assn, Inc",2025,200.2,157.5,1.55,1.52
+4045,MO,City of Columbia - (MO),2025,97.295,39.426,0.747,0.549
+4063,MO,Co-Mo Electric Coop Inc,2025,158.1,69.2,1.083,0.609
+4065,OH,City of Columbus - (OH),2025,140.88,140.88,1.45,1.45
+4068,MS,City of Columbus - (MS),2025,164.55,33.7,0.977,0.377
+4110,IL,Commonwealth Edison Co,2025,76.6,38.0,0.66,0.54
+4146,TX,Concho Valley Elec Coop Inc,2025,363.9,363.9,3.734,3.734
+4150,NC,City of Concord - (NC),2025,65.316,65.316,0.609,0.609
+4176,CT,Connecticut Light & Power Co,2025,216.6,85.4,1.005,0.685
+4237,MO,Consolidated Electric Coop,2025,232.935,120.047,1.177,0.851
+4254,MI,Consumers Energy Co - (MI),2025,819.46,163.48,1.402,0.875
+4262,TX,Cooke County Elec Coop Assn,2025,349.37,315.1,2.29,2.08
+4265,NM,Continental Divide El Coop Inc,2025,234.5,234.5,1.53,1.53
+4280,AR,Conway Corporation,2025,57.191,57.191,0.698,0.698
+4296,OK,"Cookson Hills Elec Coop, Inc",2025,488.187,258.843,2.324,1.885
+4317,OR,"Coos-Curry Electric Coop, Inc",2025,187.7,77.44,1.14,0.67
+4327,AL,Coosa Valley Electric Coop Inc,2025,345.315,209.112,2.432,1.84
+4362,IL,Corn Belt Energy Corporation,2025,1364.8,155.4,7.65,7.55
+4390,CA,City of Corona - (CA),2025,177.54,174.54,1.87,1.87
+4401,OK,"Cotton Electric Coop, Inc",2025,549.43,237.89,4.05,2.54
+4430,AL,"Covington Electric Coop, Inc",2025,211.317,85.948,2.292,1.335
+4432,GA,Coweta-Fayette El Member Corp,2025,333.232,118.606,2.363,1.483
+4442,WA,PUD No 1 of Cowlitz County,2025,218.724,116.117,1.284,0.929
+4509,AR,Craighead Electric Coop Corp,2025,499.521,192.633,3.315,2.39
+4524,MO,"Crawford Electric Coop, Inc",2025,361.984,216.177,2.04,1.744
+4538,GA,Crisp County Power Comm,2025,203.655,203.655,3.059,3.059
+4577,MN,Crow Wing Cooperative Power & Light Comp,2025,129.581,62.32,0.934,0.553
+4618,AL,"Cullman Electric Coop, Inc",2025,779.486,346.792,3.391,2.44
+4622,KY,"Cumberland Valley Electric, Inc.",2025,910.3,436.9,4.22,2.88
+4675,MO,Cuivre River Electric Coop Inc,2025,135.49,135.49,1.214,1.214
+4683,OH,City of Cuyahoga Falls - (OH),2025,55.659,45.067,0.509,0.494
+4717,ND,Dakota Valley Elec Coop Inc,2025,63.8,49.5,0.34,0.32
+4743,OR,"Consumers Power, Inc",2025,738.93,156.27,2.563,1.168
+4848,IN,Daviess Martin County R E M C,2025,619.478,187.173,1.763,1.273
+4922,OH,Dayton Power & Light Co,2025,167.6,96.48,0.99,0.75
+4939,TX,"Deaf Smith Electric Coop, Inc",2025,514.4,338.0,2.391,2.09
+4960,IN,Decatur County Rural E M C,2025,462.762,219.93,2.762,2.034
+4975,TX,Deep East Texas Elec Coop Inc,2025,1119.0,1119.0,,
+5027,DE,Delmarva Power,2025,104.0,76.0,0.78,0.69
+5027,MD,Delmarva Power,2025,114.0,66.0,0.93,0.71
+5063,TX,City of Denton - (TX),2025,47.597,11.474,0.237,0.122
+5070,DE,Delaware Electric Cooperative,2025,111.494,75.144,1.477,1.126
+5078,TX,"Denton County Elec Coop, Inc",2025,49.4,37.4,0.399,0.286
+5086,CO,Delta Montrose Electric Assn,2025,115.458,115.458,0.962,0.962
+5109,MI,DTE Electric Company,2025,191.763,150.683,1.162,1.068
+5148,TN,City of Dickson,2025,390.981,202.228,2.463,1.95
+5202,LA,Dixie Electric Membership Corp - (LA),2025,321.056,275.003,4.62,4.282
+5204,AL,Dixie Electric Coop - (AL),2025,258.32,118.27,2.04,1.75
+5309,AL,City of Dothan - (AL),2025,82.964,67.195,0.743,0.676
+5336,OH,City of Dover - (OH),2025,113.81,32.38,0.89,0.37
+5399,TN,Duck River Elec Member Corp,2025,190.36,134.23,2.14,1.88
+5416,NC,"Duke Energy Carolinas, LLC",2025,215.66,171.87,1.352,1.216
+5416,SC,"Duke Energy Carolinas, LLC",2025,219.78,140.63,1.262,1.071
+5417,WI,Dunn County Electric Coop,2025,128.47,31.55,0.758,0.388
+5509,TN,City of Dyersburg,2025,25.5,18.64,1.22,0.23
+5535,IL,Egyptian Electric Coop Assn,2025,773.2,23.885,4.621,0.634
+5574,MN,East Central Energy,2025,97.0,82.3,1.03,0.93
+5578,MS,East Mississippi Elec Pwr Assn,2025,5.95,5.22,2.57,2.4
+5585,IL,Eastern Illinois Elec Coop,2025,223.0,157.1,2.221,1.879
+5588,IA,East-Central Iowa Rural Elec Coop,2025,66.81,66.81,0.88,0.88
+5598,OK,East Central Oklahoma Elec Coop Inc,2025,418.715,321.118,2.968,2.696
+5605,IA,Eastern Iowa Light & Power Coop,2025,92.2,79.2,0.93,0.83
+5609,ME,Eastern Maine Electric Coop,2025,991.029,559.355,7.229,5.777
+5625,MD,Easton Utilities Comm,2025,30.5,20.71,0.61,0.42
+5644,SC,"Edisto Electric Coop, Inc",2025,235.49,235.49,,
+5656,NC,Edgecombe-Martin County E M C,2025,103.764,103.764,1.182,1.182
+5661,OK,City of Edmond - (OK),2025,115.771,82.383,1.457,1.193
+5701,NM,El Paso Electric Co,2025,116.382,116.382,1.242,1.242
+5701,TX,El Paso Electric Co,2025,55.156,55.156,0.858,0.858
+5773,MN,City of Elk River,2025,18.95,11.84,0.3,0.2
+5860,AR,Empire District Electric Co,2025,206.33,84.45,0.896,0.472
+5860,KS,Empire District Electric Co,2025,146.24,91.29,1.44,1.165
+5860,MO,Empire District Electric Co,2025,166.72,109.67,1.104,0.963
+5860,OK,Empire District Electric Co,2025,199.63,102.24,2.249,1.338
+5862,CO,"Empire Electric Assn, Inc",2025,174.602,174.602,1.364,1.364
+5930,NY,Village of Fairport - (NY),2025,92.873,17.722,1.852,0.197
+6022,OR,City of Eugene - (OR),2025,49.29,49.29,0.28,0.28
+6169,ID,Fall River Rural Elec Coop Inc,2025,7.304,7.049,0.063,0.061
+6169,MT,Fall River Rural Elec Coop Inc,2025,14.417,14.06,0.097,0.093
+6169,WY,Fall River Rural Elec Coop Inc,2025,18.183,18.183,0.152,0.152
+6181,MO,"Farmers Electric Coop, Inc - (MO)",2025,197.37,117.04,1.88,1.21
+6182,TX,"Farmers Electric Coop, Inc - (TX)",2025,90.699,66.293,1.348,1.154
+6194,KY,Farmers Rural Electric Coop Corp - (KY),2025,340.6,127.65,1.62,1.22
+6198,NM,"Farmers Electric Coop, Inc - (NM)",2025,198.0,198.0,1.528,1.528
+6204,NM,City of Farmington - (NM),2025,75.23,,0.593,
+6234,TN,City of Fayetteville,2025,228.844,187.132,3.035,2.567
+6235,NC,Fayetteville Public Works Commission,2025,115.882,72.457,1.937,1.364
+6258,MN,Federated Rural Electric Assn,2025,116.171,116.171,1.215,1.215
+6342,AR,First Electric Coop Corp,2025,646.072,222.041,2.538,1.685
+6374,MA,Fitchburg Gas & Elec Light Co,2025,74.4,74.4,1.079,1.079
+6395,MT,Flathead Electric Coop Inc,2025,885.98,174.02,2.29,1.6
+6411,GA,Flint Electric Membership Corp,2025,150.55,101.32,1.22,1.03
+6424,WI,Florence Utility Comm,2025,505.591,58.288,2.459,0.662
+6427,TX,City of Floresville,2025,99.54,99.54,1.23,1.23
+6442,KY,Fleming-Mason Energy Coop Inc,2025,201.48,178.85,1.32,1.28
+6443,FL,"Florida Keys El Coop Assn, Inc",2025,49.187,22.064,0.935,0.505
+6452,FL,Florida Power & Light Co,2025,46.91,44.56,0.46,0.43
+6455,FL,"Duke Energy Florida, LLC",2025,86.61,82.02,0.974,0.963
+6491,AL,Foley Board of Utilities,2025,70.301,40.452,1.069,0.676
+6604,CO,City of Fort Collins - (CO),2025,8.07,8.07,0.13,0.13
+6608,TN,Fort Loudoun Electric Coop,2025,529.51,433.3,2.835,2.346
+6610,CO,City of Fort Morgan,2025,,13.647,,0.317
+6638,CO,City of Fountain,2025,42.059,42.059,0.559,0.559
+6708,KY,City of Frankfort - (KY),2025,84.85,29.24,0.82,0.4
+6709,SC,Easley Combined Utility System,2025,90.9,90.9,1.31,1.31
+6775,NY,Village of Freeport - (NY),2025,12.16,12.16,0.222,0.222
+6779,NE,City of Fremont - (NE),2025,3080.76,18.42,1.8,0.23
+6782,MN,Freeborn Mower Electric Cooperative,2025,172.3,55.6,1.58,0.62
+6909,FL,Gainesville Regional Utilities,2025,37.19,37.19,0.77,0.77
+6923,TN,City of Gallatin - (TN),2025,49.3,22.67,0.53,0.0
+6957,UT,"Garkane Energy Coop, Inc",2025,898.6,575.4,,
+7027,NC,City of Gastonia - (NC),2025,362.14,150.43,0.97,0.7
+7090,GA,GreyStone Power Corporation,2025,241.413,81.4,2.28,1.33
+7096,IL,City of Geneva - (IL),2025,38.481,38.481,1.021,1.021
+7140,GA,Georgia Power Co,2025,286.7,154.86,1.826,1.437
+7264,FL,"Glades Electric Coop, Inc",2025,426.7,382.9,3.24,3.06
+7270,KY,City of Glasgow - (KY),2025,163.17,,2.66,
+7353,AK,Golden Valley Elec Assn Inc,2025,211.585,211.585,1.959,1.959
+7450,GA,Grady Electric Membership Corp,2025,233.647,233.647,2.539,2.539
+7483,MI,City of Grand Haven - (MI),2025,144.32,33.486,1.211,0.673
+7548,WA,PUD No 1 of Grays Harbor County,2025,1036.0,338.0,2.8,1.5
+7558,KY,Grayson Rural Electric Coop Corp,2025,2390.96,2390.96,16.88,16.88
+7563,CO,Grand Valley Power,2025,116.38,116.38,,
+7625,TN,City of Greeneville - (TN),2025,237.968,115.358,1.854,1.387
+7627,IN,City of Greenfield - (IN),2025,17.23,17.23,0.24,0.24
+7634,TX,City of Greenville - (TX),2025,54.95,14.148,0.55,0.159
+7639,NC,Greenville Utilities Comm,2025,42.53,27.65,0.41,0.37
+7646,SC,Greenwood CPW,2025,101.237,42.341,0.899,0.511
+7716,CT,Groton Dept of Utilities - (CT),2025,71.2,71.2,0.36,0.36
+7752,TX,Guadalupe Valley Elec Coop Inc,2025,138.7,119.57,1.75,1.7
+7785,FL,"Gulf Coast Electric Coop, Inc",2025,336.029,257.132,2.78,2.661
+7887,GA,Habersham Electric Membership Corp,2025,386.86,185.186,3.02,2.29
+7891,OH,Guernsey-Muskingum El Coop Inc,2025,695.035,282.141,2.445,1.921
+7977,OH,City of Hamilton - (OH),2025,121.08,60.8,1.34,0.95
+8034,OH,Hancock-Wood Electric Coop Inc,2025,61.82,42.6,1.34,0.98
+8055,MO,City of Hannibal - (MO),2025,17.67,17.67,0.33,0.33
+8179,IN,Harrison County Rural E M C,2025,251.997,140.918,1.786,1.36
+8210,GA,Hart Electric Member Corp,2025,306.151,82.883,1.583,1.04
+8245,NE,City of Hastings - (NE),2025,49.85,7.09,0.304,0.078
+8319,IA,Heartland Power Coop,2025,117.034,67.376,0.915,0.802
+8319,MN,Heartland Power Coop,2025,103.18,103.18,1.26,1.26
+8333,NC,Haywood Electric Member Corp,2025,776.287,554.282,5.086,4.686
+8366,UT,Heber Light & Power Company,2025,116.116,60.337,2.209,1.348
+8447,IN,Hendricks County Rural E M C,2025,168.576,46.87,1.396,0.599
+8449,KY,Henderson City Utility Comm,2025,22.995,22.995,0.429,0.429
+8566,WY,High Plains Power Inc,2025,320.3,262.6,,
+8571,NC,Town of High Point,2025,108.48,86.04,1.39,1.33
+8620,TX,"HILCO Electric Cooperative, Inc.",2025,212.3,175.2,1.76,1.42
+8699,WA,Inland Power & Light Company,2025,536.0,283.0,2.549,1.914
+8723,MI,City of Holland - (MI),2025,70.76,32.65,0.4,0.346
+8761,OH,Holmes-Wayne Electric Coop Inc,2025,325.543,274.456,2.187,1.933
+8764,TN,"Holston Electric Coop, Inc",2025,183.681,149.59,2.467,2.255
+8773,CO,"Holy Cross Electric Assn, Inc",2025,71.1,71.1,1.07,1.07
+8774,MA,City of Holyoke - (MA),2025,36.951,36.951,0.464,0.464
+8786,SC,Horry Electric Coop Inc,2025,110.38,101.283,1.281,1.221
+8840,AR,City of Hope - (AR),2025,51.47,24.76,0.88,0.4
+8901,TX,CenterPoint Energy,2025,193.194,151.118,1.954,1.766
+9087,NC,Town of Huntersville - (NC),2025,23.78,23.78,0.22,0.22
+9096,LA,City of Lafayette - (LA),2025,29.66,26.86,0.69,0.64
+9187,ID,City of Idaho Falls - (ID),2025,50.61,16.76,0.47,0.2
+9191,ID,Idaho Power Co,2025,170.963,141.162,1.029,0.963
+9191,OR,Idaho Power Co,2025,272.501,269.581,1.471,1.413
+9216,CA,Imperial Irrigation District,2025,113.87,56.09,0.72,0.66
+9230,IA,City of Independence - (IA),2025,17.289,3.574,0.153,0.038
+9246,OK,"Indian Electric Coop, Inc",2025,102.4,44.1,0.634,0.432
+9273,IN,AES Indiana,2025,295.233,75.975,1.221,0.866
+9292,KY,Inter County Energy Coop Corp - (KY),2025,292.8,117.3,1.781,0.975
+9324,IN,Indiana Michigan Power Co,2025,283.3,82.8,0.973,0.712
+9324,MI,Indiana Michigan Power Co,2025,931.8,141.9,1.826,1.108
+9331,MO,Intercounty Electric Coop Assn - (MO),2025,707.086,250.786,3.095,2.323
+9336,CO,CORE Electric Cooperative,2025,380.973,52.168,0.967,0.568
+9425,IA,Iowa Lakes Electric Coop,2025,55.0,53.5,0.44,0.43
+9475,MN,Itasca-Mantrap Co-op Electrical Assn,2025,195.5,104.87,1.49,1.23
+9575,KY,Jackson Energy Coop Corp - (KY),2025,915.0,334.0,3.396,2.485
+9576,IN,Jackson County Rural E M C - (IN),2025,476.03,163.21,2.694,1.621
+9601,GA,Jackson Electric Member Corp - (GA),2025,217.33,73.73,1.219,1.09
+9605,KY,Jackson Purchase Energy Corporation,2025,395.427,170.676,3.047,1.846
+9612,TN,City of Jackson - (TN),2025,185.5,185.5,1.54,1.54
+9616,FL,Beaches Energy Services,2025,19.97,,0.444,
+9665,IN,Jasper County Rural E M C,2025,409.719,104.306,3.287,1.751
+9668,TX,"Jasper-Newton Elec Coop, Inc",2025,1144.85,697.28,7.167,5.896
+9689,GA,Jefferson Electric Member Corp,2025,163.212,142.713,1.771,1.652
+9699,NM,"Jemez Mountains Elec Coop, Inc",2025,561.722,472.383,3.81,3.454
+9726,NJ,Jersey Central Power & Lt Co,2025,390.73,234.15,2.207,1.889
+9750,IL,"Jo-Carroll Energy, Inc",2025,137.664,37.182,0.535,0.22
+9777,TN,Johnson City - (TN),2025,100.643,99.986,0.876,0.864
+9778,IN,Johnson County Rural E M C,2025,121.834,41.567,1.237,0.543
+9837,NC,Jones-Onslow Elec Member Corp,2025,57.347,52.89,0.698,0.663
+9964,KY,Kenergy Corp,2025,691.14,154.58,3.28,2.07
+9996,KS,City of Kansas City - (KS),2025,257.02,130.175,1.874,1.241
+9999,IN,Kankakee Valley Rural E M C,2025,415.1,400.7,6.501,6.5
+10000,KS,Evergy Metro,2025,128.51,64.27,1.019,0.733
+10000,MO,Evergy Metro,2025,178.28,99.25,1.503,1.195
+10005,KS,"Evergy Kansas South, Inc",2025,244.31,83.78,1.389,0.914
+10019,KS,FreeState Electric Coop,2025,334.97,327.42,,
+10056,WI,City of Kaukauna (WI),2025,70.916,20.669,1.156,0.024
+10071,HI,Kauai Island Utility Cooperative,2025,335.42,202.01,3.45,2.36
+10170,OK,"Kiamichi Electric Coop, Inc",2025,2322.2,587.6,4.56,3.44
+10171,KY,Kentucky Utilities Co,2025,196.59,89.27,1.137,0.85
+10171,VA,Kentucky Utilities Co,2025,326.66,141.74,1.897,1.365
+10226,FL,"Utility Board of the City of Key West, F",2025,47.9,,1.5,
+10331,TN,Kingsport Power Co,2025,181.9,158.0,1.132,1.037
+10345,NC,City of Kinston - (NC),2025,63.83,63.83,0.482,0.482
+10370,MO,City of Kirkwood - (MO),2025,176.805,137.94,2.0,1.327
+10378,NM,"Kit Carson Electric Coop, Inc",2025,304.97,238.28,2.33,1.7
+10421,TN,Knoxville Utilities Board,2025,274.0,149.0,1.26,0.99
+10448,IN,Kosciusko County Rural E M C,2025,267.67,232.73,1.98,1.85
+10454,ID,Kootenai Electric Cooperative,2025,368.9,93.58,1.35,0.719
+10539,CO,"La Plata Electric Assn, Inc",2025,217.729,67.183,1.703,0.915
+10579,TN,City of LaFollette,2025,791.0,525.0,5.11,4.18
+10599,OK,"Lake Region Electric Coop, Inc - (OK)",2025,316.524,107.742,1.502,1.005
+10603,MO,"Laclede Electric Coop, Inc",2025,155.4,123.1,2.07,1.83
+10618,MN,Lake Region Electric Cooperative - (MN),2025,227.2,120.56,1.55,0.88
+10624,GA,Southern Rivers Energy,2025,774.18,250.77,3.59,2.59
+10668,OH,Licking Rural Electric Inc,2025,244.0,112.0,1.57,1.03
+10697,MN,Lake Country Power,2025,414.69,141.17,2.32,1.387
+10768,SC,"Laurens Electric Coop, Inc",2025,211.19,154.13,1.79,1.56
+10879,UT,Lehi City Corporation,2025,42.147,42.147,0.449,0.449
+10944,WA,PUD No 1 of Lewis County - (WA),2025,662.766,400.429,3.688,3.02
+10960,TN,City of Lewisburg - (TN),2025,25.82,25.82,0.945,0.945
+11018,NE,Lincoln Electric System,2025,240.5,18.4,0.74,0.25
+11053,IA,Corridor Energy Cooperative,2025,135.0,135.0,1.766,1.766
+11124,CA,City of Lodi - (CA),2025,72.3,22.4,0.53,0.26
+11135,UT,City of Logan - (UT),2025,28.574,14.626,0.449,0.137
+11187,CO,City of Longmont,2025,39.78,39.78,0.564,0.564
+11200,OH,"Lorain-Medina R E C, Inc",2025,214.525,172.711,,
+11204,NM,Los Alamos County - (NM),2025,19.53,19.53,0.8,0.8
+11208,CA,Los Angeles Department of Water & Power,2025,407.98,88.68,0.78,0.63
+11241,LA,Entergy Louisiana LLC,2025,252.8,218.1,1.835,1.664
+11249,KY,Louisville Gas & Electric Co,2025,228.38,94.41,1.18,0.94
+11256,CO,City of Loveland - (CO),2025,26.65,26.65,0.34,0.34
+11291,NC,Lumbee River Elec Member Corp,2025,151.837,100.18,1.726,1.363
+11292,TX,City of Lubbock - (TX),2025,110.909,95.319,1.703,1.701
+11355,SC,"Lynches River Elec Coop, Inc",2025,201.7,128.9,2.0,1.6
+11364,TX,"Lyntegar Electric Coop, Inc",2025,266.89,266.89,,
+11479,WI,Madison Gas & Electric Co,2025,48.77,27.27,0.392,0.28
+11501,TX,Magic Valley Electric Coop Inc,2025,288.47,230.9,,
+11519,MS,Magnolia Electric Power Assn,2025,1257.91,,,
+11560,VA,City of Manassas - (VA),2025,76.408,56.053,1.297,0.914
+11571,WI,Manitowoc Public Utilities,2025,35.47,9.54,0.49,0.22
+11586,MA,Town of Mansfield - (MA),2025,20.726,10.21,0.072,0.035
+11646,GA,City of Marietta - (GA),2025,105.82,105.82,1.297,1.297
+11701,MI,City of Marquette - (MI),2025,891.26,162.64,3.056,1.901
+11731,MN,City of Marshall - (MN),2025,4.87,4.87,0.16,0.16
+11740,WI,City of Marshfield - (WI),2025,12.897,9.748,0.14,0.131
+11788,IA,Consumers Energy Coop - (IA),2025,93.844,93.844,0.741,0.741
+11789,TN,Maryville Utilities,2025,77.738,54.195,1.007,0.896
+11804,MA,Massachusetts Electric Co,2025,132.56,91.1,1.001,0.837
+11824,AK,Matanuska Electric Assn Inc,2025,1133.676,390.27,4.061,2.61
+12087,ND,McKenzie Electric Coop Inc,2025,110.84,110.83,0.929,0.929
+12186,TN,McMinnville Electric System,2025,30.74,15.858,0.233,0.159
+12199,MT,Montana-Dakota Utilities Co,2025,146.35,146.32,1.232,1.232
+12199,ND,Montana-Dakota Utilities Co,2025,94.59,64.91,0.81,0.7
+12199,SD,Montana-Dakota Utilities Co,2025,212.16,205.56,2.62,2.588
+12199,WY,Montana-Dakota Utilities Co,2025,353.47,133.85,1.801,0.882
+12208,KS,City of McPherson - (KS),2025,38.876,14.453,0.492,0.277
+12227,MN,Meeker Coop Light & Power Assn,2025,151.2,128.3,1.37,1.266
+12243,KY,Meade County Rural E C C,2025,446.165,128.976,2.597,1.564
+12260,VA,Mecklenburg Electric Cooperative,2025,721.1,244.0,2.826,1.956
+12268,TX,"Medina Electric Coop, Inc",2025,299.69,258.96,2.7,2.49
+12293,TN,City of Memphis - (TN),2025,348.7,283.2,2.23,1.99
+12301,ND,Nodak Electric Coop Inc,2025,321.1,104.3,5.4,2.9
+12341,IA,MidAmerican Energy Co,2025,205.0,82.0,1.19,0.75
+12341,IL,MidAmerican Energy Co,2025,304.0,143.0,1.87,1.47
+12341,SD,MidAmerican Energy Co,2025,399.0,65.0,0.93,0.42
+12377,MI,Midwest Energy Cooperative - (MI),2025,1012.2,267.5,2.1,1.6
+12377,OH,Midwest Energy Cooperative - (MI),2025,195.4,195.4,1.1,1.1
+12395,IL,Menard Electric Coop,2025,185.723,160.835,2.269,2.1
+12462,SC,Mid-Carolina Electric Coop Inc,2025,267.06,90.239,2.211,1.478
+12470,TN,Middle Tennessee E M C,2025,50.4,47.7,0.925,0.901
+12515,OH,"Midwest Electric, Inc - (OH)",2025,254.8,91.4,1.881,0.956
+12524,KS,Midwest Energy Inc - (KS),2025,581.4,313.8,2.68,2.23
+12532,TN,City of Milan - (TN),2025,12532.0,,1.2,
+12539,NE,Midwest Electric Member Corp - (NE),2025,65.225,65.225,0.389,0.388
+12546,MN,Mille Lacs Energy Cooperative,2025,207.85,169.65,1.35,1.27
+12642,IA,Maquoketa Valley Rrl Elec Coop,2025,138.1,63.0,1.03,0.73
+12647,MN,"ALLETE, Inc.",2025,143.19,102.37,1.23,1.09
+12651,MN,Minnesota Valley Electric Coop,2025,87.2,49.6,0.726,0.533
+12685,MS,Entergy Mississippi LLC,2025,640.1,410.1,2.611,2.068
+12686,MS,Mississippi Power Co,2025,105.14,75.65,1.03,0.881
+12692,ID,"Missoula Electric Coop, Inc",2025,7.79,0.772,0.15,0.138
+12692,MT,"Missoula Electric Coop, Inc",2025,1331.91,363.081,2.403,1.844
+12698,MO,Evergy Missouri West,2025,183.46,103.8,1.486,1.184
+12745,CA,Modesto Irrigation District,2025,36.28,31.32,0.428,0.371
+12782,MO,City of Monett - (MO),2025,83.599,46.023,0.872,0.744
+12796,WV,Monongahela Power Co,2025,1250.44,553.28,3.718,2.829
+12801,NC,City of Monroe - (NC),2025,30.984,18.223,0.522,0.266
+12825,MT,NorthWestern Energy LLC - (MT),2025,125.337,116.813,1.101,1.063
+12894,MN,City of Moorhead - (MN),2025,14.501,,0.438,
+12929,IN,South Central Indiana REMC,2025,1196.16,349.3,3.96,2.84
+12988,TN,City of Morristown - (TN),2025,125.829,62.799,2.507,1.088
+12990,OH,Consolidated Cooperative,2025,162.0,109.0,1.99,1.49
+13027,TN,"Mountain Electric Coop, Inc",2025,79.3,79.3,4.12,4.12
+13050,CO,"Mountain Parks Electric, Inc",2025,181.3,122.3,2.422,1.963
+13058,CO,"Mountain View Elec Assn, Inc",2025,130.396,29.9,0.841,0.276
+13143,IA,Board of Water Electric & Communications,2025,19.091,10.954,0.268,0.163
+13196,ND,Northern Plains Electric Coop,2025,371.0,188.4,1.428,1.31
+13206,MA,Nantucket Electric Co,2025,102.6,102.6,0.972,0.972
+13208,IL,City of Naperville - (IL),2025,20.13,,0.27,
+13214,RI,The Narragansett Electric Co,2025,182.95,60.06,0.96,0.73
+13216,TN,Nashville Electric Service,2025,0.0,83.05,0.0,0.96
+13337,NE,Nebraska Public Power District,2025,195.41,76.96,0.9,0.65
+13407,NV,Nevada Power Co,2025,71.25,53.82,0.65,0.58
+13416,NC,City of New Bern - (NC),2025,115.146,36.863,0.984,0.485
+13418,TX,City of New Braunfels - (TX),2025,57.914,57.914,0.797,0.797
+13478,LA,"Entergy New Orleans, LLC",2025,208.9,174.4,1.839,1.596
+13481,WI,City of New Richmond,2025,12.929,12.929,0.102,0.102
+13482,NC,New River Light & Power Co,2025,109.89,36.42,0.69,0.6
+13485,FL,New Smyrna Beach City of,2025,144.06,144.06,1.546,1.546
+13519,DE,City of Newark - (DE),2025,35.23,35.23,0.27,0.27
+13524,SC,"Newberry Electric Coop, Inc",2025,511.92,230.44,3.23,2.41
+13573,NY,Niagara Mohawk Power Corp.,2025,242.29,140.22,1.393,1.11
+13640,VA,Northern Virginia Elec Coop,2025,94.292,42.812,0.984,0.583
+13647,IN,Noble County R E M C,2025,135.2,106.5,1.287,1.126
+13651,KY,Nolin Rural Electric Coop Corp,2025,198.69,50.453,1.327,0.679
+13664,NE,Norris Public Power District,2025,2541.431,464.752,3.124,1.485
+13676,AR,"North Arkansas Elec Coop, Inc",2025,740.21,202.41,2.63,1.86
+13679,MA,Town of North Attleborough - (MA),2025,9.877,9.877,0.082,0.082
+13693,OH,"North Central Elec Coop, Inc - (OH)",2025,165.3,161.76,,
+13716,GA,North Georgia Elec Member Corp,2025,215.24,176.25,2.35,2.12
+13735,MS,Northcentral Mississippi E P A,2025,245.0,245.0,1.52,1.52
+13750,SD,"Northern Electric Coop, Inc",2025,72.452,64.928,0.744,0.652
+13756,IN,Northern Indiana Pub Serv Co,2025,532.0,178.0,1.32,0.9
+13762,VA,"Northern Neck Elec Coop, Inc",2025,,188.644,,2.168
+13780,MI,Northern States Power Co,2025,738.02,142.09,1.71,1.18
+13780,WI,Northern States Power Co,2025,308.8,110.31,1.15,0.83
+13781,MN,Northern States Power Co - Minnesota,2025,226.33,115.02,1.38,1.11
+13781,ND,Northern States Power Co - Minnesota,2025,87.59,57.04,0.55,0.46
+13781,SD,Northern States Power Co - Minnesota,2025,160.08,58.42,0.88,0.46
+13783,LA,Northeast Louisiana Power Coop Inc.,2025,265.279,228.54,2.23,1.941
+13788,OR,Northern Wasco County PUD - (OR),2025,26.874,16.779,0.276,0.253
+13809,SD,NorthWestern Energy - (SD),2025,119.676,81.613,1.142,0.853
+13830,TX,Nueces Electric Cooperative,2025,410.9,113.49,1.903,1.065
+13831,CT,City of Norwich - (CT),2025,168.79,168.79,1.48,1.48
+13839,MA,City of Norwood - (MA),2025,117.42,33.91,1.7,0.67
+13936,WI,Oakdale Electric Coop,2025,118.1,83.5,1.109,0.916
+13998,OH,Ohio Edison Co,2025,243.64,131.45,1.509,1.232
+14006,OH,Ohio Power Co,2025,220.7,145.2,1.223,1.084
+14062,OK,Oklahoma Electric Coop Inc,2025,70.4,55.8,1.292,0.945
+14127,NE,Omaha Public Power District,2025,558.3,98.1,1.57,0.73
+14146,AL,City of Opelika - (AL),2025,,47.52,,0.35
+14164,SC,City of Orangeburg - (SC),2025,224.04,182.7,1.831,1.619
+14170,WA,Orcas Power & Light Coop,2025,323.4,323.4,2.266,2.266
+14175,SC,"Tri-County Electric Coop, Inc (SC)",2025,264.54,112.18,2.45,1.3
+14232,MN,Otter Tail Power Co,2025,557.302,136.316,1.739,1.319
+14232,ND,Otter Tail Power Co,2025,575.006,131.94,2.034,1.335
+14232,SD,Otter Tail Power Co,2025,191.026,188.917,1.731,1.716
+14245,NV,Overton Power District No 5,2025,13.44,13.44,0.18,0.18
+14246,MN,City of Owatonna - (MN),2025,99.973,9.875,0.755,0.188
+14251,KY,Owen Electric Coop Inc,2025,135.367,103.347,1.197,1.06
+14268,KY,City of Owensboro - (KY),2025,87.373,87.373,1.135,1.135
+14275,MS,City of Oxford - (MS),2025,137.31,46.04,1.11,0.41
+14289,AR,Ozarks Electric Coop Corp - (AR),2025,675.92,50.15,1.68,0.65
+14289,OK,Ozarks Electric Coop Corp - (AR),2025,1043.14,131.63,2.71,1.4
+14328,CA,Pacific Gas & Electric Co.,2025,272.6,207.8,1.63,1.502
+14354,CA,PacifiCorp,2025,484.73,297.03,5.31,4.28
+14354,ID,PacifiCorp,2025,145.95,145.95,1.16,1.16
+14354,OR,PacifiCorp,2025,385.38,104.29,1.52,0.91
+14354,UT,PacifiCorp,2025,117.77,101.58,0.9,0.86
+14354,WA,PacifiCorp,2025,102.73,58.01,0.56,0.43
+14354,WY,PacifiCorp,2025,195.42,91.4,1.37,0.76
+14371,KY,City of Paducah - (KY),2025,33.276,33.276,0.875,0.875
+14381,OH,City of Painesville - (OH),2025,154.296,69.674,2.29,1.228
+14398,SC,Palmetto Electric Coop Inc,2025,50.6,37.96,0.762,0.69
+14401,CA,City of Palo Alto - (CA),2025,68.1,27.2,0.617,0.111
+14455,TN,City of Paris - (TN),2025,488.321,443.7,5.127,4.82
+14468,MN,People's Cooperative Services,2025,99.08,45.16,1.232,0.972
+14534,CA,City of Pasadena - (CA),2025,213.045,60.02,0.776,0.645
+14563,MS,Pearl River Valley El Pwr Assn,2025,295.45,260.697,3.792,3.657
+14606,FL,"Peace River Electric Coop, Inc",2025,154.8,154.8,1.62,1.62
+14626,TX,"Pedernales Electric Coop, Inc",2025,89.9,78.2,1.156,1.101
+14668,WA,Peninsula Light Company,2025,744.52,97.71,4.24,1.08
+14715,PA,PPL Electric Utilities Corp,2025,198.1,115.6,0.974,0.765
+14717,NC,Pee Dee Electric Member Corp,2025,284.6,170.52,2.724,2.166
+14839,IN,City of Peru - (IN),2025,62.46,39.84,0.77,0.59
+14864,AR,Petit Jean Electric Coop Corp,2025,317.426,241.297,1.946,1.623
+14940,PA,PECO Energy Co,2025,328.3,59.3,1.12,0.67
+15023,NC,Piedmont Electric Member Corp,2025,502.728,146.087,1.755,1.21
+15048,AZ,Electrical Dist No2 Pinal County,2025,141.07,115.05,1.65,1.22
+15054,OH,"Pioneer Rural Elec Coop, Inc - (OH)",2025,129.4,129.4,1.5,1.5
+15073,KS,"Pioneer Electric Coop, Inc - (KS)",2025,265.25,218.14,1.54,1.29
+15095,OH,City of Piqua - (OH),2025,17.734,17.734,0.305,0.305
+15138,MO,"Platte-Clay Electric Coop, Inc",2025,78.961,58.775,1.066,0.855
+15141,TN,Plateau Electric Cooperative,2025,26.033,4.807,5.814,2.361
+15159,WI,City of Plymouth - (WI),2025,10.93,10.93,0.1,0.1
+15202,OK,City of Ponca City - (OK),2025,144.034,115.978,1.42,1.157
+15248,OR,Portland General Electric Co,2025,273.0,103.0,0.89,0.61
+15257,CO,"Poudre Valley REA, Inc",2025,150.833,48.734,1.028,0.581
+15263,MD,The Potomac Edison Company,2025,399.1,173.76,1.298,1.046
+15263,WV,The Potomac Edison Company,2025,439.65,248.81,1.964,1.626
+15270,DC,Potomac Electric Power Co,2025,50.295,33.949,0.324,0.309
+15270,MD,Potomac Electric Power Co,2025,103.742,53.809,0.741,0.579
+15293,TN,Powell Valley Electric Coop,2025,180.184,161.94,4.589,4.267
+15293,VA,Powell Valley Electric Coop,2025,180.184,161.94,4.589,4.267
+15344,WI,Polk-Burnett Electric Coop,2025,103.63,43.47,1.474,1.024
+15410,VA,Prince George Electric Coop,2025,383.34,222.2,,
+15444,UT,Provo City Corp,2025,53.342,53.342,0.65,0.65
+15466,CO,Public Service Co of Colorado,2025,360.33,149.18,1.58,1.36
+15470,IN,"Duke Energy Indiana, LLC",2025,266.84,107.58,1.26,0.915
+15472,NH,Public Service Co of NH,2025,160.5,83.4,1.09,0.742
+15473,NM,Public Service Co of NM,2025,125.1,116.51,0.937,0.868
+15474,OK,Public Service Co of Oklahoma,2025,199.6,98.1,1.484,1.161
+15477,NJ,Public Service Elec & Gas Co,2025,66.25,42.57,0.72,0.63
+15500,WA,Puget Sound Energy Inc,2025,580.0,178.0,1.6,1.1
+15507,TN,City of Pulaski - (TN),2025,442.49,162.62,3.81,2.31
+15671,NC,Randolph Electric Member Corp,2025,224.95,107.9,2.159,1.521
+15700,GA,Rayle Electric Membership Corp,2025,473.77,302.586,4.12,3.404
+15748,MA,Town of Reading - (MA),2025,50.2,20.6,0.48,0.34
+15783,CA,City of Redding - (CA),2025,74.13,49.47,0.682,0.556
+15979,WA,City of Richland - (WA),2025,38.841,38.841,0.376,0.376
+16057,NM,"Rio Grande Electric Coop, Inc",2025,194.652,134.447,,
+16057,TX,"Rio Grande Electric Coop, Inc",2025,194.652,134.447,,
+16060,WI,Riverland Energy Cooperative,2025,169.994,134.14,1.534,1.376
+16082,WI,City of River Falls,2025,38.24,38.24,0.43,0.43
+16088,CA,City of Riverside - (CA),2025,88.257,75.751,0.494,0.492
+16101,NC,Roanoke Electric Member Corp,2025,178.58,178.58,1.478,1.478
+16146,TX,"Navasota Valley Elec Coop, Inc",2025,568.932,472.821,4.449,4.12
+16179,IL,Rochelle Municipal Utilities - (IL),2025,90.234,,0.325,
+16181,MN,Rochester Public Utilities,2025,33.034,24.45,0.552,0.432
+16195,SC,City of Rock Hill - (SC),2025,69.1,69.1,0.763,0.763
+16196,IL,Rock Energy Cooperative,2025,16.14,15.13,0.401,0.332
+16196,WI,Rock Energy Cooperative,2025,55.526,36.66,0.528,0.385
+16223,TN,City of Rockwood - (TN),2025,575.846,169.571,3.5,2.002
+16226,NC,City of Rocky Mount - (NC),2025,81.36,71.91,1.2,1.08
+16259,MO,City of Rolla - (MO),2025,52.304,26.15,3.041,0.92
+16286,SD,Rosebud Electric Coop Inc,2025,140.9,78.4,0.77,0.73
+16368,MN,Runestone Electric Assn,2025,135.42,116.34,1.57,1.47
+16382,OK,"Rural Electric Coop, Inc - (OK)",2025,697.8,212.0,4.489,2.435
+16461,TX,"Rusk County Electric Coop, Inc",2025,587.28,357.164,,
+16463,LA,City of Ruston - (LA),2025,133.17,,1.61,
+16496,NC,Rutherford Elec Member Corp,2025,149.27,134.74,1.238,1.077
+16558,VA,City of Salem - (VA),2025,27.566,27.566,0.288,0.288
+16565,ID,Salmon River Electric Coop Inc,2025,356.051,356.051,3.824,3.824
+16572,AZ,Salt River Project,2025,65.66,49.89,1.017,0.888
+16587,KY,Salt River Electric Coop Corp,2025,512.1,126.1,2.31,1.35
+16603,CO,"San Luis Valley R E C, Inc",2025,150.0,105.4,1.485,1.213
+16604,TX,City of San Antonio - (TX),2025,110.57,75.38,1.54,1.25
+16606,SC,"Santee Electric Coop, Inc",2025,211.41,146.68,,
+16609,CA,San Diego Gas & Electric Co,2025,129.99,67.78,0.538,0.509
+16613,TX,Sam Houston Electric Coop Inc,2025,466.0,347.0,,
+16627,TX,San Patricio Electric Coop Inc,2025,240.218,240.218,2.202,2.202
+16638,TX,"San Bernard Electric Coop, Inc",2025,184.201,110.044,1.427,1.178
+16655,CA,City of Santa Clara - (CA),2025,69.31,69.31,0.63,0.63
+16751,MO,Three Rivers Electric Coop,2025,130.045,104.063,1.04,0.909
+16865,GA,Sawnee Electric Membership Corporation,2025,65.57,31.09,1.13,0.72
+16868,WA,City of Seattle - (WA),2025,157.8,129.3,1.038,0.925
+16930,TN,Sequachee Valley Electric Coop,2025,304.9,253.3,2.15,1.78
+16949,TN,Sevier County Electric System,2025,376.0,174.0,2.63,1.91
+16971,MN,Shakopee Public Utilities Comm,2025,12.664,12.664,0.157,0.157
+17044,KY,"Shelby Energy Coop, Inc - (KY)",2025,244.9,197.68,1.86,1.65
+17047,TN,City of Shelbyville - (TN),2025,17.54,17.35,0.613,0.611
+17066,VA,Shenandoah Valley Elec Coop,2025,391.0,258.0,2.78,2.34
+17127,MA,Town of Shrewsbury - (MA),2025,830.49,37.461,2.552,0.844
+17166,NV,Sierra Pacific Power Co,2025,288.06,239.69,2.51,2.27
+17184,AR,City of Siloam Springs - (AR),2025,43.356,43.356,0.378,0.378
+17252,AL,Singing River Elec Cooperative,2025,0.904,0.904,,
+17252,MS,Singing River Elec Cooperative,2025,156.366,156.366,,
+17267,MN,Sioux Valley SW Elec Coop,2025,95.162,95.162,1.899,1.899
+17267,SD,Sioux Valley SW Elec Coop,2025,58.534,58.534,1.635,1.635
+17470,WA,PUD No 1 of Snohomish County - (WA),2025,343.3,148.6,1.74,1.28
+17534,AL,"South Alabama Elec Coop, Inc",2025,234.922,158.561,2.347,2.079
+17539,SC,"Dominion Energy South Carolina, Inc",2025,131.08,81.15,1.34,1.1
+17543,SC,South Carolina Public Service Authority,2025,43.078,40.667,0.69,0.671
+17550,MN,South Central Electric Assn,2025,125.447,90.874,1.148,0.95
+17564,KY,South Kentucky Rural E C C,2025,1367.5,314.4,2.99,2.283
+17585,IL,"Southeastern IL Elec Coop, Inc",2025,2213.81,172.0,3.949,1.665
+17592,CO,Southeast Colorado Power Assn,2025,1290.0,1280.0,,
+17599,IN,Southeastern Indiana R E M C,2025,345.6,322.7,2.067,1.923
+17603,OK,Southeastern Electric Coop Inc - (OK),2025,398.0,268.0,2.142,1.0
+17609,CA,Southern California Edison Co,2025,545.012,116.368,1.39,0.963
+17612,CA,Bear Valley Electric Service,2025,338.4,58.1,5.6,1.1
+17633,IN,Southern Indiana Gas & Elec Co,2025,948.53,82.61,1.594,0.78
+17637,MD,Southern Maryland Elec Coop Inc,2025,173.07,117.69,1.56,1.26
+17647,MS,Southern Pine Electric Cooperative,2025,649.05,446.46,5.459,4.583
+17671,AR,Southwest Arkansas E C C,2025,465.587,199.682,2.024,1.529
+17683,MS,Southwest Mississippi E P A,2025,2736.1,1832.1,,
+17692,NE,Southwest Public Power Dist,2025,80.21,80.21,0.98,0.98
+17697,IL,Southwestern Electric Coop Inc - (IL),2025,240.9,194.5,1.919,1.68
+17698,AR,Southwestern Electric Power Co,2025,427.6,212.3,1.842,1.645
+17698,LA,Southwestern Electric Power Co,2025,450.9,332.1,3.017,2.594
+17698,TX,Southwestern Electric Power Co,2025,467.1,311.7,2.979,2.631
+17718,NM,Southwestern Public Service Co,2025,234.69,144.98,1.43,1.09
+17718,TX,Southwestern Public Service Co,2025,441.36,151.22,1.71,1.31
+17832,GA,Snapping Shoals El Member Corp,2025,174.942,99.879,1.448,1.109
+17833,MO,City Utilities of Springfield - (MO),2025,1287.76,79.5,2.27,1.01
+17839,OR,City of Springfield - (OR),2025,39.89,10.85,0.79,0.13
+17845,UT,City of Springville - (UT),2025,46.049,,0.445,
+17874,UT,City of St George - (UT),2025,21.657,18.483,,
+17896,CA,City of Shasta Lake - (CA),2025,79.5,79.5,0.73,
+18019,MN,Stearns Cooperative Elec Assn,2025,107.258,96.618,0.961,0.919
+18022,NC,City of Statesville - (NC),2025,78.299,38.141,0.574,0.515
+18047,MN,Steele-Waseca Cooperative Electric,2025,90.22,56.08,0.74,0.6
+18085,OH,South Central Power Company,2025,298.08,197.791,2.834,2.448
+18125,OK,Stillwater Utilities Authority,2025,1024.09,21.51,1.55,0.35
+18181,WI,City of Stoughton - (WI),2025,33.628,33.628,0.329,0.329
+18203,AL,Tallapoosa River Elec Coop Inc,2025,566.86,268.22,3.064,1.954
+18206,UT,Strawberry Electric Serv Dist,2025,61.479,61.479,,
+18249,WI,City of Sturgeon Bay - (WI),2025,11.78,4.56,0.26,0.05
+18252,MI,City of Sturgis - (MI),2025,39.152,39.152,0.372,0.372
+18280,AZ,Sulphur Springs Valley E C Inc,2025,91.64,82.55,0.826,0.808
+18305,GA,Sumter Electric Member Corp,2025,159.43,134.15,,
+18312,WI,Sun Prairie Utilities,2025,10.52,10.52,0.14,0.14
+18336,WI,Superior Water and Light Co,2025,25.33,9.88,0.32,0.11
+18339,NC,Surry-Yadkin Elec Member Corp,2025,249.3,176.4,1.814,1.387
+18360,FL,Suwannee Valley Elec Coop Inc,2025,212.0,212.0,3.24,3.24
+18429,WA,City of Tacoma - (WA),2025,171.584,69.944,0.893,0.678
+18449,FL,"Talquin Electric Coop, Inc",2025,421.145,224.931,3.565,3.02
+18454,FL,Tampa Electric Co,2025,112.063,78.76,1.847,1.3
+18488,MA,City of Taunton - (MA),2025,63.603,63.603,1.412,1.412
+18498,KY,Taylor County Rural E C C,2025,456.34,262.98,2.61,2.41
+18848,GA,City of Thomasville - (GA),2025,160.94,126.21,2.172,1.99
+18940,IN,Tipmont Rural Elec Member Corp,2025,215.68,74.85,1.8,0.91
+18955,IL,"Tri-County Electric Coop, Inc (IL)",2025,131.5,62.7,1.64,0.89
+18957,NC,Tri-County Elec Member Corp (NC),2025,88.71,88.71,0.65,0.65
+18976,TX,Trinity Valley Elec Coop Inc,2025,178.99,141.984,2.362,1.977
+18997,OH,The Toledo Edison Co,2025,109.6,91.77,0.953,0.883
+19108,NC,Tideland Electric Member Corp,2025,205.3,164.331,2.494,2.271
+19125,MI,City of Traverse City - (MI),2025,39.97,39.97,0.76,0.76
+19156,WY,Powder River Energy Corp,2025,570.87,271.18,3.5,2.45
+19157,IA,MiEnergy Cooperative,2025,101.495,85.679,0.857,0.769
+19157,MN,MiEnergy Cooperative,2025,212.801,79.44,1.082,0.686
+19159,TX,"Tri-County Electric Coop, Inc (TX)",2025,202.9,131.96,1.67,1.4
+19161,FL,"Tri-County Electric Coop, Inc (FL)",2025,230.39,230.39,2.395,2.395
+19162,KY,Tri-County Elec Member Corp (TN),2025,527.67,239.39,3.91,3.17
+19162,TN,Tri-County Elec Member Corp (TN),2025,527.67,239.39,3.91,3.17
+19189,AZ,Trico Electric Cooperative Inc,2025,90.0,66.4,0.73,0.578
+19219,AL,Diverse Power Incorporated,2025,1203.755,210.257,2.253,1.557
+19219,GA,Diverse Power Incorporated,2025,503.932,115.493,2.211,1.374
+19266,TN,Tullahoma Board-Public Utils,2025,73.865,54.519,3.039,2.182
+19281,CA,Turlock Irrigation District,2025,61.5,61.5,0.66,0.66
+19324,WI,Two Rivers Water & Light,2025,66.898,0.0,0.508,0.0
+19325,OR,Umatilla Electric Coop Assn,2025,155.22,107.501,0.998,0.771
+19390,PA,"UGI Utilities, Inc",2025,56.0,56.0,0.58,0.58
+19396,MI,Tri-County Electric Coop (MI),2025,1153.0,119.0,1.82,1.28
+19435,NC,Union Electric Membership Corp - (NC),2025,51.72,47.26,0.678,0.634
+19436,MO,Union Electric Co - (MO),2025,594.0,119.0,1.18,0.76
+19445,IN,"Southern Indiana R E C, Inc",2025,893.706,240.106,2.983,1.676
+19446,KY,Duke Energy Kentucky,2025,183.6,97.89,0.877,0.731
+19490,TX,United Electric Coop Service Inc - (TX),2025,122.296,71.967,1.232,0.861
+19497,CT,United Illuminating Co,2025,73.3,39.2,0.66,0.51
+19499,CO,"United Power, Inc",2025,303.068,90.018,1.18,1.1
+19501,OH,"Union Rural Electric Coop, Inc",2025,183.8,62.0,2.12,1.014
+19502,ID,"United Electric Co-op, Inc - (ID)",2025,225.72,118.2,1.52,1.01
+19545,MT,"Black Hills Power, Inc.",2025,756.267,672.633,3.433,2.433
+19545,SD,"Black Hills Power, Inc.",2025,540.867,42.858,2.265,0.787
+19545,WY,"Black Hills Power, Inc.",2025,68.078,12.858,1.254,0.385
+19558,AK,Homer Electric Assn Inc,2025,805.01,239.16,3.36,1.75
+19578,MI,Upper Peninsula Power Company,2025,445.6,189.9,2.2,1.29
+19579,TX,Upshur Rural Elec Coop Corp,2025,1332.141,714.393,5.597,4.739
+19667,IN,Utilities Dist-Western IN REMC,2025,763.34,362.51,3.433,2.58
+19728,AZ,"UNS Electric, Inc",2025,81.22,64.17,0.936,0.761
+19790,ND,Verendrye Electric Coop Inc,2025,41.67,41.67,0.65,0.65
+19791,VT,"Vermont Electric Cooperative, Inc",2025,251.3,150.6,2.06,1.45
+19806,TX,"Victoria Electric Coop, Inc",2025,252.91,171.37,2.2,1.82
+19820,KS,Victory Electric Coop Assn Inc,2025,355.7,126.4,,
+19840,NV,"Valley Electric Assn, Inc",2025,92.89,50.07,0.844,0.536
+19951,OH,City of Wadsworth - (OH),2025,43.53,43.53,0.512,0.512
+19981,NC,Wake Electric Membership Corp,2025,211.0,128.0,1.935,1.624
+20065,GA,Walton Electric Member Corp,2025,306.6,164.4,2.65,1.9
+20130,KY,Warren Rural Elec Coop Corp,2025,475.58,158.63,3.208,1.817
+20146,GA,Washington Elec Member Corp,2025,1789.3,1789.3,,
+20169,ID,Avista Corp,2025,973.0,208.0,1.89,1.2
+20169,WA,Avista Corp,2025,200.0,119.0,0.97,0.8
+20187,SD,Watertown Municipal Utilities,2025,4.25,4.18,0.122,0.081
+20211,WI,Village of Waunakee - (WI),2025,19.332,0.0,0.31,0.0
+20213,WI,Waupun Utilities,2025,4.109,4.109,0.066,0.066
+20363,MO,West Central Electric Coop Inc - (MO),2025,108.646,66.529,0.949,
+20371,FL,"West Florida El Coop Assn, Inc",2025,413.258,237.936,3.883,3.139
+20377,KY,West Kentucky Rural E C C,2025,380.001,265.006,2.838,2.413
+20401,SD,West River Electric Assn Inc,2025,24.0,24.0,0.3,0.3
+20404,TX,AEP Texas North Company,2025,133.0,105.9,1.407,1.23
+20413,ND,Mountrail-Williams Elec Coop,2025,115.71,115.71,1.16,1.16
+20477,OH,City of Westerville - (OH),2025,24.58,24.58,0.29,0.29
+20481,MA,City of Westfield - (MA),2025,194.15,51.98,1.848,0.99
+20510,KS,"Wheatland Electric Coop, Inc",2025,172.84,121.26,1.44,1.28
+20521,WV,Wheeling Power Co,2025,706.1,425.6,2.263,1.968
+20603,IN,Northeastern Rural E M C,2025,56.5,56.5,0.92,0.92
+20737,MN,Willmar Municipal Utilities (MN),2025,16.109,,0.393,
+20785,NC,City of Wilson - (NC),2025,65.802,50.748,0.546,0.494
+20793,TN,City of Winchester - (TN),2025,207.46,52.05,2.02,0.79
+20841,AL,"Wiregrass Electric Coop, Inc",2025,111.189,94.045,1.528,1.334
+20847,WI,Wisconsin Electric Power Co,2025,185.0,93.0,0.9,0.66
+20860,WI,Wisconsin Public Service Corp,2025,630.0,107.0,1.44,0.86
+20885,FL,Withlacoochee River Elec Coop,2025,105.49,105.49,1.45,1.45
+20927,TX,"Wood County Electric Coop, Inc",2025,934.25,575.88,4.31,1.3
+20963,AR,Woodruff Electric Coop Corp,2025,44.6,44.6,0.42,0.42
+20996,MN,Wright-Hennepin Coop Elec Assn,2025,44.978,29.287,0.561,0.44
+21002,SC,York Electric Coop Inc,2025,66.22,60.47,0.512,0.49
+21075,CO,Y-W Electric Assn Inc,2025,699.69,699.69,,
+21081,CO,Yampa Valley Electric Assn Inc,2025,272.24,189.0,2.005,1.4
+21158,MI,City of Zeeland - (MI),2025,25.146,25.146,0.264,0.264
+21244,VA,"Southside Electric Coop, Inc",2025,2126.936,323.591,4.445,2.866
+21538,AZ,"Mohave Electric Cooperative, Inc.",2025,197.3,151.9,,
+21567,LA,"Washington-St Tammany E C, Inc",2025,510.914,484.399,5.2,4.791
+21632,NC,EnergyUnited Elec Member Corp,2025,169.44,120.84,1.56,1.287
+22053,KY,Kentucky Power Co,2025,911.1,376.0,2.624,2.059
+22500,KS,"Evergy Kansas Central, Inc",2025,126.09,80.16,1.171,0.926
+22815,MS,Delta Electric Power Assn,2025,1941.04,577.52,5.81,2.99
+22822,IN,Clark County Rural E M C - (IN),2025,209.544,75.704,1.26,0.797
+24211,AZ,Tucson Electric Power Co,2025,41.81,41.81,0.646,0.646
+24590,NH,Unitil Energy Systems,2025,98.32,91.09,1.36,0.99
+24753,IN,Boone County Rural EMC,2025,147.4,147.4,1.54,1.54
+24889,NC,Brunswick Electric Member Corp,2025,40.844,35.487,0.641,0.598
+24949,ND,Cass County Elec Coop Inc,2025,299.857,23.715,0.768,0.388
+25177,MN,Dakota Electric Association,2025,28.7,20.5,0.35,0.29
+25295,IN,Western Indiana Energy REMC,2025,407.552,287.158,2.307,1.937
+26510,NH,Liberty Utilities (Granite State Electri,2025,124.71,108.54,1.072,0.985
+27222,TN,City of Ripley - (TN),2025,281.255,281.255,1.84,1.84
+27238,MO,"Southwest Electric Coop, Inc",2025,355.95,214.35,1.0,0.92
+27369,TX,Taylor Electric Coop Inc - (TX),2025,363.633,309.063,3.537,3.248
+27599,IN,Carroll-White REMC,2025,839.4,553.2,,
+28541,OR,Clatskanie Peoples Util Dist,2025,397.2,197.2,1.102,0.797
+28604,TX,Kerrville Public Utility Board,2025,85.267,24.368,0.541,0.292
+28978,TX,City of San Marcos - (TX),2025,136.488,,1.774,
+30518,AZ,Electrical Dist No3 Pinal County,2025,30.41,30.41,0.42,0.42
+31833,FL,Okefenoke Rural El Member Corp,2025,478.503,249.866,3.73,3.296
+31833,GA,Okefenoke Rural El Member Corp,2025,407.126,179.52,2.825,2.377
+38084,MI,Great Lakes Energy Coop,2025,4400.69,315.42,4.09,2.07
+40165,AZ,"Dixie Escalante R E A, Inc",2025,99.363,10.002,1.287,0.309
+40165,UT,"Dixie Escalante R E A, Inc",2025,43.679,10.002,0.182,0.173
+40228,VA,Rappahannock Electric Coop,2025,428.33,219.71,2.5,2.02
+40304,MN,Minnesota Valley Coop L&P Assn,2025,124.8,64.9,1.514,1.012
+40438,OR,Columbia River Peoples Ut Dist,2025,170.025,37.212,0.576,0.391
+40606,NE,City of Grand Island - (NE),2025,37.078,8.56,1.004,0.366
+54913,MA,NSTAR Electric Company,2025,113.2,65.77,0.805,0.658
+55787,CA,City of Moreno Valley - (CA),2025,85.27,85.27,0.749,0.749
+55937,TX,Entergy Texas Inc.,2025,403.1,304.5,2.579,2.218
+55982,TX,Heart of Texas Electric Coop,2025,204.4,133.7,1.827,1.397
+56146,CO,"Black Hills Colorado Electric, LLC",2025,94.518,94.518,0.898,0.897
+56697,IL,Ameren Illinois Company,2025,287.4,129.6,1.19,0.94
+57483,CA,Liberty Utilities,2025,614.289,434.996,3.092,2.609
+59013,WA,PUD No 1 of Jefferson County,2025,773.9,441.5,3.84,3.21
+60631,MI,Upper Michigan Energy Resources Corp.,2025,1249.0,240.0,2.46,1.2
+60839,KS,Southern Pioneer Electric Company,2025,145.51,112.07,1.82,1.584
+65261,AZ,Gila River Indian Utility Authority (GRICUA),2025,263.79,263.79,6.274,6.274
+66073,SC,MPD Electric Cooperative,2025,135.942,103.33,1.241,1.097
+66101,PA,FirstEnergy Pennsylvania Electric Co,2025,647.3,216.86,2.022,1.555
