@@ -25,7 +25,7 @@ Last line: a missing line is a missing read, not a clean bill.
 | Section | What it bears on | Source in v0 | Level |
 |---|---|---|---|
 | Physical hazards | outage, cooling load, damage, insurability | FEMA National Risk Index, county table: 15 hazard ratings, overall risk, social vulnerability, community resilience | county |
-| Energy | running cost, fuel-price exposure, the mix behind the grid | EIA Detailed State Data: industrial and commercial average retail price, change over five years, US average; net generation share by source, all producers | state |
+| Energy | running cost, fuel-price exposure, the mix behind the grid | EIA: industrial and commercial average retail price for the latest year, its change since 2020, the US average; net generation share by source, all producers | state |
 | Local and political | permits, moratoria, zoning, large-load tariffs, incentives | hand-kept table, one row per primary read | state or county |
 | Country | sanctions and export rules for the hardware and the payment | hand-kept table, one row per primary read | country |
 | Measured at the site | what rigs there showed under load | preflight reports from rigs at the declared site | rigs |
@@ -52,7 +52,9 @@ rating word, fewer than 3,000 counties, fewer than 50 states.
 FEMA's download address for the county table now forwards to its Resilience Analysis and Planning Tool page
 (observed 2 November 2026). The fetcher tries the download first, then the same county table served as a
 hosted ArcGIS layer, and uses that layer only when the organisation owning it names itself as FEMA. The
-owner's name, the layer name and its last-edit time are recorded in `SOURCES.json`. If neither route
+owner's name, the layer name and its last-edit time are recorded in `SOURCES.json` and printed in the source
+line. The first complete fetch (2 November 2026) read layer NRI_Counties_Prod, owner "FEMA AGOL", last edited
+14 October 2026: 3,232 counties. If neither route
 answers, the physical section reads "not yet fetched" and the run is red.
 
 The county table has renamed one hazard between versions: riverine flooding (RFLD) became inland flooding
