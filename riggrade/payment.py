@@ -115,6 +115,23 @@ def _b64url(data):
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
 
 
+def bazaar_outcome(payload, verify_response, settle_response):
+    """What the Bazaar catalogue saw. Listing happens only when the paying
+    client echoes the 402's bazaar extension in its payload (x402 bazaar
+    extension spec); the facilitator may report the cataloguing outcome in
+    the extensions sidechannel of its verify or settle response. Recorded
+    in the sale log so a missing listing can be traced to its cause."""
+    extensions = payload.get("extensions") if isinstance(payload, dict) else None
+    echoed = isinstance(extensions, dict) and "bazaar" in extensions
+    outcome = None
+    for resp in (settle_response, verify_response):
+        ext = resp.get("extensions") if isinstance(resp, dict) else None
+        if isinstance(ext, dict) and ext.get("bazaar") is not None:
+            outcome = ext.get("bazaar")
+            break
+    return {"echoed_by_client": echoed, "facilitator_outcome": outcome}
+
+
 class CdpAuth:
     """Bearer JWT for the Coinbase (CDP) facilitator, as the cdp-sdk signs it
     (python/cdp/auth/utils/jwt.py): header {alg EdDSA, kid, typ JWT, nonce},
@@ -303,7 +320,8 @@ class FacilitatorAdapter:
                                     facilitator=base)
             receipt = base64.b64encode(json.dumps(result, sort_keys=True).encode()).decode()
             return {"ok": True, "payer": payer, "tx": result.get("transaction"),
-                    "receipt_header": receipt, "charged": True, "facilitator": base}
+                    "receipt_header": receipt, "charged": True, "facilitator": base,
+                    "bazaar": bazaar_outcome(payload, verdict, result)}
         return self._refuse("no facilitator reachable: " + "; ".join(tried))
 
 

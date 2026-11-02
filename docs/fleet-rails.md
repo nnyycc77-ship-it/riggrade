@@ -15,13 +15,18 @@ one-line reason to call.
 
 RigGrade: the technical requirements are met (x402 v2 exact on Base; the
 bazaar extension with a request schema in every paid 402; a "Use when"
-line on every listing since PR 52), and the listing event has occurred: a
-settlement through the Coinbase facilitator with the extension echoed
-(attributed by elimination, 1 Nov 2026), after which indexing follows on
-Coinbase's own schedule. A positive read of the Bazaar catalogue showing
-the RigGrade resources has not yet been made from this side; the Bazaar
-discovery crawler has visited. **Ready on our side; listing read pending.**
-No action beyond the read.
+line on every listing since PR 52), but **RigGrade is not in the Bazaar
+catalogue**: a full read of the discovery list (about 59,700 resources,
+2 Nov 2026 01:11 UTC) and the Bazaar search both returned no RigGrade
+resource. The bazaar extension spec says cataloguing happens only when the
+paying client echoes the 402's `bazaar` extension into its payment payload;
+the one settlement so far was made by a client that evidently did not. From
+PR 61 every sale record carries whether the client echoed the extension and
+what the facilitator reported about cataloguing, so the next sale shows the
+cause. A listing therefore needs one paid call from a client that echoes
+the extension (the current official x402 clients do); making that call is
+an owner step, since it is a payment. **Not listed; cause traced to the
+client side; the next echoing sale lists it.**
 
 ## 2. Cloudflare Monetization Gateway (closed beta since 30 Sep 2026)
 
