@@ -95,6 +95,40 @@ class FetcherParseTests(unittest.TestCase):
             ss.parse_mix([["YEAR", "STATE", "TYPE OF PRODUCER", "ENERGY SOURCE", "GENERATION"]])
 
 
+class ReliabilityTests(unittest.TestCase):
+    @staticmethod
+    def table(n=210):
+        rows = [["Reliability, 2024"], [],
+                [None, None, None, None, None, "IEEE Standard", None, None, None, None, "Other Standard", None],
+                ["Data Year", "Utility Number", "Utility Name", "State", "Ownership",
+                 "SAIDI With MED", "SAIDI Without MED", "SAIFI With MED", "SAIFI Without MED", "CAIDI With MED",
+                 "SAIDI With MED", "SAIDI Without MED"]]
+        for i in range(n):
+            rows.append([2024, 1000 + i, f"Utility {i}", "TX", "Investor Owned", 300.5, 120.25, 1.6, 1.1, 180,
+                         999, 999])
+        rows.append([2024, 5, "No figures", "TX", "Cooperative", ".", ".", ".", ".", ".", ".", "."])
+        return rows
+
+    def test_ieee_columns_not_the_other_standard(self):
+        out = ss.parse_reliability(self.table())
+        self.assertEqual(out[0], [1000, "TX", "Utility 0", 2024, 300.5, 120.25, 1.6, 1.1])
+        self.assertNotIn(5, {r[0] for r in out})
+
+    def test_shape_surprises_stop(self):
+        with self.assertRaises(SystemExit):
+            ss.parse_reliability([["Utility Number", "State"]])
+        with self.assertRaises(SystemExit):
+            ss.parse_reliability(self.table(n=10))
+
+    def test_territory_rows(self):
+        rows = [["Data Year", "Utility Number", "Utility Name", "Short Form", "State", "County"]]
+        rows += [[2024, 1000 + i % 50, "U", None, "TX", f"County {i}"] for i in range(1200)]
+        rows.append([2024, 1, "U", None, "TX", None])
+        out = ss.parse_territory(rows)
+        self.assertEqual(len(out), 1200)
+        self.assertIn(("TX", "County 0", 1000), out)
+
+
 class LatestPriceTests(unittest.TestCase):
     def table(self):
         # The shape EIA served on 2 Nov 2026: two title rows, the sector row, then
@@ -160,7 +194,7 @@ class FetcherRunTests(unittest.TestCase):
                 self.assertEqual(kept["price"]["rows"], 52)
                 self.assertEqual(kept["price"]["base"]["year"], 2024)
                 self.assertTrue(Path(d, "eia_state_mix.csv").exists())
-                self.assertIn("1 of 3 sources failed", str(cm.exception))
+                self.assertIn("2 of 4 sources failed", str(cm.exception))  # the risk index and EIA-861 refused
                 self.assertIn("redirects: ['302 -> https://moved.example/x']", out.getvalue())
         finally:
             ss.fetch, ss.excel_sheets = saved
@@ -268,7 +302,20 @@ def snapshot(d):
         w = csv.writer(fh)
         w.writerow(["state", "year", "source", "share"])
         w.writerows([["TX", 2024, "Natural Gas", 0.5], ["TX", 2024, "Wind", 0.25], ["TX", 2024, "Other", 0.01]])
-    (d / "SOURCES.json").write_text(json.dumps({"nri": {"name": "FEMA National Risk Index, county table",
+    with open(d / "eia861_reliability.csv", "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["utility", "state", "name", "year", "saidi_all", "saidi_no_med", "saifi_all", "saifi_no_med"])
+        w.writerows([[1, "TX", "Austin Energy", 2024, 95.0, 60.0, 0.9, 0.7],
+                     [2, "TX", "Pedernales Electric Coop", 2024, 400.0, 150.0, 2.0, 1.4],
+                     [3, "TX", "Oncor", 2024, 300.0, 110.0, 1.5, 1.2],
+                     [4, "TX", "Quiet Coop", 2024, "", "", "", ""]])
+    with open(d / "eia861_territory.csv", "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["state", "county", "utility"])
+        w.writerows([["TX", "Travis", 1], ["TX", "Travis", 2], ["TX", "Travis", 4], ["TX", "Dallas", 3]])
+    (d / "SOURCES.json").write_text(json.dumps({"reliability": {"name": "EIA-861 reliability and service territory",
+                                                                "year": 2024, "fetched_at": "2026-11-03T04:00:00Z"},
+                                                "nri": {"name": "FEMA National Risk Index, county table",
                                                         "fetched_at": "2026-11-03T04:00:00Z"},
                                                 "price": {"fetched_at": "2026-11-03T04:00:00Z"}}))
     with open(d / "local_actions.csv", "w", newline="") as fh:
@@ -321,6 +368,21 @@ class ContextTests(unittest.TestCase):
         Path(self.tmp.name, "SOURCES.json").write_text(json.dumps(src))
         p = self.ctx({"fips": "48453"})["physical"]
         self.assertIn("hosted layer NRI_Counties_Prod owned by FEMA AGOL, last edited 2026-10-14", p["source"])
+
+    def test_grid_lists_the_utilities_serving_the_county(self):
+        g = self.ctx({"fips": "48453"})["grid"]
+        self.assertEqual(g["status"], "read")
+        self.assertEqual((g["serving"], g["reporting"]), (3, 2))
+        self.assertEqual([ln["item"] for ln in g["lines"]], ["Austin Energy", "Pedernales Electric Coop"])
+        self.assertEqual(g["lines"][0]["value"], "60 minutes a year over 0.70 interruptions, without major event days")
+        self.assertEqual(g["lines"][0]["with_major_events"], "95 minutes")
+        self.assertEqual(g["us_median"], "110 minutes a year without major event days")
+        self.assertIn("the site's own utility is one of them", g["scope"])
+        self.assertEqual(self.ctx({"state": "TX"})["grid"]["status"], "county not declared")
+        page = sr.render(self.ctx({"fips": "48453"}))
+        self.assertIn("## Grid reliability", page)
+        self.assertIn("3 utilities serve the county; 2 report reliability figures.", page)
+        self.assertIn("data year 2024", page)
 
     def test_watch_lists_only_the_sources_high_ratings(self):
         d = self.ctx({"state": "TX", "county": "Dallas"})
