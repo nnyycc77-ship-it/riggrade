@@ -14,6 +14,7 @@ after the method has been reviewed (docs/preflight-pool-method.md).
 """
 
 import json
+import math
 import statistics
 from pathlib import Path
 
@@ -30,7 +31,7 @@ TEXT_KEYS = {"gpu_name": 80, "driver": 32, "disk_fs": 32, "cuda_driver": 16, "cu
 
 
 def _num(value):
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and value == value
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and not math.isnan(value)
 
 
 def clean(doc, hour):
