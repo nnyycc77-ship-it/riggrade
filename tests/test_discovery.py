@@ -184,7 +184,9 @@ class PackageLayoutTests(unittest.TestCase):
         self.assertIn("inference", params)
         self.assertIn(params["passes"], dist["passes"])
         text = (ROOT / "pyproject.toml").read_text()
-        self.assertIn('riggrade = ["spec/*.json", "index/*.json", "index/*.csv"]', text)
+        line = next(ln for ln in text.splitlines() if ln.startswith("riggrade = ["))
+        for entry in ('"spec/*.json"', '"index/*.json"', '"index/*.csv"', '"site/*.json"', '"site/*.csv"'):
+            self.assertIn(entry, line)
         self.assertNotIn("../spec", text)
 
 

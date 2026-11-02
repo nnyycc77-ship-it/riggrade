@@ -1,0 +1,40 @@
+# Monthly fetch of the public datasets behind the site context
+# (docs/site-risk-method.md): FEMA National Risk Index county ratings and EIA
+# state electricity prices and generation mix, all US federal works in the
+# public domain. Small extracts are committed to riggrade/site/ with a
+# SOURCES.json naming each file's URL, fetch time and SHA-256. The fetcher
+# stops loudly on any shape it does not recognise. The service does not use
+# these until the site context is switched on (Phase 2).
+name: site-sources
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '41 5 3 * *'
+permissions:
+  contents: write
+jobs:
+  fetch:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Readers for the EIA spreadsheets (CI only)
+        run: python -m pip install --quiet pandas openpyxl xlrd
+      - name: Fetch and extract (stops loudly on any shape surprise)
+        run: |
+          set -euo pipefail
+          python3 -m pricewatch.site_sources | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 -m unittest tests.test_siterisk -q
+          python3 -m riggrade.siterisk --state TX --county Travis | head -40 | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Commit the snapshots
+        run: |
+          set -euo pipefail
+          git config user.name "riggrade site sources"
+          git config user.email "site@riggrade.invalid"
+          git add riggrade/site/
+          git commit -m "site: public-source snapshots $(date -u +%Y-%m-%d) [skip ci]" || { echo "nothing to commit"; exit 0; }
+          git push origin HEAD:main
