@@ -45,7 +45,8 @@ rating word, fewer than 3,000 counties, fewer than 50 states.
 | Key | Dataset | URL |
 |---|---|---|
 | nri | FEMA National Risk Index, county table | hazards.fema.gov NRI_Table_Counties.zip |
-| price | EIA average retail price by state and sector | eia.gov/electricity/data/state/avgprice_annual.xlsx |
+| price | EIA Electric Power Annual table 2.10, average price by state and sector, latest two years | eia.gov/electricity/annual/xls/epa_02_10.xlsx |
+| price base | EIA average retail price by state and sector, 1990 to 2020; the base year for the change line | eia.gov/electricity/data/state/avgprice_annual.xlsx |
 | mix | EIA net generation by state and energy source | eia.gov/electricity/data/state/annual_generation_state.xls |
 
 FEMA's download address for the county table now forwards to its Resilience Analysis and Planning Tool page
@@ -53,6 +54,10 @@ FEMA's download address for the county table now forwards to its Resilience Anal
 hosted ArcGIS layer, and uses that layer only when the organisation owning it names itself as FEMA. The
 owner's name, the layer name and its last-edit time are recorded in `SOURCES.json`. If neither route
 answers, the physical section reads "not yet fetched" and the run is red.
+
+The county table has renamed one hazard between versions: riverine flooding (RFLD) became inland flooding
+(IFLD) in the hosted layer. The fetcher takes whichever is present and the page prints the name of the one
+read.
 
 EIA workbooks are read sheet by sheet, and the sheet reaching the latest year is used; its name is recorded.
 

@@ -31,6 +31,9 @@ LICENCE = "US federal government work, public domain (17 U.S.C. 105)"
 URLS = {
     "nri": "https://hazards.fema.gov/nri/Content/StaticDocuments/DataDownload//NRI_Table_Counties/NRI_Table_Counties.zip",
     "price": "https://www.eia.gov/electricity/data/state/avgprice_annual.xlsx",
+    # Electric Power Annual table 2.10: the latest two years of average price by
+    # state and sector (the workbook above stops at 2020).
+    "price_latest": "https://www.eia.gov/electricity/annual/xls/epa_02_10.xlsx",
     "mix": "https://www.eia.gov/electricity/data/state/annual_generation_state.xls",
 }
 
@@ -42,6 +45,25 @@ HAZARDS = {
     "ISTM": "Ice storm", "WNTW": "Winter weather", "CWAV": "Cold wave", "DRGT": "Drought",
     "ERQK": "Earthquake", "LTNG": "Lightning", "HAIL": "Hail", "LNDS": "Landslide",
 }
+# A hazard the index has renamed between versions: the first prefix present
+# is used, and the snapshot's column carries the prefix actually read.
+ALIASES = {"RFLD": ("RFLD", "IFLD")}
+
+
+def resolve_hazards(cols):
+    """{hazard key: prefix present in the source}; stops if one has none."""
+    out, missing = {}, []
+    for h in HAZARDS:
+        hit = next((p for p in ALIASES.get(h, (h,)) if f"{p}_RISKR" in cols), None)
+        if hit:
+            out[h] = hit
+        else:
+            missing.append(h)
+    require(not missing, f"NRI hazard rating columns missing for {missing}; rating columns present: "
+                         f"{sorted(c for c in cols if c.endswith('_RISKR'))}")
+    return out
+
+
 RATINGS = {
     "Very High": "VH", "Relatively High": "RH", "Relatively Moderate": "RM",
     "Relatively Low": "RL", "Very Low": "VL", "No Rating": "NR",
@@ -95,13 +117,13 @@ def rating(value, where):
 
 def parse_nri_records(fieldnames, records):
     """Rows of (fips, state, county, overall, sovi, resl, *hazard codes) from the
-    county table's own field names, whether read from the CSV or the service."""
+    county table's own field names, whether read from the CSV or the service,
+    and the snapshot header (hazard columns named by the prefix actually read)."""
     cols = set(fieldnames or [])
-    need = {"STCOFIPS", "STATEABBRV", "COUNTY", "RISK_RATNG", "SOVI_RATNG", "RESL_RATNG"}
-    need |= {f"{h}_RISKR" for h in HAZARDS}
-    missing = sorted(need - cols)
-    require(not missing, f"NRI columns missing: {missing}; rating columns present: "
-                         f"{sorted(c for c in cols if c.endswith('_RISKR'))}")
+    base = {"STCOFIPS", "STATEABBRV", "COUNTY", "RISK_RATNG", "SOVI_RATNG", "RESL_RATNG"}
+    missing = sorted(base - cols)
+    require(not missing, f"NRI columns missing: {missing}")
+    prefixes = resolve_hazards(cols)
     rows = []
     for r in records:
         fips = str(r["STCOFIPS"]).strip().zfill(5)
@@ -109,11 +131,11 @@ def parse_nri_records(fieldnames, records):
         rows.append([fips, str(r["STATEABBRV"]).strip(), str(r["COUNTY"]).strip(),
                      rating(r["RISK_RATNG"], fips), rating(r["SOVI_RATNG"], fips),
                      rating(r["RESL_RATNG"], fips)]
-                    + [rating(r[f"{h}_RISKR"], fips) for h in HAZARDS])
+                    + [rating(r[f"{prefixes[h]}_RISKR"], fips) for h in HAZARDS])
     require(len(rows) >= NRI_MIN_ROWS, f"NRI county table has {len(rows)} rows, expected {NRI_MIN_ROWS}+")
     require(len({r[0] for r in rows}) == len(rows), "duplicate county FIPS in the NRI table")
     rows.sort()
-    return rows
+    return rows, ["fips", "state", "county", "risk", "sovi", "resl", *(prefixes[h] for h in HAZARDS)]
 
 
 def parse_nri(zip_bytes):
@@ -124,7 +146,8 @@ def parse_nri(zip_bytes):
         require(len(names) == 1, f"expected one county CSV in the NRI zip, found {names}")
         text = zf.read(names[0]).decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(text))
-    return parse_nri_records(reader.fieldnames, reader), names[0]
+    rows, header = parse_nri_records(reader.fieldnames, reader)
+    return rows, header, names[0]
 
 
 # Since late 2026 the download above forwards to FEMA's planning-tool page.
@@ -158,9 +181,9 @@ def fetch_nri_service(get=None, page=None):
     layer = get(f"{NRI_SERVICE}/0?f=json")
     fields = [f.get("name") for f in layer.get("fields", [])]
     need = ["STCOFIPS", "STATEABBRV", "COUNTY", "RISK_RATNG", "SOVI_RATNG", "RESL_RATNG"]
-    need += [f"{h}_RISKR" for h in HAZARDS]
     missing = [f for f in need if f not in fields]
     require(not missing, f"hosted layer fields missing: {missing}")
+    need += [f"{p}_RISKR" for p in resolve_hazards(set(fields)).values()]
     size = page or min(int(layer.get("maxRecordCount") or 1000), 2000)
     records, offset = [], 0
     while True:
@@ -173,11 +196,11 @@ def fetch_nri_service(get=None, page=None):
         if not feats or (len(feats) < size and not doc.get("exceededTransferLimit")):
             break
         require(offset < 10000, "hosted layer paging did not end")
-    rows = parse_nri_records(need, records)
+    rows, header = parse_nri_records(need, records)
     edited = (layer.get("editingInfo") or {}).get("lastEditDate") or (layer.get("editingInfo") or {}).get("dataLastEditDate")
     meta = {"via": "hosted layer", "service": NRI_SERVICE, "owner": owner, "layer": layer.get("name"),
             "layer_last_edit_ms": edited}
-    return rows, meta
+    return rows, header, meta
 
 
 def year_of(value):
@@ -231,6 +254,64 @@ def parse_prices(rows, span=5):
         out.append([state, latest, round(ind, 2), round(com, 2), latest - span,
                     round(base[0], 2) if base else ""])
     require(len(out) >= 50, f"only {len(out)} states priced for {latest}")
+    return out
+
+
+STATES = {
+    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR", "California": "CA", "Colorado": "CO",
+    "Connecticut": "CT", "Delaware": "DE", "District of Columbia": "DC", "Florida": "FL", "Georgia": "GA",
+    "Hawaii": "HI", "Idaho": "ID", "Illinois": "IL", "Indiana": "IN", "Iowa": "IA", "Kansas": "KS",
+    "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD", "Massachusetts": "MA",
+    "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS", "Missouri": "MO", "Montana": "MT",
+    "Nebraska": "NE", "Nevada": "NV", "New Hampshire": "NH", "New Jersey": "NJ", "New Mexico": "NM",
+    "New York": "NY", "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH", "Oklahoma": "OK",
+    "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC", "South Dakota": "SD",
+    "Tennessee": "TN", "Texas": "TX", "Utah": "UT", "Vermont": "VT", "Virginia": "VA", "Washington": "WA",
+    "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY", "U.S. Total": "US", "US Total": "US",
+}
+
+
+def parse_price_latest(rows):
+    """Per state: [state, year, industrial, commercial] for the latest year of a
+    table laid out as a sector header row (Residential, Commercial, Industrial,
+    each spanning its year columns) over a row of years, then one row per state."""
+    h = None
+    for i, row in enumerate(rows[:20]):
+        cells = [str(c or "").strip().lower() for c in row]
+        if any(c.startswith("commercial") for c in cells) and any(c.startswith("industrial") for c in cells):
+            h = i
+            break
+    require(h is not None, "no sector header row (Commercial, Industrial) in the first 20 rows")
+    yrow = next((j for j in range(h + 1, min(h + 4, len(rows)))
+                 if sum(year_of(c) is not None and 1990 <= (year_of(c) or 0) <= 2100 for c in rows[j]) >= 2), None)
+    require(yrow is not None, "no row of years under the sector header")
+    cols, sector = {}, None
+    width = max(len(rows[h]), len(rows[yrow]))
+    for c in range(width):
+        cell = str(rows[h][c] if c < len(rows[h]) and rows[h][c] is not None else "").strip().lower()
+        if cell:
+            sector = cell.split()[0]
+        y = year_of(rows[yrow][c]) if c < len(rows[yrow]) else None
+        if sector in ("commercial", "industrial") and y:
+            cols[(sector, y)] = c
+    years = sorted({y for _, y in cols})
+    require(years, f"no Commercial or Industrial year columns found in {rows[h]} / {rows[yrow]}")
+    latest = years[-1]
+    require(("industrial", latest) in cols and ("commercial", latest) in cols,
+            f"latest year {latest} lacks a Commercial or Industrial column")
+    out = []
+    for r in rows[yrow + 1:]:
+        name = re.sub(r"[\d*]+$", "", str(r[0] or "")).strip()
+        code = STATES.get(name)
+        if not code:
+            continue
+        try:
+            ind = float(r[cols[("industrial", latest)]])
+            com = float(r[cols[("commercial", latest)]])
+        except (TypeError, ValueError, IndexError):
+            continue
+        out.append([code, latest, round(ind, 2), round(com, 2)])
+    require(len({r[0] for r in out}) >= 50, f"only {len(out)} states priced in the latest-year table")
     return out
 
 
@@ -350,26 +431,41 @@ def main(argv=None):
             data = fetch(URLS["nri"])
         except SystemExit as exc:
             sys.stdout.write(f"nri: download refused ({exc}); trying the hosted layer\n")
-            rows, meta = fetch_nri_service()
-            write_csv(out / "nri_counties.csv", ["fips", "state", "county", "risk", "sovi", "resl", *HAZARDS], rows)
+            rows, header, meta = fetch_nri_service()
+            write_csv(out / "nri_counties.csv", header, rows)
             blob = json.dumps(rows).encode()
             meta.update({"name": "FEMA National Risk Index, county table", "rows": len(rows),
                          "note": "sha256 and bytes are of the extracted rows; the layer has no file to hash"})
             return blob, meta, NRI_SERVICE
-        rows, inner = parse_nri(data)
-        write_csv(out / "nri_counties.csv", ["fips", "state", "county", "risk", "sovi", "resl", *HAZARDS], rows)
+        rows, header, inner = parse_nri(data)
+        write_csv(out / "nri_counties.csv", header, rows)
         return data, {"name": "FEMA National Risk Index, county table", "file": inner, "rows": len(rows),
                       "via": "download"}, URLS["nri"]
 
     def price():
-        data = fetch(URLS["price"])
-        rows, sheet, seen = best_sheet(excel_sheets(data, URLS["price"]), parse_prices)
-        sys.stdout.write(f"price: sheets {seen}; using {sheet!r}\n")
+        base = fetch(URLS["price"])
+        hist, _, _ = best_sheet(excel_sheets(base, URLS["price"]), parse_prices)
+        data = fetch(URLS["price_latest"])
+        sheets = excel_sheets(data, URLS["price_latest"])
+        try:
+            latest, sheet, seen = best_sheet(sheets, parse_price_latest)
+        except SystemExit:
+            for name, rows in sheets[:1]:
+                sys.stdout.write(f"price_latest sheet {name!r}, first rows for the next fix:\n")
+                for r in rows[:8]:
+                    sys.stdout.write(f"  {r[:12]}\n")
+            raise
+        sys.stdout.write(f"price: latest-year sheets {seen}; using {sheet!r}; base from the {hist[0][1]} workbook\n")
+        by = {r[0]: r for r in hist}
+        rows = [[st, y, ind, com, by[st][1] if st in by else "", by[st][2] if st in by else ""]
+                for st, y, ind, com in latest]
         write_csv(out / "eia_state_prices.csv",
                   ["state", "year", "industrial_cents_kwh", "commercial_cents_kwh", "base_year",
                    "industrial_base_cents_kwh"], rows)
-        return data, {"name": "EIA average retail price of electricity by state and sector",
-                      "year": rows[0][1], "rows": len(rows), "sheet": str(sheet)}, URLS["price"]
+        return data, {"name": "EIA Electric Power Annual table 2.10, average price by state and sector",
+                      "year": rows[0][1], "rows": len(rows), "sheet": str(sheet),
+                      "base": {"url": URLS["price"], "year": hist[0][1],
+                               "sha256": hashlib.sha256(base).hexdigest()}}, URLS["price_latest"]
 
     def mix():
         data = fetch(URLS["mix"])
