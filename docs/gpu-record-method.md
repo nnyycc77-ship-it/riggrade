@@ -95,9 +95,11 @@ entry rests on a sample, and states its evidence in numbers on the page:
   sample" and makes no site claim.
 - **What is claimed.** Only the pass share of the sampled cards and its
   one-sided 95% lower bound (exact binomial), printed beside the sample size.
-  With every sampled card passing, the bound on the site's pass share is: 5
-  cards, 55%; 10 cards, 74%; 20 cards, 86%; 30 cards, 90%; 50 cards, 94%. With
-  one failure among them: 10 cards, 61%; 20 cards, 78%; 30 cards, 85%. A site
+  With every sampled card passing, the bound on the site's pass share is: 10
+  cards, 74%; 20 cards, 86%; 30 cards, 90%; 50 cards, 94%. With one failure
+  among them: 10 cards, 61%; 20 cards, 78%; 30 cards, 85%. (A clean sample of
+  5 cards would bound the share at 55%; it is below the minimum sample and is
+  never a site claim.) A site
   entry reads, for example, "12 of 12 sampled cards passed; at least 78% of the
   declared 96 pass at 95% confidence; declared inventory, declared runner".
   Measured quality (speed ratio, consistency) is reported as the sample's
@@ -122,10 +124,14 @@ A record states what a named card delivered in named sessions on named dates,
 each with its evidence tag. It is not a title, not proof of ownership, not a
 location, and not a statement about any card not measured. Published counts
 read "records", never "cards owned" or "hosts". **[C4]** Published counts carry
-the locked-counts protection of Revision 5 discussion decision 5: any cell
-under five reads "fewer than 5", and larger totals are rounded (to the nearest
-five in this build; the decision's rounding rule governs and is confirmed at
-the coordinator's read).
+the locked-counts protection of Revision 5 discussion decision 5, exactly as
+that decision states it: while a class holds fewer than 20 records, every
+published figure for it is rounded to the nearest five and anything under five
+reads "fewer than 5"; once a class holds 20 records its total publishes as
+counted; and a per-class split (held, operator series, physical) publishes only
+once each cell has at least 5 records behind it, a smaller cell reading "fewer
+than 5". The rounding is the protection stage, not a permanent rounding of all
+larger totals. The decision governs where this text and it differ.
 
 ## 6. Supersession, corrections, retention
 

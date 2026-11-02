@@ -117,24 +117,32 @@ def history(rows, card_id):
 
 
 SMALL = 5
+PROTECTION_STAGE = 20
 
 
-def protect(n):
-    """[condition 4] Locked-counts protection for published counts: any cell
-    under SMALL reads "fewer than 5"; larger totals are rounded to the
-    nearest five (the rounding rule of Revision 5 discussion decision 5
-    governs; confirmed at the coordinator's read)."""
+def protect(n, total):
+    """[C4] Locked-counts protection, as Revision 5 discussion decision 5
+    states it: while the class holds fewer than PROTECTION_STAGE records,
+    every figure is rounded to the nearest five and anything under five
+    reads "fewer than 5"; from PROTECTION_STAGE on, a figure publishes as
+    counted, except that a cell under five still reads "fewer than 5"."""
     if n < SMALL:
         return "fewer than 5"
-    return int(SMALL * round(n / SMALL))
+    if total < PROTECTION_STAGE:
+        return int(SMALL * round(n / SMALL))
+    return n
 
 
 def counts(rows):
-    """Per peer class, for publication: protected counts of served records,
-    held entries and operator-series entries."""
+    """Per peer class, for publication: the class total and its split
+    (physical records, held, operator series), each protected."""
     raw = {}
     for r in rows:
         c = raw.setdefault(r.get("peer_class") or "unknown_class", {"records": 0, "held": 0, "operator": 0})
         key = "held" if r.get("held") else ("operator" if is_operator_series(r) else "records")
         c[key] += 1
-    return {cid: {k: protect(v) for k, v in c.items()} for cid, c in raw.items()}
+    out = {}
+    for cid, c in raw.items():
+        total = sum(c.values())
+        out[cid] = {"total": protect(total, total), **{k: protect(v, total) for k, v in c.items()}}
+    return out
