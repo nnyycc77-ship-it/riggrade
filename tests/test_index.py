@@ -126,7 +126,7 @@ class McpTests(unittest.TestCase):
     def test_price_index_tool_lists_and_filters(self):
         names = [t["name"] for t in mcp.TOOLS]
         self.assertIn("gpu_price_index", names)
-        fetch = lambda url: (_ for _ in ()).throw(OSError("offline"))  # noqa: E731
+        fetch = lambda url: (_ for _ in ()).throw(OSError("offline"))
         res = mcp.call_tool("gpu_price_index", {"class_id": "rtx4090-24"}, fetch=fetch)
         self.assertFalse(res["isError"])
         doc = json.loads(res["content"][0]["text"])
@@ -193,7 +193,7 @@ class AmendmentA1Tests(unittest.TestCase):
 
     def test_mcp_filter_accepts_a_chip_family_once_published(self):
         doc = rec.build(payload(self.ROWS), now="2026-11-15T00:00:00Z")
-        fetch = lambda url: doc  # noqa: E731
+        fetch = lambda url: doc
         res = mcp.call_tool("gpu_price_index", {"class_id": "chip:h100"}, fetch=fetch)
         self.assertFalse(res["isError"])
         out = json.loads(res["content"][0]["text"])
