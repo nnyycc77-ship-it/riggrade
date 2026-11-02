@@ -42,11 +42,13 @@ from . import index as price_index
 from . import certificate_page
 from . import signing
 from . import pool
+from . import ledger
 
 PREFIX = "/riggrade/v1"
 X402_VERSION = 2
 NETWORK_BASE = "eip155:8453"
-PAID_ROUTES = {("grade",): "grade", ("fixit",): "fixit", ("cluster", "acceptance"): "cluster"}
+PAID_ROUTES = {("grade",): "grade", ("fixit",): "fixit", ("cluster", "acceptance"): "cluster",
+               ("ledger",): "ledger"}
 V1_REFUSED = ("x402 v1 (X-PAYMENT) is not accepted; send PAYMENT-SIGNATURE with "
               "x402Version 2, as the PAYMENT-REQUIRED header of this answer describes")
 DISCOVERY_PATHS = ("/", "/favicon.ico", "/favicon.png", "/favicon.svg", "/.well-known/agent.json",
@@ -67,6 +69,9 @@ USE_WHEN = {
              "cause, the fix steps and who can act (host or renter).",
     "cluster": "Use when a rented multi-node GPU cluster must pass an independent acceptance "
                "test before a long run, a handover or a dispute.",
+    "ledger": "Use when an agent needs the compute supply ledger's weekly listed-price series per "
+              "GPU class, the derived figures with their bands, and the signal states, as one "
+              "machine-readable document with its method and posture attached.",
 }
 PRODUCT_NOTES = {
     "fixit": USE_WHEN["fixit"] + " Host fix-it report, 2 USDC: POST /riggrade/v1/fixit with "
@@ -79,6 +84,12 @@ PRODUCT_NOTES = {
                "/riggrade/v1/cluster/acceptance/{id} returns it. The certificate carries an "
                "Ed25519 signature verifiable offline with the public key at "
                "/.well-known/riggrade-keys.json (pip install riggrade; riggrade-verify).",
+    "ledger": USE_WHEN["ledger"] + " Compute supply ledger feed: POST /riggrade/v1/ledger with "
+              "{weeks} (1 to 52) and optional {classes}; returns the link 4 window per class, "
+              "implied gross revenue per GPU-year at stated bands (arithmetic, listed not paid), "
+              "every section 4 signal with its state and missing series, provenance, and the "
+              "four posture statements first and last. Information, not advice, an offer, a rate "
+              "or a forecast. Free weekly note in the repository; the feed is the per-call form.",
 }
 WALLET = re.compile(r"^0x[0-9a-fA-F]{40}$")
 OPERATOR_CLAIM_NOTE = ("A free reference session is claimed with a PAYMENT-SIGNATURE authorisation "
@@ -120,6 +131,10 @@ class Config:
         # published after a secret rotation so older certificates still verify.
         self.prior_public_keys = [k for k in env.get("RIGGRADE_PRIOR_PUBLIC_KEYS", "").split(",") if k.strip()]
         self.products = {p.strip() for p in env.get("RIGGRADE_PRODUCTS", "").split(",") if p.strip()}
+        # The ledger feed has no decided price: it sells only once the owner
+        # sets one here (USDC atomic units) and names it in RIGGRADE_PRODUCTS.
+        raw_price = env.get("RIGGRADE_LEDGER_PRICE_ATOMIC", "").strip()
+        self.ledger_price = int(raw_price) if raw_price.isdigit() and int(raw_price) > 0 else None
 
     def reasons_off(self, adapter):
         reasons = []
@@ -164,7 +179,19 @@ class GradingApp:
         reasons = list(self.config.reasons_off(self.adapter))
         if name not in self.config.products:
             reasons.append("RIGGRADE_PRODUCTS does not include %s" % name)
+        if self.product_price(name) is None:
+            reasons.append(f"no price is set for {name} (RIGGRADE_LEDGER_PRICE_ATOMIC)")
         return reasons
+
+    def product_price(self, name):
+        """USDC atomic units, or None while the owner has set no price."""
+        if name == "ledger":
+            return self.config.ledger_price
+        return PRODUCT_PRICE_ATOMIC.get(name)
+
+    def priced_products(self):
+        return sorted(name for name in list(PRODUCT_PRICE_ATOMIC) + ["ledger"]
+                      if self.product_price(name) is not None)
 
     def __call__(self, environ, start_response):
         path = environ.get("PATH_INFO", "")
@@ -229,6 +256,8 @@ class GradingApp:
                 return self.fixit_report(start_response, environ, body)
             if rest == ["cluster", "acceptance"]:
                 return self.cluster_acceptance(start_response, environ, body)
+            if rest == ["ledger"]:
+                return self.ledger_feed(start_response, environ, body)
         except BadRequest as exc:
             return _json(start_response, "400 Bad Request", {"error": str(exc), "charged": False})
         except SessionError as exc:
@@ -279,10 +308,10 @@ class GradingApp:
                 "spec": "docs/grading-spec.md", "statement": STATEMENT,
                 "point_grade_price_usdc": {"data_centre": "5", "consumer": "3"},
                 "free_reference_sessions": FREE_REFERENCE_NOTE,
-                "products": {name: {"price_usdc": str(PRODUCT_PRICE_ATOMIC[name] // 1_000_000),
+                "products": {name: {"price_usdc": _usdc(self.product_price(name)),
                                     "on_sale": not self.product_reasons_off(name),
                                     "note": PRODUCT_NOTES[name]}
-                             for name in sorted(PRODUCT_PRICE_ATOMIC)},
+                             for name in self.priced_products()},
                 "operator_rules": {"cap_per_operator": CAP_PER_OPERATOR,
                                    "min_operators": MIN_OPERATORS,
                                    "max_payer_share": MAX_OPERATOR_SHARE,
@@ -441,8 +470,9 @@ class GradingApp:
         if off:
             return _json(start_response, "503 Service Unavailable",
                          {"charged": False, "reasons_off": off})
-        path = {"fixit": PREFIX + "/fixit", "cluster": PREFIX + "/cluster/acceptance"}[name]
-        return self._payment_required(start_response, environ, path, PRODUCT_PRICE_ATOMIC[name],
+        path = {"fixit": PREFIX + "/fixit", "cluster": PREFIX + "/cluster/acceptance",
+                "ledger": PREFIX + "/ledger"}[name]
+        return self._payment_required(start_response, environ, path, self.product_price(name),
                                       PRODUCT_NOTES[name], bazaar=bazaar_extension(name),
                                       error=self._v1_error(environ)
                                       or "POST the JSON body the description names; this 402 "
@@ -496,14 +526,14 @@ class GradingApp:
         if off:
             return _json(start_response, "503 Service Unavailable",
                          {"charged": False, "preview": preview_doc, "reasons_off": off})
-        requirement = self._accept(PRODUCT_PRICE_ATOMIC[name])
+        requirement = self._accept(self.product_price(name))
         header = self._payment_header(environ)
         if not header:
-            return self._payment_required(start_response, environ, path, PRODUCT_PRICE_ATOMIC[name],
+            return self._payment_required(start_response, environ, path, self.product_price(name),
                                           description, bazaar=bazaar_extension(name),
                                           error=self._v1_error(environ), preview=preview_doc)
         result = self.adapter.settle(header, requirement)
-        product = {"fixit": fixit.PRODUCT, "cluster": acceptance.PRODUCT}[name]
+        product = {"fixit": fixit.PRODUCT, "cluster": acceptance.PRODUCT, "ledger": ledger.PRODUCT}[name]
         if not result.get("ok") and result.get("charged") in (True, "unknown"):
             salelog.append(self.config.sale_log,
                            {"product": product, "status": "charged_without_delivery",
@@ -596,6 +626,37 @@ class GradingApp:
                     {"certificate_id": cert_id, "verdict": result["verdict"]})
         return self._sell(start_response, environ, "cluster", PREFIX + "/cluster/acceptance",
                           description, prev, deliver)
+
+    def ledger_feed(self, start_response, environ, body):
+        """The compute supply ledger as one paid, machine-readable document
+        (riggrade.ledger.feed). Reads the same index the free route serves;
+        the free weekly note stays free. No price until the owner sets one."""
+        weeks = body.get("weeks", ledger.DEFAULT_WEEKS) if isinstance(body, dict) else None
+        classes = body.get("classes") if isinstance(body, dict) else None
+        bad = (not isinstance(weeks, int) or isinstance(weeks, bool)
+               or not 1 <= weeks <= ledger.MAX_WEEKS
+               or (classes is not None and (not isinstance(classes, list)
+                                            or not all(isinstance(c, str) for c in classes))))
+        if bad:
+            if not self._payment_header(environ):
+                return self.probe(start_response, environ, "ledger")
+            raise BadRequest(f"weeks must be an integer from 1 to {ledger.MAX_WEEKS}; classes, if "
+                             "given, a list of peer class ids")
+        doc = self.index.current()
+        prev = ledger.preview(doc, weeks, classes)
+        if prev["unknown_classes"] and not self.product_reasons_off("ledger"):
+            return _json(start_response, "422 Unprocessable Entity",
+                         {"error": "unknown peer class: " + ", ".join(prev["unknown_classes"]),
+                          "known": sorted(doc.get("classes") or {}), "charged": False})
+        description = (f"RigGrade compute supply ledger feed: {len(prev['classes'])} class(es), "
+                       f"{weeks} week(s) of link 4, derived figures and signal states")
+
+        def deliver(result):
+            out = ledger.feed(doc, weeks, classes)
+            out["paying_wallet"] = result.get("payer")
+            return out, {"weeks": weeks, "classes": len(prev["classes"])}
+        return self._sell(start_response, environ, "ledger", PREFIX + "/ledger", description,
+                          prev, deliver)
 
     def preflight_share(self, start_response, body):
         """Opt-in intake of an anonymised preflight summary. Stores the
@@ -718,7 +779,14 @@ class GradingApp:
 
 RESOURCE_TAGS = {"grade": ["gpu", "benchmark", "verification", "grading", "x402"],
                  "fixit": ["gpu", "diagnosis", "host", "preflight", "x402"],
-                 "cluster": ["gpu", "cluster", "acceptance", "verification", "x402"]}
+                 "cluster": ["gpu", "cluster", "acceptance", "verification", "x402"],
+                 "ledger": ["gpu", "pricing", "market-data", "compute", "x402"]}
+
+
+def _usdc(atomic):
+    """Atomic units as a plain USDC string: 2000000 -> "2", 500000 -> "0.5"."""
+    whole, frac = divmod(int(atomic), 1_000_000)
+    return str(whole) if not frac else f"{whole}.{frac:06d}".rstrip("0")
 
 
 def bazaar_extension(resource="grade"):
@@ -751,6 +819,14 @@ def bazaar_extension(resource="grade"):
                     {"certificate": {"certificate_id": "rc_...", "verdict": "accept",
                                      "signature": "..."}, "lookup_url": "..."},
                     ["gpu", "cluster", "acceptance", "verification"]),
+        "ledger": ({"weeks": 8},
+                   {"weeks": {"type": "integer", "minimum": 1, "maximum": 52,
+                              "description": "Weeks of the listed-price series per class to "
+                                             "return, newest last."}},
+                   {"read_this_first": ["..."], "classes": {"rtx4090-24": {"link4": ["..."],
+                    "implied_gross_usd_per_gpu_year": {"bands": {}}}}, "signals": {},
+                    "read_this_last": ["..."]},
+                   ["gpu", "pricing", "market-data", "compute"]),
     }
     example_in, props, example_out, tags = shapes[resource]
     # "schema" is the JSON Schema of the "info" object (x402 bazaar extension):

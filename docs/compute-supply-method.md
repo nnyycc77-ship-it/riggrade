@@ -157,3 +157,22 @@ when it comes, carries link 4 (live), the derived figures of section 3, and
 one context series from link 5 once a source has cleared terms; links 1 to
 3 enter as their first verified quarterly values are recorded. The note is
 free. A per-call feed for agents is a separate decision for the owner.
+
+## 6. Delivery (added 2 Nov 2026)
+
+Two forms of the same data, same posture on both:
+
+- **Free weekly note.** `python -m pricewatch.ledger_note --out docs/ledger/<date>.md`
+  writes the week's note from link 4 (the reconstructed index). The four 4b statements
+  open and close the page; every derived figure carries its band and "listed, not paid";
+  every signal that needs an unpublished series reads "no signal" with the series named.
+  The first note publishes only after its page posture has been shown for review.
+- **Paid feed, per call.** `POST /riggrade/v1/ledger` with `{"weeks": N}` (1 to 52) and an
+  optional `classes` list returns `riggrade.ledger.feed`: the link 4 window per class, the
+  implied gross revenue bands as labelled arithmetic, every section 4 signal with its state
+  and missing series, provenance, and the posture statements first and last. The route
+  ships off: it sells only when `RIGGRADE_PRODUCTS` names `ledger` **and** the owner has set
+  `RIGGRADE_LEDGER_PRICE_ATOMIC` (USDC atomic units). With no price it answers 503 with the
+  reason, appears in no descriptor, catalogue or OpenAPI document, and nothing is charged.
+  The free preview in the 402 names the classes, the week count and the latest week, never
+  a figure. No signal is ever computed from a missing series on either form.
