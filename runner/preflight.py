@@ -606,6 +606,98 @@ def idle_snapshot(probes, samples=5, interval=None, sleep=time.sleep):
     return out
 
 
+DEFAULT_ENDPOINT = "https://riggrade-674098696181.us-central1.run.app/riggrade/v1"
+
+
+def measures_of(obs):
+    """The measured numbers behind the findings, as a flat dict (first GPU
+    for per-GPU values, every GPU under per_gpu). Numbers only."""
+    m = {}
+    loads = obs.get("load") or {}
+    per_gpu = {}
+    for i, load in sorted(loads.items()):
+        per_gpu[str(i)] = {k: load.get(k) for k in ("clock_ratio", "peak_temperature_c") if load.get(k) is not None}
+    if per_gpu:
+        first = per_gpu[sorted(per_gpu)[0]]
+        m.update(first)
+        m["per_gpu"] = per_gpu
+    tflops = obs.get("tflops") or {}
+    if isinstance(tflops, dict) and tflops:
+        vals = [v for v in tflops.values() if isinstance(v, (int, float))]
+        if vals:
+            m["tflops"] = min(vals)
+    bw = obs.get("mem_bw_gbs")
+    if isinstance(bw, dict) and bw:
+        vals = [v for v in bw.values() if isinstance(v, (int, float))]
+        if vals:
+            m["mem_bw_gbs"] = min(vals)
+    elif isinstance(bw, (int, float)):
+        m["mem_bw_gbs"] = bw
+    for key in ("download_mbs", "disk_write_mbs"):
+        if isinstance(obs.get(key), (int, float)):
+            m[key] = obs[key]
+    mount = obs.get("disk_mount") or {}
+    if isinstance(mount, dict) and mount.get("fstype"):
+        m["disk_fs"] = str(mount["fstype"])
+    ecc = obs.get("ecc") or {}
+    if isinstance(ecc, dict) and ecc:
+        first = ecc[sorted(ecc)[0]] or {}
+        for src, dst in (("corrected_volatile", "ecc_corrected_volatile"),
+                         ("uncorrected_volatile", "ecc_uncorrected_volatile")):
+            if isinstance(first.get(src), (int, float)):
+                m[dst] = first[src]
+    host = obs.get("host") or {}
+    if isinstance(host, dict):
+        for src, dst in (("load_per_core", "host_load_per_core"),
+                         ("memory_available_pct", "host_memory_available_pct"),
+                         ("swap_used_pct", "host_swap_used_pct")):
+            if isinstance(host.get(src), (int, float)):
+                m[dst] = host[src]
+        if host.get("cpu_governor"):
+            m["host_cpu_governor"] = str(host["cpu_governor"])
+    return m
+
+
+def anonymise(report):
+    """The shareable summary: peer-class inputs, verdict, each check's
+    status, the measured numbers. No hostnames, paths, ids, free text or
+    error strings; the detail strings are dropped on purpose."""
+    gpus = report.get("gpus") or []
+    first = gpus[0] if gpus else {}
+    measures = {k: v for k, v in (report.get("measures") or {}).items()
+                if isinstance(v, (int, float)) and not isinstance(v, bool)}
+    doc = {"pool": 1, "gpu_name": first.get("name"), "driver": first.get("driver"),
+           "gpus": len(gpus) or 1, "memory_total_mb": first.get("memory_total_mb"),
+           "verdict": report.get("verdict"),
+           "statuses": {f["check"]: f["status"] for f in report.get("findings", []) if isinstance(f, dict)},
+           "measures": measures, "exclusive": bool(report.get("exclusive_box_assumed", True))}
+    for key in ("disk_fs", "host_cpu_governor"):
+        if (report.get("measures") or {}).get(key):
+            doc[key] = str(report["measures"][key])
+    return {k: v for k, v in doc.items() if v is not None}
+
+
+def share(doc, endpoint=None, opener=None, timeout=10):
+    """POST the anonymised summary; returns the server's answer or an
+    error dict. Never raises: sharing must not change the verdict."""
+    import urllib.error
+    import urllib.request
+    url = (endpoint or os.environ.get("RIGGRADE_ENDPOINT") or DEFAULT_ENDPOINT).rstrip("/") + "/preflight/share"
+    data = json.dumps(doc).encode()
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json",
+                                                           "User-Agent": "riggrade-preflight"})
+    try:
+        with (opener or urllib.request.urlopen)(req, timeout=timeout) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        try:
+            return json.loads(exc.read().decode("utf-8"))
+        except Exception:  # noqa: BLE001
+            return {"accepted": False, "error": "HTTP %s" % exc.code}
+    except Exception as exc:  # noqa: BLE001
+        return {"accepted": False, "error": "%s: %s" % (type(exc).__name__, exc)}
+
+
 def run(probes, seconds=30.0, url=DEFAULT_URL, download=True, directory=".",
         out=sys.stdout, shared=False):
     obs, errors = {}, {}
@@ -646,7 +738,7 @@ def run(probes, seconds=30.0, url=DEFAULT_URL, download=True, directory=".",
         obs["disk_mount"] = attempt("mount", lambda: probes.mount(directory)) or {}
 
     findings = evaluate(obs)
-    report = {"preflight": True,
+    report = {"preflight": True, "measures": measures_of(obs),
               "note": "Not a grade. No results were sent anywhere.",
               "exclusive_box_assumed": not obs.get("shared"),
               "gpus": [{"index": g.get("index"), "name": g.get("name"),
@@ -670,12 +762,19 @@ def main(argv=None):
     ap.add_argument("--dir", default=".", help="directory for the disk write test")
     ap.add_argument("--shared", action="store_true",
                     help="box is shared or sliced: skip the foreign-use checks")
+    ap.add_argument("--share", action="store_true",
+                    help="opt in: send an anonymised summary (class, statuses, numbers; no "
+                         "identifiers) to the RigGrade pool after the check")
+    ap.add_argument("--endpoint", default=None, help="service URL for --share (default: RIGGRADE_ENDPOINT)")
     ap.add_argument("--fail-on-warn", action="store_true",
                     help="exit 1 on warn as well as fail")
     args = ap.parse_args(argv)
     report = run(Probes(), args.seconds, args.url, not args.skip_download, args.dir,
                  shared=args.shared)
     bad = (FAIL, WARN) if args.fail_on_warn else (FAIL,)
+    if args.share:
+        answer = share(anonymise(report), args.endpoint)
+        sys.stdout.write("Shared with the RigGrade pool: %s\n" % json.dumps(answer, sort_keys=True))
     return 1 if report["verdict"] in bad else 0
 
 

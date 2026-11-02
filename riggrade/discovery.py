@@ -123,6 +123,7 @@ def llms_txt(base, prefix, on_sale):
         "- Host fix-it report, 2 USDC: POST " + api + "/fixit with {preflight_report}",
         "- Cluster acceptance certificate, 25 USDC: POST " + api + "/cluster/acceptance with {evidence_pack}",
         "- Free GPU price index (latest listed on-demand price per class, weekly): GET " + api + "/index",
+        "- Pooled preflight results per class (opt in with --share; aggregates at GET " + api + "/index/quality once published)",
         "- OpenAPI: " + api + "/openapi.json",
         "- Agent card: " + base + "/.well-known/agent.json",
         "- Certificate signing keys (Ed25519, verify offline): " + base + "/.well-known/riggrade-keys.json",
@@ -220,6 +221,15 @@ def openapi(base, prefix, contact_email=None):
                             "422": {"description": "nothing gradable in this session"},
                             "503": {"description": "sale off; nothing charged"}}, paid="grade"),
             "/heartbeat": post("Subscription heartbeat chain", {"type": "object"}),
+            "/preflight/share": post("Opt in: share an anonymised preflight summary with the pool (free; "
+                                     "no identifiers stored; the runner's --share flag or the MCP tool's "
+                                     "share flag sends it)", {"type": "object"},
+                                     {"503": {"description": "pool closed"}}),
+            "/index/quality": {"get": {"summary": "Pooled preflight results aggregated per peer class (free; "
+                                                  "published once the method is reviewed and a class has "
+                                                  "five records)",
+                                       "security": [], "responses": {"200": {"description": "OK"},
+                                                                     "503": {"description": "not yet published"}}}},
             "/fixit": post("Host fix-it report (2 USDC): causes and fixes for every warn or fail "
                            "finding in a preflight report; answers 402 with the x402 requirement",
                            {"type": "object", "properties": {"preflight_report": {"type": "object"}},

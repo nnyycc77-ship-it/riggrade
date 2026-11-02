@@ -82,6 +82,10 @@ TOOLS = [
                                "description": "Skip the download speed check."},
              "shared": {"type": "boolean",
                         "description": "The box is shared or sliced: skip the foreign-use checks."},
+             "share": {"type": "boolean",
+                       "description": "Opt in: after the check, send an anonymised summary (peer class, "
+                                      "each check's status, the measured numbers; no identifiers) to "
+                                      "the RigGrade pool so the class aggregates improve."},
          },
          "additionalProperties": False}},
     {"name": "gpu_price_index",
@@ -120,7 +124,7 @@ def _text(text, error=False):
     return {"content": [{"type": "text", "text": text}], "isError": error}
 
 
-def _preflight(args, probes=None):
+def _preflight(args, probes=None, share_opener=None):
     from runner import preflight
     seconds = float(args.get("seconds", 30))
     if not 5 <= seconds <= 300:
@@ -133,6 +137,9 @@ def _preflight(args, probes=None):
                                       "exclusive_box_assumed")}
     summary["findings"] = report["findings"]
     summary["errors"] = report["errors"]
+    summary["measures"] = report.get("measures", {})
+    if args.get("share"):
+        summary["shared"] = preflight.share(preflight.anonymise(report), opener=share_opener)
     return _text(out.getvalue() + "\n" + json.dumps(summary, indent=1, sort_keys=True))
 
 
@@ -190,10 +197,10 @@ def _verify_certificate(args):
                              "verdict": cert.get("verdict"), "detail": lines}, indent=1))
 
 
-def call_tool(name, args, probes=None, fetch=None):
+def call_tool(name, args, probes=None, fetch=None, share_opener=None):
     args = args if isinstance(args, dict) else {}
     if name == "gpu_preflight":
-        return _preflight(args, probes)
+        return _preflight(args, probes, share_opener)
     if name == "gpu_price_index":
         return _price_index(args, fetch)
     if name == "riggrade_service_info":
