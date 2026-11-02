@@ -28,7 +28,7 @@ Last line: a missing line is a missing read, not a clean bill.
 |---|---|---|---|
 | Physical hazards | outage, cooling load, damage, insurability | FEMA National Risk Index, county table: 15 hazard ratings, overall risk, social vulnerability, community resilience | county |
 | Energy | running cost, fuel-price exposure, the mix behind the grid | EIA: industrial and commercial average retail price for the latest year, its change since 2020, the US average; net generation share by source, all producers | state |
-| Grid reliability (v1, for review) | how long and how often the utilities serving the county cut power | EIA-861: SAIDI (minutes a year per customer) and SAIFI (interruptions a year per customer), IEEE standard, with and without major event days, for every utility with service territory in the county; the US median across reporting utilities | county, by utility |
+| Grid reliability (v1, accepted with conditions, Message 293) | how long and how often the utilities EIA names for the county cut power | EIA-861: SAIDI (minutes a year per customer) and SAIFI (interruptions a year per customer), IEEE standard, for every utility EIA names for the county; the figure without major event days leads for both, and the all-events figure prints beside it in full for both [G3]; the US median, with its basis printed [G2] | county, by utility |
 | Local and political | permits, moratoria, zoning, large-load tariffs, incentives | hand-kept table, one row per primary read | state or county |
 | Country | sanctions and export rules for the hardware and the payment; information only, never a replacement for the payer screening and logging on every paid call [A] | hand-kept table, one row per primary read | country |
 | Measured at the site | what rigs there showed under load | preflight reports from rigs at the declared site | rigs |
@@ -56,10 +56,19 @@ rating word, fewer than 3,000 counties, fewer than 50 states.
 
 Grid reliability is read under the IEEE standard columns, never the "other standard" columns some utilities
 also report. A utility is listed for a county when EIA's service territory table names that county for it.
-That is not proof the site buys from that utility: the page says the site's own utility is one of those listed,
-and that a site's own feed can differ. Utilities that serve the county but report no figures are counted, not
-hidden. The US median is arithmetic on the same table, labelled as such. Up to eight utilities are listed by
-name; any more are counted.
+The scope line reads: the utilities named are the ones EIA names for this county; the site's own utility may
+be one of them, a listing is not proof that the site buys from any named utility, and the site's own feed can
+differ. A retail supplier, a private feed or a gap in the territory table can sit outside the list. [G1]
+Utilities EIA names for the county that report no figures are counted, not hidden. Up to eight utilities are
+named, from public EIA filings; any more are counted. (Message 293, point 1.)
+
+The US median is arithmetic on the same table: the median of every utility-state row that reports SAIDI
+without major event days, each row counted once (a utility reporting in two states counts twice), not
+weighted by customer count. The page prints that basis and the number of rows beside the figure. [G2] A state
+median may be added later as an extra line; it never replaces the US figure.
+
+Each utility's line leads with the figure without major event days, for SAIDI and for SAIFI, and prints the
+all-events SAIDI and SAIFI beside it in full, so the impact of major events stays on the line. [G3]
 
 The fetcher takes the newest EIA-861 year published, trying this year and the three before it; EIA answers a
 year it has not published with a web page, which counts as not published. The workbook's three header rows
@@ -151,4 +160,6 @@ high-rating list stays, with the note of condition C. The measured wording chang
 hand-kept tables are read by the coordinator for any row used in a decision or offered. The v1 order is grid
 reliability first, water stress second.
 
-v1, for review: grid reliability from EIA-861 is added as its own section, per Message 288 point 5.
+Coordinator verdict, Message 293: grid reliability (v1) accepted with named conditions A to C (scope line,
+median basis, lead order), all written in above and marked [G1], [G2] and [G3] so they are not confused with
+the conditions of Message 288.

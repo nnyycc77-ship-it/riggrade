@@ -428,13 +428,21 @@ class ContextTests(unittest.TestCase):
         self.assertEqual((g["serving"], g["reporting"]), (3, 2))
         self.assertEqual([ln["item"] for ln in g["lines"]], ["Austin Energy", "Pedernales Electric Coop"])
         self.assertEqual(g["lines"][0]["value"], "60 minutes a year over 0.70 interruptions, without major event days")
-        self.assertEqual(g["lines"][0]["with_major_events"], "95 minutes")
+        self.assertEqual(g["lines"][0]["with_major_events"], "95 minutes a year over 0.90 interruptions")
         self.assertEqual(g["us_median"], "110 minutes a year without major event days")
-        self.assertIn("the site's own utility is one of them", g["scope"])
+        self.assertEqual(g["us_median_basis"],
+                         "median of 3 utility-state rows reporting the figure, each row counted once, "
+                         "not weighted by customers")
+        self.assertIn("the site's own utility may be one of them", g["scope"])
+        self.assertIn("a listing is not proof that the site buys from any named utility", g["scope"])
+        self.assertNotIn("is one of them", g["scope"])
         self.assertEqual(self.ctx({"state": "TX"})["grid"]["status"], "county not declared")
         page = sr.render(self.ctx({"fips": "48453"}))
         self.assertIn("## Grid reliability", page)
-        self.assertIn("3 utilities serve the county; 2 report reliability figures.", page)
+        self.assertIn("EIA names 3 utilities for this county; 2 report reliability figures.", page)
+        self.assertIn("- Austin Energy: 60 minutes a year over 0.70 interruptions, without major event days; "
+                      "all events: 95 minutes a year over 0.90 interruptions", page)
+        self.assertIn("(median of 3 utility-state rows reporting the figure", page)
         self.assertIn("data year 2024", page)
 
     def test_watch_lists_only_the_sources_high_ratings(self):
