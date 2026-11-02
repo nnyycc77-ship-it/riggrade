@@ -50,12 +50,16 @@ class CleanTests(unittest.TestCase):
             self.assertEqual((h["records"], h["held"]), (2, 1))
             self.assertEqual([e["at"] for e in h["entries"]], [100, 200])
             self.assertIn("records, not cards owned", h["note"])
-            self.assertEqual(record.counts(rows), {"rtx4090-24": {"records": "fewer than 5", "held": "fewer than 5",
-                                                                  "operator": "fewer than 5"}})
+            self.assertEqual(record.counts(rows), {"rtx4090-24": {"total": "fewer than 5", "records": "fewer than 5",
+                                                                  "held": "fewer than 5", "operator": "fewer than 5"}})
             for _ in range(10):
                 record.append(path, record.clean(DOC, 400))
-            self.assertEqual(record.counts(record.read(path))["rtx4090-24"]["records"], 10)
-            self.assertEqual(record.protect(13), 15)
+            c = record.counts(record.read(path))["rtx4090-24"]   # 13 entries: protection stage, rounded
+            self.assertEqual((c["total"], c["records"], c["held"]), (15, 10, "fewer than 5"))
+            for _ in range(7):
+                record.append(path, record.clean(DOC, 500))
+            c = record.counts(record.read(path))["rtx4090-24"]   # 20 entries: as counted, small cell protected
+            self.assertEqual((c["total"], c["records"], c["held"]), (20, 19, "fewer than 5"))
 
     def test_operator_and_virtualised_entries_never_merge_into_the_card_history(self):
         with tempfile.TemporaryDirectory() as tmp:
