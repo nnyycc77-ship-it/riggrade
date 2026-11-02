@@ -52,6 +52,7 @@ class HostCertTests(Harness):
     def test_off_without_a_price_and_hidden(self):
         app = self.app(priced=False)
         sid, _g = self.graded(app)
+        calls = len(self.adapter.calls)      # the grade's own settlement
         status, _h, doc = call(app, "POST", "/riggrade/v1/host/certificate", {"session_id": sid})
         self.assertEqual(status, "503 Service Unavailable")
         self.assertIn("no price is set for hostcert (RIGGRADE_HOSTCERT_PRICE_ATOMIC)", doc["reasons_off"])
@@ -59,7 +60,7 @@ class HostCertTests(Harness):
         self.assertNotIn("hostcert", desc["products"])
         status, _h, _d = call(app, "GET", "/riggrade/v1/host/certificate")
         self.assertEqual(status, "503 Service Unavailable")
-        self.assertEqual([c for c in self.adapter.calls if c[0] != "verify"], [])
+        self.assertEqual(len(self.adapter.calls), calls)      # nothing settled for the certificate
 
     def test_host_paid_session_issues_a_certificate_once_with_the_wording(self):
         app = self.app()
