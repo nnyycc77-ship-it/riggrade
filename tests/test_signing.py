@@ -149,3 +149,18 @@ class VerifyCliTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@needs_crypto
+class McpVerifyTests(unittest.TestCase):
+    def test_tool_verifies_and_rejects(self):
+        from riggrade import mcp
+        cert = issued()
+        res = mcp.call_tool("verify_certificate", {"certificate": {"certificate": cert, "signature_valid": True}})
+        out = json.loads(res["content"][0]["text"])
+        self.assertTrue(out["valid"])
+        self.assertEqual(out["certificate_id"], cert["certificate_id"])
+        keys = signing.keys_document(signing.Signer.from_secret(b"other"))
+        out = json.loads(mcp.call_tool("verify_certificate", {"certificate": cert, "keys_document": keys})["content"][0]["text"])
+        self.assertFalse(out["valid"])
+        self.assertTrue(mcp.call_tool("verify_certificate", {"certificate": "nope"})["isError"])

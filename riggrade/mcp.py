@@ -93,6 +93,17 @@ TOOLS = [
          "class_id": {"type": "string", "description": "One peer class, e.g. rtx4090-24, or a chip family such as "
                                                        "chip:h100 once published; all when omitted."}},
          "additionalProperties": False}},
+    {"name": "verify_certificate",
+     "description": "Verify a RigGrade cluster acceptance certificate offline: checks its Ed25519 "
+                    "signature with the public key embedded in it and, when the published key "
+                    "document is given, that the key is in the service's published set. Nothing is "
+                    "sent anywhere. Returns valid or not, the key id and the evidence-pack hash to "
+                    "compare after recomputing with runner.cluster evaluate.",
+     "inputSchema": {"type": "object", "properties": {
+         "certificate": {"type": "object", "description": "The certificate JSON, or the lookup response that wraps it."},
+         "keys_document": {"type": "object", "description": "Optional: the JSON from /.well-known/riggrade-keys.json."},
+         "public_key": {"type": "string", "description": "Optional: a base64 Ed25519 public key to use instead of the embedded one."}},
+         "required": ["certificate"], "additionalProperties": False}},
     {"name": "riggrade_service_info",
      "description": "How a RigGrade grade works and what it costs; the live service descriptor "
                     "when RIGGRADE_ENDPOINT is configured.",
@@ -159,6 +170,19 @@ def _price_index(args, fetch=None):
     return _text(json.dumps(doc, indent=1, sort_keys=True))
 
 
+def _verify_certificate(args):
+    from riggrade import verify
+    cert = args.get("certificate")
+    if not isinstance(cert, dict):
+        return _text("certificate must be a JSON object", error=True)
+    if isinstance(cert.get("certificate"), dict):   # the lookup response wraps it
+        cert = cert["certificate"]
+    keys_doc = args.get("keys_document") if isinstance(args.get("keys_document"), dict) else None
+    ok, lines = verify.check(cert, keys_doc, args.get("public_key") or None)
+    return _text(json.dumps({"valid": ok, "certificate_id": cert.get("certificate_id"),
+                             "verdict": cert.get("verdict"), "detail": lines}, indent=1))
+
+
 def call_tool(name, args, probes=None, fetch=None):
     args = args if isinstance(args, dict) else {}
     if name == "gpu_preflight":
@@ -167,6 +191,8 @@ def call_tool(name, args, probes=None, fetch=None):
         return _price_index(args, fetch)
     if name == "riggrade_service_info":
         return _service_info(fetch)
+    if name == "verify_certificate":
+        return _verify_certificate(args)
     raise ToolNotFound(name)
 
 
