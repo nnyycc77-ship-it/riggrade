@@ -121,6 +121,28 @@ class FetcherRunTests(unittest.TestCase):
             ss.fetch, ss.excel_rows = saved
 
 
+class FindNriTests(unittest.TestCase):
+    def test_catalogue_search_prints_titles_owners_and_urls(self):
+        answers = {
+            ss.CATALOGUES["data.gov"]: {"result": {"results": [
+                {"title": "National Risk Index Counties", "organization": {"title": "FEMA"},
+                 "metadata_modified": "2026-01-01", "resources": [{"format": "ZIP", "url": "https://x.gov/nri.zip"}]}]}},
+            ss.CATALOGUES["arcgis-hub"]: {"features": [
+                {"properties": {"title": "NRI Counties", "owner": "fema_owner", "orgTitle": "FEMA", "url": "https://y/z"}}]},
+        }
+        saved = ss.fetch
+        ss.fetch = lambda url, timeout=120: json.dumps(answers[url]).encode()
+        try:
+            out = io.StringIO()
+            ss.find_nri(out)
+        finally:
+            ss.fetch = saved
+        text = out.getvalue()
+        self.assertIn("National Risk Index Counties | FEMA", text)
+        self.assertIn("ZIP: https://x.gov/nri.zip", text)
+        self.assertIn("owner fema_owner | org FEMA | https://y/z", text)
+
+
 def snapshot(d):
     d = Path(d)
     hz = list(sr.HAZARDS)
