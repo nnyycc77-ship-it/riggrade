@@ -626,7 +626,7 @@ def parse_cards_csv(csv_text):
         if len(parts) < 2 or not parts[1].startswith("GPU-"):
             continue
         serial = parts[2] if len(parts) > 2 and parts[2] not in identity.NOT_REPORTED else None
-        cards.append({"index": _num(parts[0]), "card_id": identity.card_id(parts[1]), "serial": serial})
+        cards.append({"index": int(parts[0]) if parts[0].isdigit() else None, "card_id": identity.card_id(parts[1]), "serial": serial})
         uuids.append(parts[1])
     if not cards:
         return None
