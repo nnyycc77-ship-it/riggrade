@@ -166,7 +166,9 @@ Two forms of the same data, same posture on both:
   writes the week's note from link 4 (the reconstructed index). The four 4b statements
   open and close the page; every derived figure carries its band and "listed, not paid";
   every signal that needs an unpublished series reads "no signal" with the series named.
-  The first note publishes only after its page posture has been shown for review.
+  The first note (`docs/ledger/2026-11-02.md`) published on 2 November 2026 after its
+  page posture was shown for review and accepted (board Messages 261b and 268); later
+  notes are written by the Tuesday index workflow after each import.
 - **Paid feed, per call.** `POST /riggrade/v1/ledger` with `{"weeks": N}` (1 to 52) and an
   optional `classes` list returns `riggrade.ledger.feed`: the link 4 window per class, the
   implied gross revenue bands as labelled arithmetic, every section 4 signal with its state
