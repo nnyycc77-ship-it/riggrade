@@ -1,4 +1,4 @@
-# Site context method, v0 (draft for coordinator review)
+# Site context method, v0 (accepted with named conditions, written in)
 
 Status: accepted with named conditions (coordinator, Message 288, 2 November 2026); conditions A to F are
 written in below and marked. Built for our own decisions now. Offered to anyone only once the owner has said
@@ -80,9 +80,9 @@ declared site needs one; there is no standing schedule. (Message 288, point 4.)
 The host declares the site as a US state and county, or a five-digit county FIPS code. RigGrade never infers
 a location from an IP address or a network path. County is the finest level held: no street address, no
 coordinates. A host may declare a state only; the county lines then read "county not declared" and are never
-filled from a guess. (Message 288, point 1.) An ambiguous county name is refused with the candidate FIPS codes listed. A site outside the
-United States reads "not covered" in the physical and energy sections rather than borrowing another
-country's data.
+filled from a guess. (Message 288, point 1.) An ambiguous county name is refused with the candidate FIPS
+codes listed. A site outside the United States reads "not covered" in the physical and energy sections rather
+than borrowing another country's data.
 
 ## 5. Measured signals
 
