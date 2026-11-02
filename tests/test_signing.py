@@ -18,6 +18,7 @@ def issued(secret=SECRET, signer=None):
     cert = certificate_page.sample()
     cert.pop("signature", None)
     cert["paying_wallet"] = "0x" + "ab" * 20
+    cert["keys_url"] = "https://grade.example/.well-known/riggrade-keys.json"
     cert["signature"] = acceptance.sign(cert, secret)
     acceptance.attach_ed25519(cert, signer if signer is not None else signing.Signer.from_secret(secret))
     return cert
@@ -60,6 +61,8 @@ class CertificateTests(unittest.TestCase):
         cert = issued()
         self.assertTrue(acceptance.verify(cert, SECRET))
         self.assertTrue(acceptance.verify_ed25519(cert))
+        self.assertEqual(cert["keys_url"], "https://grade.example/.well-known/riggrade-keys.json")
+        self.assertFalse(acceptance.verify_ed25519(dict(cert, keys_url="https://evil.example/keys")))
         self.assertEqual(cert["ed25519"]["kid"], signing.Signer.from_secret(SECRET).kid)
         changed = dict(cert, verdict="accept")
         self.assertFalse(acceptance.verify(changed, SECRET))
@@ -126,25 +129,44 @@ class RouteTests(unittest.TestCase):
 
 @needs_crypto
 class VerifyCliTests(unittest.TestCase):
-    def test_cli_valid_tampered_and_key_set(self):
+    def test_anchored_unanchored_tampered_and_wrong_key_set(self):
         cert = issued()
         keys = signing.keys_document(signing.Signer.from_secret(SECRET))
         with tempfile.TemporaryDirectory() as t:
             cpath, kpath = Path(t) / "c.json", Path(t) / "k.json"
             cpath.write_text(json.dumps({"certificate": cert, "signature_valid": True}))
             kpath.write_text(json.dumps(keys))
-            self.assertEqual(verify.main([str(cpath)]), 0)
+            # Anchored to a saved key set: 0.
             self.assertEqual(verify.main([str(cpath), "--keys", str(kpath)]), 0)
+            # Anchored by fetching the certificate's keys_url: 0.
+            fetched = []
+            self.assertEqual(verify.main([str(cpath)], fetch=lambda url: (fetched.append(url), keys)[1]), 0)
+            self.assertEqual(fetched, ["https://grade.example/.well-known/riggrade-keys.json"])
+            # Offline with no key set: valid but unanchored, exit 2, and it says so.
+            self.assertEqual(verify.main([str(cpath), "--offline"]), 2)
+            # A fetch that fails falls back to unanchored, exit 2.
+            self.assertEqual(verify.main([str(cpath)], fetch=lambda url: (_ for _ in ()).throw(OSError("down"))), 2)
+            # Tampered: 1.
             cert["nodes"] = 99
             cpath.write_text(json.dumps(cert))
-            self.assertEqual(verify.main([str(cpath)]), 1)
+            self.assertEqual(verify.main([str(cpath), "--keys", str(kpath)]), 1)
+            # A valid signature under a key that is not in the published set: 1.
             other = signing.keys_document(signing.Signer.from_secret(b"other"))
             kpath.write_text(json.dumps(other))
-            cert["nodes"] = 2
             cpath.write_text(json.dumps(issued()))
             self.assertEqual(verify.main([str(cpath), "--keys", str(kpath)]), 1)
+            # HMAC-only certificate: 1.
             cpath.write_text(json.dumps(certificate_page.sample()))
-            self.assertEqual(verify.main([str(cpath)]), 1)
+            self.assertEqual(verify.main([str(cpath), "--offline"]), 1)
+
+    def test_check_reports_anchoring(self):
+        cert = issued()
+        keys = signing.keys_document(signing.Signer.from_secret(SECRET))
+        ok, anchored, lines = verify.check(cert, keys)
+        self.assertEqual((ok, anchored), (True, True))
+        ok, anchored, lines = verify.check(cert)
+        self.assertEqual((ok, anchored), (True, False))
+        self.assertTrue(any(ln.startswith("UNANCHORED") for ln in lines))
 
 
 if __name__ == "__main__":
@@ -159,7 +181,13 @@ class McpVerifyTests(unittest.TestCase):
         res = mcp.call_tool("verify_certificate", {"certificate": {"certificate": cert, "signature_valid": True}})
         out = json.loads(res["content"][0]["text"])
         self.assertTrue(out["valid"])
+        self.assertFalse(out["anchored"])
+        self.assertIn("only that the certificate matches its own embedded key", out["proves"])
         self.assertEqual(out["certificate_id"], cert["certificate_id"])
+        good = signing.keys_document(signing.Signer.from_secret(SECRET))
+        out = json.loads(mcp.call_tool("verify_certificate", {"certificate": cert, "keys_document": good})["content"][0]["text"])
+        self.assertEqual((out["valid"], out["anchored"]), (True, True))
+        self.assertIn("RigGrade issued", out["proves"])
         keys = signing.keys_document(signing.Signer.from_secret(b"other"))
         out = json.loads(mcp.call_tool("verify_certificate", {"certificate": cert, "keys_document": keys})["content"][0]["text"])
         self.assertFalse(out["valid"])

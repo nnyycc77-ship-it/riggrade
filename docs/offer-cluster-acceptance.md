@@ -42,12 +42,16 @@ hash, and the service's signature check. Give the counterparty the pack and
 the hash; they can recompute.
 
 **Verify it yourself:** every certificate carries an Ed25519 signature over
-its canonical body, and the public key is published at
-`/.well-known/riggrade-keys.json`. Save the JSON form and run
-`python3 -m riggrade.verify certificate.json`, or use any Ed25519 library.
-That check needs nothing from RigGrade after issue. The evidence pack
-recomputes every check with the open rules; the certificate carries the
-pack's SHA-256.
+its canonical body and names the published key set it is anchored to
+(`keys_url`, the service's `/.well-known/riggrade-keys.json`). Save the JSON
+form and run `python3 -m riggrade.verify certificate.json`: it fetches that
+key set, checks the certificate's key is in it, and verifies the signature.
+A key in the published set proves RigGrade issued the certificate and it has
+not changed; a check against the key embedded in the certificate alone
+(`--offline`) proves only that the certificate matches itself, and the
+verifier says so. Any Ed25519 library can do the same from the stated
+canonicalisation. The evidence pack recomputes every check with the open
+rules; the certificate carries the pack's SHA-256.
 
 **Limits, stated plainly:** the verdict covers the named test at the named
 time; it is not a promise about future delivery. The rules are v0 draft and
