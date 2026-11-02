@@ -18,6 +18,7 @@ import io
 import json
 import sys
 import time
+import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -57,10 +58,30 @@ def require(cond, msg):
         fail(msg)
 
 
+class _Redirects(urllib.request.HTTPRedirectHandler):
+    """Keeps the redirect chain so a failed fetch says where it was sent."""
+
+    def __init__(self):
+        self.chain = []
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        self.chain.append(f"{code} -> {newurl}")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 def fetch(url, timeout=120):
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return resp.read()
+    hops = _Redirects()
+    opener = urllib.request.build_opener(hops)
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "*/*"})
+    try:
+        with opener.open(req, timeout=timeout) as resp:
+            return resp.read()
+    except urllib.error.HTTPError as err:
+        fail(f"{url}: HTTP {err.code} at {err.url}; redirects: {hops.chain or 'none'}; "
+             f"server: {err.headers.get('Server')}; content-type: {err.headers.get('Content-Type')}")
+    except urllib.error.URLError as err:
+        fail(f"{url}: {err.reason}; redirects: {hops.chain or 'none'}")
+    return None
 
 
 def rating(value, where):
@@ -196,33 +217,50 @@ def main(argv=None):
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    sources = {}
+    old_path = out / "SOURCES.json"
+    sources = json.loads(old_path.read_text(encoding="utf-8")) if old_path.exists() else {}
+    failures = []
 
-    data = fetch(URLS["nri"])
-    rows, inner = parse_nri(data)
-    write_csv(out / "nri_counties.csv", ["fips", "state", "county", "risk", "sovi", "resl", *HAZARDS], rows)
-    sources["nri"] = {"name": "FEMA National Risk Index, county table", "file": inner, "rows": len(rows)}
+    def nri():
+        data = fetch(URLS["nri"])
+        rows, inner = parse_nri(data)
+        write_csv(out / "nri_counties.csv", ["fips", "state", "county", "risk", "sovi", "resl", *HAZARDS], rows)
+        return data, {"name": "FEMA National Risk Index, county table", "file": inner, "rows": len(rows)}
 
-    data_p = fetch(URLS["price"])
-    prices = parse_prices(excel_rows(data_p, URLS["price"]))
-    write_csv(out / "eia_state_prices.csv",
-              ["state", "year", "industrial_cents_kwh", "commercial_cents_kwh", "base_year", "industrial_base_cents_kwh"],
-              prices)
-    sources["price"] = {"name": "EIA average retail price of electricity by state and sector",
-                        "year": prices[0][1], "rows": len(prices)}
+    def price():
+        data = fetch(URLS["price"])
+        rows = parse_prices(excel_rows(data, URLS["price"]))
+        write_csv(out / "eia_state_prices.csv",
+                  ["state", "year", "industrial_cents_kwh", "commercial_cents_kwh", "base_year",
+                   "industrial_base_cents_kwh"], rows)
+        return data, {"name": "EIA average retail price of electricity by state and sector",
+                      "year": rows[0][1], "rows": len(rows)}
 
-    data_m = fetch(URLS["mix"])
-    mix = parse_mix(excel_rows(data_m, URLS["mix"]))
-    write_csv(out / "eia_state_mix.csv", ["state", "year", "source", "share"], mix)
-    sources["mix"] = {"name": "EIA net generation by state and energy source, all producers",
-                      "year": mix[0][1], "rows": len(mix)}
+    def mix():
+        data = fetch(URLS["mix"])
+        rows = parse_mix(excel_rows(data, URLS["mix"]))
+        write_csv(out / "eia_state_mix.csv", ["state", "year", "source", "share"], rows)
+        return data, {"name": "EIA net generation by state and energy source, all producers",
+                      "year": rows[0][1], "rows": len(rows)}
 
-    for key, blob in (("nri", data), ("price", data_p), ("mix", data_m)):
-        sources[key].update({"url": URLS[key], "fetched_at": stamp, "licence": LICENCE,
-                             "sha256": hashlib.sha256(blob).hexdigest(), "bytes": len(blob)})
-    (out / "SOURCES.json").write_text(json.dumps(sources, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    for key, meta in sorted(sources.items()):
+    # Each source stands alone: one refusing does not stop the others, and a
+    # failed source keeps its last good snapshot and SOURCES entry. Any
+    # failure still ends the run red.
+    for key, job in (("nri", nri), ("price", price), ("mix", mix)):
+        try:
+            blob, meta = job()
+        except SystemExit as exc:
+            failures.append(str(exc))
+            sys.stdout.write(f"{key}: FAILED: {exc}\n")
+            continue
+        meta.update({"url": URLS[key], "fetched_at": stamp, "licence": LICENCE,
+                     "sha256": hashlib.sha256(blob).hexdigest(), "bytes": len(blob)})
+        sources[key] = meta
         sys.stdout.write(f"{key}: {meta['rows']} rows, {meta['bytes']} bytes, sha256 {meta['sha256'][:16]}\n")
+    if len(failures) < 3:
+        old_path.write_text(json.dumps(sources, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if failures:
+        fail(f"{len(failures)} of 3 sources failed; the others were written")
     return 0
 
 
