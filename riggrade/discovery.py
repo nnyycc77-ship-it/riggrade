@@ -73,7 +73,8 @@ def agent_card(base, prefix, on_sale):
         {"id": "gpu_preflight", "name": "GPU preflight check",
              "description": "Use when you have just rented a GPU box, or before listing your own, "
                             "and want to know in a minute whether it behaves like the card it "
-                            "reports. Free. Run on the rented box itself: `python3 -m runner.preflight` "
+                            "reports. Free. Run on the rented box itself: `pip install riggrade` then "
+                            "`riggrade-preflight` (or `python3 -m runner.preflight`) "
                             "or the MCP tool gpu_preflight. Clocks under load, foreign use, "
                             "driver vs CUDA, PCIe link, download and disk speed.",
              "tags": ["gpu", "free", "preflight"]},
@@ -131,7 +132,8 @@ def llms_txt(base, prefix, on_sale):
         "- Grading spec: " + REPO + "/blob/main/docs/grading-spec.md",
         "- Payments: " + REPO + "/blob/main/docs/payments.md",
         "- Benchmark container: " + BENCH_IMAGE + " (run by digest; see container/bench-image.env)",
-        "- MCP server (stdio): python3 -m riggrade.mcp, tools gpu_preflight, gpu_price_index, verify_certificate and riggrade_service_info",
+        "- Install: pip install riggrade (PyPI); commands riggrade-preflight, riggrade-mcp, riggrade-verify",
+        "- MCP server (stdio): riggrade-mcp (python3 -m riggrade.mcp), tools gpu_preflight, gpu_price_index, verify_certificate and riggrade_service_info",
         "",
     ])
 

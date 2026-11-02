@@ -44,7 +44,7 @@ the hash; they can recompute.
 **Verify it yourself:** every certificate carries an Ed25519 signature over
 its canonical body and names the published key set it is anchored to
 (`keys_url`, the service's `/.well-known/riggrade-keys.json`). Save the JSON
-form and run `python3 -m riggrade.verify certificate.json`: it fetches that
+form and run `riggrade-verify certificate.json` (`pip install riggrade`): it fetches that
 key set, checks the certificate's key is in it, and verifies the signature.
 A key in the published set proves RigGrade issued the certificate and it has
 not changed; a check against the key embedded in the certificate alone

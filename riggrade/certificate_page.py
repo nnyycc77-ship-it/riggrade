@@ -56,7 +56,7 @@ def render(cert, signature_valid, lookup_url="", ed25519_valid=None, keys_url=""
     if ed25519_valid is True and ed:
         ed_line = ("<span class=ok>valid: Ed25519 signature by key <code>%s</code>, which is in this service's "
                    "published key set at <a href=\"%s\">%s</a>. Anyone can repeat the check with "
-                   "<code>python3 -m riggrade.verify certificate.json</code>, which fetches that key set "
+                   "<code>pip install riggrade</code> then <code>riggrade-verify certificate.json</code>, which fetches that key set "
                    "and anchors the result to it (a check against the embedded key alone proves only "
                    "that the certificate matches itself).</span>"
                    % (_e(ed.get("kid", "")), _e(keys_url), _e(keys_url)))
