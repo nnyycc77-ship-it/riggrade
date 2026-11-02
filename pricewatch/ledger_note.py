@@ -13,51 +13,18 @@ import sys
 from pathlib import Path
 
 from riggrade import index as price_index
-
-METHOD_VERSION = "compute-supply-ledger-v0"
-HOURS_PER_YEAR = 8760
-BANDS = (0.4, 0.6, 0.8)
-POSTURE = (
-    "Information, not advice, and not an offer, a rate or a forecast.",
-    (
-        "This ledger covers the long-tail listings market only and says nothing about hyperscaler "
-        "fleets or sponsors whose capacity never lists."
-    ),
-    "Marketplace listings are the marginal market, not fleet utilisation.",
-    "Listed prices are asks, not paid prices.",
+from riggrade.ledger import (  # noqa: F401 - re-exported for the note's callers and tests
+    BANDS,
+    FLAT_BAND_PCT,
+    FLAT_END_PCT,
+    HOURS_PER_YEAR,
+    METHOD_VERSION,
+    POSTURE,
+    implied_revenue,
+    is_flat,
+    series_window,
+    spread,
 )
-FLAT_END_PCT = 5.0
-FLAT_BAND_PCT = 10.0
-
-
-def implied_revenue(median_usd_per_hour, band):
-    """Gross USD per GPU-year at a utilisation band: arithmetic, not a forecast."""
-    return round(median_usd_per_hour * HOURS_PER_YEAR * band, 0)
-
-
-def spread(v):
-    return round(v["max_price"] / v["min_price"], 2) if v.get("min_price") else None
-
-
-def series_window(weeks, n=8):
-    keys = sorted(weeks)[-n:]
-    return [(k, weeks[k]) for k in keys]
-
-
-def is_flat(values):
-    """Section 4: end within FLAT_END_PCT of start, no value outside a
-    FLAT_BAND_PCT band around the start. Returns (flat, detail)."""
-    if len(values) < 2 or not values[0]:
-        return None, "fewer than two values"
-    start, end = values[0], values[-1]
-    end_move = (end - start) / start * 100
-    band_breach = any(abs(v - start) / start * 100 > FLAT_BAND_PCT for v in values)
-    flat = abs(end_move) <= FLAT_END_PCT and not band_breach
-    breach = "yes" if band_breach else "no"
-    return flat, (
-        f"start {start:.4g}, end {end:.4g}, end move {end_move:+.1f}% (tolerance {FLAT_END_PCT:.0f}%), "
-        f"band breach {breach} (band {FLAT_BAND_PCT:.0f}%)"
-    )
 
 
 def build(doc, date):

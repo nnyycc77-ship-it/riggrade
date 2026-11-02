@@ -9,7 +9,7 @@ from pathlib import Path
 
 from riggrade import acceptance, cluster_rules, fixit, salelog
 from riggrade.endpoint import GradingApp
-from tests.test_endpoint import FakeAdapter, IMAGE, PAYER, WALLET, call
+from tests.test_endpoint import IMAGE, PAYER, WALLET, FakeAdapter, call
 
 REPORT = {"preflight": True, "verdict": "fail", "gpus": [{"index": 0, "name": "NVIDIA RTX 4090"}],
           "findings": [
@@ -133,10 +133,11 @@ class ProductEndpointTests(unittest.TestCase):
         self.log = str(Path(self.tmp.name) / "sales.jsonl")
         self.adapter = FakeAdapter()
 
-    def app(self, products="fixit,cluster", enabled="1"):
+    def app(self, products="fixit,cluster", enabled="1", ledger_price=""):
         env = {"RIGGRADE_ENABLED": enabled, "PAYOUT_WALLET_ADDRESS": WALLET,
                "RIGGRADE_SALE_LOG": self.log, "RIGGRADE_SECRET": "s",
-               "RIGGRADE_IMAGE_DIGESTS": IMAGE, "RIGGRADE_PRODUCTS": products}
+               "RIGGRADE_IMAGE_DIGESTS": IMAGE, "RIGGRADE_PRODUCTS": products,
+               "RIGGRADE_LEDGER_PRICE_ATOMIC": ledger_price}
         return GradingApp(env, lambda: 1_800_000_000, adapter=self.adapter)
 
     def test_products_default_off_with_reasons_and_no_charge(self):
@@ -262,6 +263,54 @@ class ProductEndpointTests(unittest.TestCase):
         self.assertEqual(status, "422 Unprocessable Entity")
         self.assertIn("does not recompute", doc["error"])
         self.assertEqual(self.adapter.calls, [])
+
+    def test_ledger_feed_is_off_without_a_price_and_hidden_from_the_descriptor(self):
+        app = self.app(products="fixit,cluster,ledger")
+        status, _h, doc = call(app, "POST", "/riggrade/v1/ledger", {"weeks": 8})
+        self.assertEqual(status, "503 Service Unavailable")
+        self.assertIn("no price is set for ledger (RIGGRADE_LEDGER_PRICE_ATOMIC)", doc["reasons_off"])
+        self.assertEqual(doc["preview"]["weeks"], 8)
+        self.assertNotIn("median", json.dumps(doc))       # nothing of the paid document leaks
+        self.assertEqual(self.adapter.calls, [])
+        _s, _h, desc = call(app, "GET", "/riggrade/v1")
+        self.assertNotIn("ledger", desc["products"])      # no listing until a price exists
+        status, _h, doc = call(app, "GET", "/riggrade/v1/ledger")
+        self.assertEqual(status, "503 Service Unavailable")
+
+    def test_ledger_feed_sells_at_the_price_the_owner_sets(self):
+        app = self.app(products="fixit,cluster,ledger", ledger_price="500000")
+        _s, _h, desc = call(app, "GET", "/riggrade/v1")
+        self.assertEqual(desc["products"]["ledger"]["price_usdc"], "0.5")
+        self.assertTrue(desc["products"]["ledger"]["on_sale"])
+        status, _h, doc = call(app, "GET", "/riggrade/v1/ledger")
+        self.assertEqual((status, doc["accepts"][0]["amount"]), ("402 Payment Required", "500000"))
+        self.assertEqual(doc["resource"]["tags"][:2], ["gpu", "pricing"])
+        self.assertEqual(doc["extensions"]["bazaar"]["info"]["input"]["body"], {"weeks": 8})
+        status, _h, doc = call(app, "POST", "/riggrade/v1/ledger", {"weeks": 3, "classes": ["l40s-48"]})
+        self.assertEqual(status, "402 Payment Required")
+        self.assertEqual(doc["preview"]["classes"], ["l40s-48"])
+        self.assertEqual(self.adapter.calls, [])
+        status, _h, doc = call(app, "POST", "/riggrade/v1/ledger",
+                                    {"weeks": 3, "classes": ["l40s-48"]}, payment="pay")
+        self.assertEqual(status, "200 OK")
+        self.assertEqual(list(doc["classes"]), ["l40s-48"])
+        self.assertEqual(doc["classes"]["l40s-48"]["weeks_returned"], 3)
+        self.assertEqual(doc["read_this_first"], doc["read_this_last"])
+        self.assertEqual(doc["signals"]["absorption_gap"]["state"], "no signal")
+        self.assertEqual(doc["paying_wallet"], PAYER)
+        (entry,) = salelog.read_chain(self.log)
+        self.assertEqual((entry["product"], entry["amount_atomic"], entry["weeks"], entry["classes"]),
+                         ("riggrade_ledger_feed", "500000", 3, 1))
+        # Bad bodies: a bare probe gets the challenge, a paid bad body a 400,
+        # an unknown class a 422, none of them settled.
+        status, _h, _d = call(app, "POST", "/riggrade/v1/ledger", {"weeks": 0})
+        self.assertEqual(status, "402 Payment Required")
+        status, _h, _d = call(app, "POST", "/riggrade/v1/ledger", {"weeks": 99}, payment="pay")
+        self.assertEqual(status, "400 Bad Request")
+        status, _h, d = call(app, "POST", "/riggrade/v1/ledger", {"weeks": 2, "classes": ["x"]},
+                             payment="pay")
+        self.assertEqual((status, d["charged"]), ("422 Unprocessable Entity", False))
+        self.assertEqual(len(self.adapter.calls), 1)
 
     def test_sale_switch_off_gates_products_too(self):
         app = self.app(enabled="0")
