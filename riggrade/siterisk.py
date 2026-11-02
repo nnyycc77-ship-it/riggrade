@@ -47,7 +47,7 @@ WATCH = ("VH", "RH")
 BEARS_ON = {
     "physical": "Outage, cooling load and physical damage at the site; insurability.",
     "energy": "Running cost and its exposure to fuel prices; the source mix behind the grid.",
-    "grid": "How long and how often the utilities serving the county cut power to their customers.",
+    "grid": "How long and how often the utilities EIA names for the county cut power to their customers.",
     "local": "Permits, moratoria, zoning, large-load tariffs and incentives that can stop or reprice a site.",
     "country": ("Sanctions and export rules that decide whether the hardware may sit or be paid for there. "
                 "Information only; these lines never replace the payer screening and logging on every paid call."),
@@ -196,23 +196,34 @@ def grid(row, state_only, rel, ter, src):
     usable = [r for r in reported if _f(r["saidi_no_med"]) is not None]
     usable.sort(key=lambda r: r["name"])
     lines = []
+    def pair(saidi, saifi):
+        if _f(saidi) is None:
+            return "not reported"
+        tail = f" over {_f(saifi):.2f} interruptions" if _f(saifi) is not None else ", interruptions not reported"
+        return f"{_f(saidi):.0f} minutes a year{tail}"
+
     for r in usable[:GRID_MAX_LINES]:
+        # Lead order (Message 293, condition C): without major event days first,
+        # for SAIDI and SAIFI, with the all-events pair printed in full beside it.
         lines.append({"item": r["name"] or f"utility {r['utility']}",
-                      "value": (f"{_f(r['saidi_no_med']):.0f} minutes a year over "
-                                f"{_f(r['saifi_no_med']) or 0:.2f} interruptions, without major event days"),
-                      "with_major_events": (f"{_f(r['saidi_all']):.0f} minutes" if _f(r["saidi_all"]) is not None
-                                            else "not reported"),
+                      "value": pair(r["saidi_no_med"], r["saifi_no_med"]) + ", without major event days",
+                      "with_major_events": pair(r["saidi_all"], r["saifi_all"]),
                       "year": r["year"] or meta.get("year")})
     all_saidi = sorted(v for v in (_f(r["saidi_no_med"]) for r in rel) if v is not None)
     median = all_saidi[len(all_saidi) // 2] if all_saidi else None
     return {"status": "read" if serving else "no utility listed for this county",
             "source": meta.get("name", "EIA-861"), "fetched_at": meta.get("fetched_at", "date unknown"),
             "year": meta.get("year"),
-            "scope": ("utilities with service territory in the county; the site's own utility is one of them, "
-                      "and a site's own feed can differ"),
+            # Scope wording (Message 293, condition A).
+            "scope": ("the utilities named are the ones EIA names for this county; the site's own utility may be "
+                      "one of them, a listing is not proof that the site buys from any named utility, and the "
+                      "site's own feed can differ"),
             "serving": len(serving), "reporting": len(usable),
             "not_shown": max(0, len(usable) - GRID_MAX_LINES),
             "us_median": f"{median:.0f} minutes a year without major event days" if median is not None else None,
+            # Median basis (Message 293, condition B).
+            "us_median_basis": (f"median of {len(all_saidi)} utility-state rows reporting the figure, each row "
+                                "counted once, not weighted by customers") if all_saidi else None,
             "lines": lines}
 
 
@@ -333,10 +344,10 @@ def render(doc):
     out += ["", "## Grid reliability", f"_{BEARS_ON['grid']}_"]
     if g["status"] == "read":
         out.append(f"Source: {g['source']}, data year {g['year']}, fetched {g['fetched_at']}; {g['scope']}.")
-        out.append(f"{g['serving']} utilities serve the county; {g['reporting']} report reliability figures."
-                   + (f" US median across reporting utilities: {g['us_median']}." if g.get("us_median") else ""))
+        out.append(f"EIA names {g['serving']} utilities for this county; {g['reporting']} report reliability figures."
+                   + (f" US median: {g['us_median']} ({g['us_median_basis']})." if g.get("us_median") else ""))
         for ln in g["lines"]:
-            out.append(f"- {ln['item']}: {ln['value']}; {ln['with_major_events']} with them")
+            out.append(f"- {ln['item']}: {ln['value']}; all events: {ln['with_major_events']}")
         if g["not_shown"]:
             out.append(f"- {g['not_shown']} more reporting utilities not shown.")
     else:
