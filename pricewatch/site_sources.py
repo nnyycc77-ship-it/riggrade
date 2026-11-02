@@ -67,7 +67,7 @@ def resolve_hazards(cols):
 RATINGS = {
     "Very High": "VH", "Relatively High": "RH", "Relatively Moderate": "RM",
     "Relatively Low": "RL", "Very Low": "VL", "No Rating": "NR",
-    "Not Applicable": "NA", "Insufficient Data": "ID",
+    "Not Applicable": "NA", "Insufficient Data": "ID", "Data Unavailable": "DU",
 }
 NRI_MIN_ROWS = 3000  # the county table covers every US county and equivalent
 
@@ -204,8 +204,8 @@ def fetch_nri_service(get=None, page=None):
 
 
 def year_of(value):
-    """A year from a cell such as 2023, 2023.0 or '2023P'; None if none."""
-    m = re.match(r"\s*(\d{4})", str(value if value is not None else ""))
+    """A year from a cell such as 2023, 2023.0, '2023P' or 'Year 2023'; None if none."""
+    m = re.search(r"(?<!\d)(\d{4})(?!\d)", str(value if value is not None else ""))
     return int(m.group(1)) if m else None
 
 
@@ -311,7 +311,8 @@ def parse_price_latest(rows):
         except (TypeError, ValueError, IndexError):
             continue
         out.append([code, latest, round(ind, 2), round(com, 2)])
-    require(len({r[0] for r in out}) >= 50, f"only {len(out)} states priced in the latest-year table")
+    require(len({r[0] for r in out}) == len(out), "a state appears twice in the latest-year table")
+    require(len(out) >= 50, f"only {len(out)} states priced in the latest-year table")
     return out
 
 

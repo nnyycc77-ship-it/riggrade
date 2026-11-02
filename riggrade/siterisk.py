@@ -37,6 +37,7 @@ HAZARDS = {
 RATING_WORDS = {
     "VH": "Very High", "RH": "Relatively High", "RM": "Relatively Moderate", "RL": "Relatively Low",
     "VL": "Very Low", "NR": "No Rating", "NA": "Not Applicable", "ID": "Insufficient Data",
+    "DU": "Data Unavailable",
 }
 WATCH = ("VH", "RH")
 

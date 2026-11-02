@@ -97,13 +97,17 @@ class FetcherParseTests(unittest.TestCase):
 
 class LatestPriceTests(unittest.TestCase):
     def table(self):
-        rows = [["Table 2.10. Average Price of Electricity to Ultimate Customers by End-Use Sector, by State"],
-                ["Census Division and State", "Residential", None, "Commercial", None, "Industrial", None,
+        # The shape EIA served on 2 Nov 2026: two title rows, the sector row, then
+        # "Year 2025" labels under each sector.
+        rows = [["Table 2.10. Average Price of Electricity to Ultimate Customers by End-Use Sector,"] + [None] * 10,
+                ["by State, 2025 and 2024 (Cents per Kilowatthour)"] + [None] * 10,
+                [float("nan"), "Residential", None, "Commercial", None, "Industrial", None,
                  "Transportation", None, "All Sectors", None],
-                [None, "2024", "2023", "2024", "2023", "2024", "2023", "2024", "2023", "2024", "2023"],
+                ["Census Division\nand State"] + ["Year 2024", "Year 2023"] * 5,
                 ["New England", 28, 27, 21, 20, 17, 16, 9, 9, 23, 22]]
         for name in list(ss.STATES)[:-2]:
-            rows.append([name, 16.0, 15.0, 12.5, 12.0, 8.25, 8.0, 10, 10, 13, 12])
+            transport = "--" if name == "Maine" else 10  # EIA prints -- where a sector has no sales
+            rows.append([name, 16.0, 15.0, 12.5, 12.0, 8.25, 8.0, transport, transport, 13, 12])
         rows.append(["U.S. Total", 16.48, 16.0, 12.7, 12.4, 8.1, 8.0, 11, 11, 13, 12])
         return rows
 
@@ -113,6 +117,12 @@ class LatestPriceTests(unittest.TestCase):
         self.assertEqual(tx, ["TX", 2024, 8.25, 12.5])
         self.assertIn(["US", 2024, 8.1, 12.7], out)
         self.assertNotIn("New England", {r[0] for r in out})
+
+    def test_a_state_listed_twice_stops(self):
+        rows = self.table()
+        rows.append(["Texas", 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+        with self.assertRaises(SystemExit):
+            ss.parse_price_latest(rows)
 
     def test_a_table_without_the_sector_header_stops(self):
         with self.assertRaises(SystemExit):
@@ -164,7 +174,7 @@ class HostedLayerTests(unittest.TestCase):
         for i in range(n):
             r = {f: "Relatively Low" for f in fields}
             r.update({"OBJECTID": i, "STCOFIPS": f"{1001 + i:05d}", "STATEABBRV": "AL", "COUNTY": f"C{i}",
-                      "WFIR_RISKR": "Very High"})
+                      "WFIR_RISKR": "Very High", "HAIL_RISKR": "Data Unavailable" if i == 3 else "Very Low"})
             recs.append(r)
         calls = []
 
@@ -188,6 +198,7 @@ class HostedLayerTests(unittest.TestCase):
         self.assertEqual(len(rows), 3005)
         self.assertEqual(rows[0][:3], ["01001", "AL", "C0"])
         self.assertEqual(dict(zip(ss.HAZARDS, rows[0][6:], strict=True))["WFIR"], "VH")
+        self.assertEqual(dict(zip(ss.HAZARDS, rows[3][6:], strict=True))["HAIL"], "DU")
         self.assertEqual(meta["owner"], "Federal Emergency Management Agency (FEMA)")
         self.assertEqual(meta["via"], "hosted layer")
         self.assertEqual(sum("resultOffset" in c for c in calls), 4)
@@ -202,8 +213,8 @@ class HostedLayerTests(unittest.TestCase):
 
 class SheetTests(unittest.TestCase):
     def test_year_cells_and_latest_sheet(self):
-        self.assertEqual([ss.year_of(v) for v in (2023, 2023.0, "2024P", " 2022 ", None, "Year")],
-                         [2023, 2023, 2024, 2022, None, None])
+        self.assertEqual([ss.year_of(v) for v in (2023, 2023.0, "2024P", " 2022 ", None, "Year", "Year 2025", 12345)],
+                         [2023, 2023, 2024, 2022, None, None, 2025, None])
 
         def sheet(year):
             rows = [["Year", "State", "Industry Sector Category", "Commercial", "Industrial"]]
