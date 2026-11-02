@@ -1,8 +1,9 @@
 # RigGrade GPU record: method v0 (draft, for review)
 
-Status: draft for the coordinator's review; nothing is published from it and
-no record is kept beyond each host's own preflight report until it is
-accepted. Owner direction 2 Nov 2026, on Adviser 1's side: grow the record
+Status: accepted with named conditions by the coordinator on 2 Nov 2026 (board
+Message 277); the conditions are written in below, marked **[C1]** to **[C6]**.
+No record is kept or served until the switch is set after the coordinator's
+confirmation read of this text. Owner direction 2 Nov 2026, on Adviser 1's side: grow the record
 without sales, on free compute and through hosts running the free tool; no
 spend; distribution held.
 
@@ -45,14 +46,30 @@ sent, that the entry is public once accepted, and that it cannot be withdrawn
 buyer runs the tool on someone else's rig, the record entry is held until the
 host's registered wallet consents, the same rule as the host certificate.
 
+**[C3]** The consent text printed before any send names in plain words: that
+the board serial is included where the driver exposes it, and that it is a
+persistent plain identifier of the card; that the entry is public through the
+record lookup once accepted; that it is kept for 24 months; that it cannot be
+withdrawn, a later run superseding and nothing deleted. The runner's copy of
+the text and the service's are held equal by a test.
+
 ## 4. Sources of entries, in the order they start
 
 1. **Free compute runs by RigGrade** (Kaggle, Colab and similar free tiers):
    real cards, few machine types, virtualised and shared; entries are labelled
    `operator: riggrade` and `virtualised`, and count toward nothing in the
    grading references beyond what the spec already allows an operator.
+   **[C5]** Operator and virtualised entries form a separate labelled series:
+   the record lookup lists them apart, and a virtualised entry never merges
+   into the history of a physical card under the same `card_id`. Runs on the
+   owner's own free-tier accounts are an execution step confirmed by the owner
+   in his own chat before they are made.
 2. **Hosts running the free preflight** with `--record`, with the host
-   certificate as the incentive (its launch price is the owner's decision).
+   certificate as the incentive. **[C1]** The certificate's launch window is a
+   price and a switch step: its dates are the owner's to give in his own chat,
+   and until he gives them and confirms the window there, no launch variable is
+   set, no certificate issues at zero price, and that code path stays behind
+   its off switch (host certificate method, section 6).
 3. **Agents running the preflight** before renting a box, through the MCP tool
    and the catalogues, with the same opt-in.
 4. Not a source: scraped listings, forum posts, bug reports or any identifier
@@ -64,11 +81,18 @@ A data centre or a host with many cards is not graded card by card. A site
 entry rests on a sample, and states its evidence in numbers on the page:
 
 - **Who picks the cards.** The service draws the sample, never the host: the
-  session nonce (already drawn at session start) selects card indices from the
-  inventory the host declares (`card_count` per box, boxes per site). A host
-  that runs the tool on cards of its own choosing produces card records, not a
-  site entry. The declared inventory is printed beside the sample so the
-  coverage is visible (for example "12 of a declared 96 cards").
+  host declares the inventory first (`card_count` per box, boxes per site, per
+  peer class), the declaration is recorded and bound to the draw before the
+  session nonce is issued, and the nonce then selects card indices from it. A
+  host that runs the tool on cards of its own choosing produces card records,
+  not a site entry. The declared inventory is printed beside the sample so the
+  coverage is visible (for example "12 of a declared 96 cards"). A declared
+  inventory that shrinks, or a card that does not match its declared slot,
+  voids the entry; nothing is edited.
+- **Per class, never pooled.** The draw and the bound run per peer class; a
+  site with two classes gets two entries.
+- **Minimum sample.** Fewer than 10 sampled cards prints as "insufficient
+  sample" and makes no site claim.
 - **What is claimed.** Only the pass share of the sampled cards and its
   one-sided 95% lower bound (exact binomial), printed beside the sample size.
   With every sampled card passing, the bound on the site's pass share is: 5
@@ -80,8 +104,12 @@ entry rests on a sample, and states its evidence in numbers on the page:
   median and range, never extrapolated to the unsampled cards.
 - **What is not claimed.** Nothing about cards not sampled beyond the bound;
   nothing about future delivery; nothing about the site's location or owner.
+  A site entry never reads as a grade or a certificate for any unsampled card.
   A later sample supersedes, nothing is deleted, and the two are shown side by
   side when they differ.
+- **Attestation printed.** The attestation state of the sampled cards prints
+  on the entry; where cards are unattested the entry states plainly that a
+  substituted card cannot be ruled out by the measurement alone.
 - **Steering defences.** The nonce-drawn selection is the defence against
   cherry-picking; attestation where present is the defence against a
   substituted card; a declared inventory that shrinks between samples is
@@ -93,7 +121,11 @@ entry rests on a sample, and states its evidence in numbers on the page:
 A record states what a named card delivered in named sessions on named dates,
 each with its evidence tag. It is not a title, not proof of ownership, not a
 location, and not a statement about any card not measured. Published counts
-read "records", never "cards owned" or "hosts".
+read "records", never "cards owned" or "hosts". **[C4]** Published counts carry
+the locked-counts protection of Revision 5 discussion decision 5: any cell
+under five reads "fewer than 5", and larger totals are rounded (to the nearest
+five in this build; the decision's rounding rule governs and is confirmed at
+the coordinator's read).
 
 ## 6. Supersession, corrections, retention
 
@@ -108,8 +140,12 @@ record keeps entries for 24 months, as the grading evidence packs.
 - Service: `POST /riggrade/v1/record` (free, consented entries), `GET
   /riggrade/v1/record/{card_id}` (the history, with evidence tags), a
   per-class count of records on the free index page.
-- Anchoring: a periodic hash of the record log written to Base, so an entry
-  is provably unchanged without trusting this service (design note to follow;
-  cost is cents per period, an owner decision).
+- Anchoring: **[C2]** out of the v0 build. A periodic hash of the record log
+  written to Base would be spend; no anchor is written until a design note
+  exists and the owner approves the design and its cost in his own chat.
 - Tests: identity never carries a UUID or a typed string; consent text printed
   before any send; buyer-run entries held for host consent; append-only.
+- **[C6]** No entry is kept or served from any run until this text carries
+  [C1] to [C5] and the switch (`RIGGRADE_RECORD`) is set after the
+  coordinator's confirmation read. Building behind the off switch proceeded
+  as with the feed and the certificate.

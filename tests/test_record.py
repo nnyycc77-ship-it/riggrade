@@ -50,7 +50,24 @@ class CleanTests(unittest.TestCase):
             self.assertEqual((h["records"], h["held"]), (2, 1))
             self.assertEqual([e["at"] for e in h["entries"]], [100, 200])
             self.assertIn("records, not cards owned", h["note"])
-            self.assertEqual(record.counts(rows), {"rtx4090-24": {"records": 2, "held": 1}})
+            self.assertEqual(record.counts(rows), {"rtx4090-24": {"records": "fewer than 5", "held": "fewer than 5",
+                                                                  "operator": "fewer than 5"}})
+            for _ in range(10):
+                record.append(path, record.clean(DOC, 400))
+            self.assertEqual(record.counts(record.read(path))["rtx4090-24"]["records"], 10)
+            self.assertEqual(record.protect(13), 15)
+
+    def test_operator_and_virtualised_entries_never_merge_into_the_card_history(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "record.jsonl"
+            record.append(path, record.clean(DOC, 100))
+            record.append(path, record.clean(dict(DOC, declared_runner="riggrade", virtualised=True), 200))
+            record.append(path, record.clean(dict(DOC, virtualised=True), 300))
+            h = record.history(record.read(path), CARDS[0]["card_id"])
+            self.assertEqual(h["records"], 1)
+            self.assertEqual([e["at"] for e in h["entries"]], [100])
+            self.assertEqual(h["operator_series"]["records"], 2)
+            self.assertIn("never merged", h["operator_series"]["note"])
 
 
 class RunnerTests(unittest.TestCase):
@@ -69,6 +86,9 @@ class RunnerTests(unittest.TestCase):
             pf.main(["--record", "--skip-download", "--seconds", "0"])
         self.assertIn("explicit opt-in", record.CONSENT)
         self.assertIn("append-only", record.CONSENT)
+        for words in ("board serial number", "persistent plain identifier", "public through the record lookup",
+                      "kept for 24 months", "cannot be withdrawn", "a later run supersedes, nothing is deleted"):
+            self.assertIn(words, record.CONSENT)                         # [C3]
         self.assertEqual(pf.RECORD_CONSENT, record.CONSENT)   # the runner prints the same words
 
 
