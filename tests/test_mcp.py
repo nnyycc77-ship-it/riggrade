@@ -32,7 +32,7 @@ class McpTests(unittest.TestCase):
         self.assertEqual(r["result"]["protocolVersion"], "2025-03-26")
         self.assertEqual(r["result"]["serverInfo"]["name"], "riggrade")
         names = [t["name"] for t in mcp.handle_request(rpc("tools/list"))["result"]["tools"]]
-        self.assertEqual(names, ["gpu_preflight", "gpu_price_index", "riggrade_service_info"])
+        self.assertEqual(names, ["gpu_preflight", "gpu_price_index", "verify_certificate", "riggrade_service_info"])
         self.assertIsNone(mcp.handle_request({"jsonrpc": "2.0", "method": "notifications/initialized"}))
 
     def test_preflight_tool(self):
