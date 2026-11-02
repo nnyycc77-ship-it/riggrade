@@ -58,6 +58,36 @@ host's registered wallet consents, the same rule as the host certificate.
 4. Not a source: scraped listings, forum posts, bug reports or any identifier
    collected without the operator of the card running the tool.
 
+## 4a. Sites: a sample of cards, with its evidence stated (owner direction, 2 Nov 2026)
+
+A data centre or a host with many cards is not graded card by card. A site
+entry rests on a sample, and states its evidence in numbers on the page:
+
+- **Who picks the cards.** The service draws the sample, never the host: the
+  session nonce (already drawn at session start) selects card indices from the
+  inventory the host declares (`card_count` per box, boxes per site). A host
+  that runs the tool on cards of its own choosing produces card records, not a
+  site entry. The declared inventory is printed beside the sample so the
+  coverage is visible (for example "12 of a declared 96 cards").
+- **What is claimed.** Only the pass share of the sampled cards and its
+  one-sided 95% lower bound (exact binomial), printed beside the sample size.
+  With every sampled card passing, the bound on the site's pass share is: 5
+  cards, 55%; 10 cards, 74%; 20 cards, 86%; 30 cards, 90%; 50 cards, 94%. With
+  one failure among them: 10 cards, 61%; 20 cards, 78%; 30 cards, 85%. A site
+  entry reads, for example, "12 of 12 sampled cards passed; at least 78% of the
+  declared 96 pass at 95% confidence; declared inventory, declared runner".
+  Measured quality (speed ratio, consistency) is reported as the sample's
+  median and range, never extrapolated to the unsampled cards.
+- **What is not claimed.** Nothing about cards not sampled beyond the bound;
+  nothing about future delivery; nothing about the site's location or owner.
+  A later sample supersedes, nothing is deleted, and the two are shown side by
+  side when they differ.
+- **Steering defences.** The nonce-drawn selection is the defence against
+  cherry-picking; attestation where present is the defence against a
+  substituted card; a declared inventory that shrinks between samples is
+  printed as such. The operator-concentration rules of the grading spec apply
+  to site samples as to single rigs.
+
 ## 5. What a record can say, and cannot
 
 A record states what a named card delivered in named sessions on named dates,
