@@ -40,6 +40,7 @@ from . import fixit
 from . import acceptance
 from . import index as price_index
 from . import certificate_page
+from . import signing
 
 PREFIX = "/riggrade/v1"
 X402_VERSION = 2
@@ -48,7 +49,7 @@ PAID_ROUTES = {("grade",): "grade", ("fixit",): "fixit", ("cluster", "acceptance
 V1_REFUSED = ("x402 v1 (X-PAYMENT) is not accepted; send PAYMENT-SIGNATURE with "
               "x402Version 2, as the PAYMENT-REQUIRED header of this answer describes")
 DISCOVERY_PATHS = ("/", "/favicon.ico", "/favicon.png", "/favicon.svg", "/.well-known/agent.json",
-                   "/llms.txt", "/openapi.json", PREFIX + "/openapi.json")
+                   signing.KEYS_PATH, "/llms.txt", "/openapi.json", PREFIX + "/openapi.json")
 MAX_BODY = 4 * 1024 * 1024
 USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 # Decided prices (plan Revision 5, decided items 1), USDC atomic units.
@@ -74,8 +75,9 @@ PRODUCT_NOTES = {
                "/riggrade/v1/cluster/acceptance with {evidence_pack} (the acceptance.json "
                "runner.cluster wrote); the server recomputes every check, refuses a pack that "
                "does not recompute, and issues a signed, stored certificate. GET "
-               "/riggrade/v1/cluster/acceptance/{id} returns it with the service's own "
-               "signature check (HMAC: not independently verifiable).",
+               "/riggrade/v1/cluster/acceptance/{id} returns it. The certificate carries an "
+               "Ed25519 signature verifiable offline with the public key at "
+               "/.well-known/riggrade-keys.json (python3 -m riggrade.verify).",
 }
 WALLET = re.compile(r"^0x[0-9a-fA-F]{40}$")
 OPERATOR_CLAIM_NOTE = ("A free reference session is claimed with a PAYMENT-SIGNATURE authorisation "
@@ -107,6 +109,9 @@ class Config:
         self.contact_email = env.get("RIGGRADE_CONTACT_EMAIL", "").strip()
         # The free price index refreshes from this URL (packaged copy otherwise).
         self.index_url = env.get("RIGGRADE_INDEX_URL", "").strip() or None
+        # Prior certificate-signing public keys (base64, comma-separated) stay
+        # published after a secret rotation so older certificates still verify.
+        self.prior_public_keys = [k for k in env.get("RIGGRADE_PRIOR_PUBLIC_KEYS", "").split(",") if k.strip()]
         self.products = {p.strip() for p in env.get("RIGGRADE_PRODUCTS", "").split(",") if p.strip()}
 
     def reasons_off(self, adapter):
@@ -131,6 +136,7 @@ class GradingApp:
                  attestation_verifier=None, envelopes=None, secret=None):
         self.config = Config(env)
         self.index = price_index.Index(url=self.config.index_url)
+        self.signer = signing.Signer.from_secret(self.config.secret)
         self.clock = clock
         self.adapter = adapter
         self.store = store or MemoryStore()
@@ -235,6 +241,10 @@ class GradingApp:
             return [data]
         if path == "/.well-known/agent.json":
             return _json(start_response, "200 OK", discovery.agent_card(base, PREFIX, self.on_sale))
+        if path == signing.KEYS_PATH:
+            return _json(start_response, "200 OK",
+                         signing.keys_document(self.signer, self.config.prior_public_keys),
+                         [("Cache-Control", "public, max-age=3600")])
         if path in ("/openapi.json", PREFIX + "/openapi.json"):
             return _json(start_response, "200 OK",
                          discovery.openapi(base, PREFIX, self.config.contact_email))
@@ -563,6 +573,7 @@ class GradingApp:
                                           self.clock(), cert_id)
             cert["paying_wallet"] = settled.get("payer")
             cert["signature"] = acceptance.sign(cert, self.config.secret)
+            acceptance.attach_ed25519(cert, self.signer)
             self.store.put("cert:" + cert_id, cert)
             return ({"certificate": cert,
                      "lookup_url": _url(environ, PREFIX + "/cluster/acceptance/" + cert_id)},
@@ -577,13 +588,16 @@ class GradingApp:
         if cert is None:
             return _json(start_response, "404 Not Found", {"error": "no such certificate"})
         valid = acceptance.verify(cert, self.config.secret)
+        ed_valid = acceptance.verify_ed25519(cert)
+        keys_url = _url(environ, signing.KEYS_PATH) if environ is not None else signing.KEYS_PATH
         if environ is not None and certificate_page.wants_html(environ):
             json_url = _url(environ, PREFIX + "/cluster/acceptance/" + cert_id) + "?format=json"
-            data = certificate_page.render(cert, valid, json_url).encode("utf-8")
+            data = certificate_page.render(cert, valid, json_url, ed_valid, keys_url).encode("utf-8")
             start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"),
                                       ("Content-Length", str(len(data)))])
             return [data]
-        return _json(start_response, "200 OK", {"certificate": cert, "signature_valid": valid})
+        return _json(start_response, "200 OK", {"certificate": cert, "signature_valid": valid,
+                                                "ed25519_valid": ed_valid, "public_keys_url": keys_url})
 
     CLAIM_DESCRIPTION = ("RigGrade free reference session: operator claim, 0 USDC. "
                          "Verified, never settled; the signer becomes the rig's operator.")

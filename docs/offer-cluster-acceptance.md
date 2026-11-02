@@ -41,10 +41,19 @@ page carries the verdict, every check with its numbers, the evidence-pack
 hash, and the service's signature check. Give the counterparty the pack and
 the hash; they can recompute.
 
-**Limits, stated plainly:** the signature is the service's own HMAC, not an
-independently verifiable one. The verdict covers the named test at the named
+**Verify it yourself:** every certificate carries an Ed25519 signature over
+its canonical body, and the public key is published at
+`/.well-known/riggrade-keys.json`. Save the JSON form and run
+`python3 -m riggrade.verify certificate.json`, or use any Ed25519 library.
+That check needs nothing from RigGrade after issue. The evidence pack
+recomputes every check with the open rules; the certificate carries the
+pack's SHA-256.
+
+**Limits, stated plainly:** the verdict covers the named test at the named
 time; it is not a promise about future delivery. The rules are v0 draft and
 versioned; a change gets notice and a new version string on the certificate.
+The service also keeps its own HMAC check on stored certificates; that one is
+internal and not the independent proof.
 
 Contact: entropoid.research@gmail.com. Code and rules: Apache-2.0 at
 https://github.com/nnyycc77-ship-it/riggrade.

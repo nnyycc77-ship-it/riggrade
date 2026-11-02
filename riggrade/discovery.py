@@ -96,8 +96,8 @@ def agent_card(base, prefix, on_sale):
                             "(25 USDC, x402). Run runner.cluster on the rented nodes, then "
                             "POST %s/cluster/acceptance with the evidence pack: the server recomputes "
                             "every check and issues a signed, stored certificate. The fetch URL "
-                            "returns it with the service's own signature check (HMAC, not "
-                            "independently verifiable)." % api,
+                            "returns it; its Ed25519 signature verifies offline with the public "
+                            "key at /.well-known/riggrade-keys.json." % api,
              "tags": ["gpu", "cluster", "acceptance", "x402"]},
         ],
         "payments": {"protocol": "x402", "x402Version": 2, "network": "eip155:8453", "asset": "USDC",
@@ -124,6 +124,7 @@ def llms_txt(base, prefix, on_sale):
         "- Free GPU price index (latest listed on-demand price per class, weekly): GET " + api + "/index",
         "- OpenAPI: " + api + "/openapi.json",
         "- Agent card: " + base + "/.well-known/agent.json",
+        "- Certificate signing keys (Ed25519, verify offline): " + base + "/.well-known/riggrade-keys.json",
         "",
         "## Code and docs",
         "- Repository (Apache-2.0): " + REPO,

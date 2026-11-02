@@ -5,7 +5,8 @@
 <h1>SAMPLE (fictional values, for illustration): Cluster acceptance certificate</h1>
 <p class=muted>RigGrade &middot; certificate <code>rc_sample0000000000</code> &middot; issued 2026-11-01 00:00 UTC &middot; rules <code>cluster-acceptance-v0-draft</code></p>
 <p><span class="verdict exceptions">Verdict: accept with exceptions</span></p>
-<p>Signature check by this service: <span class=ok>valid by this service's own check (HMAC): the stored certificate is unchanged. This is not an independent proof; the recomputation from the evidence pack is.</span>.</p>
+<p>Independent signature: <span class=muted>none: this certificate predates independently verifiable signatures; the recomputation from the evidence pack is the independent check.</span></p>
+<p>Service check: <span class=ok>valid by this service's own check (HMAC): the stored certificate is unchanged.</span></p>
 <h2>What the provider claimed</h2>
 <table><tr><th>Claim</th><th>Value</th></tr>
 <tr><td><code>gpu_model</code></td><td>NVIDIA H100 80GB HBM3</td></tr>
@@ -28,5 +29,5 @@
 <h2>Evidence</h2>
 <p>Evidence pack SHA-256 <code>7c2a9e1f0b4d6a8c3e5f1a2b9d8c7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d</code>. Anyone holding the pack can recompute every check with the open rules (<code>python3 -m runner.cluster evaluate</code>) and compare the hash.</p>
 <p class=muted>Measured, not promised. What this cluster delivered during the named test, against what its provider claimed; no promise about future delivery.</p>
-<p class=muted>Signature: HMAC by this service (not independently verifiable); the JSON form of this certificate is at <a href="https://riggrade-674098696181.us-central1.run.app/riggrade/v1/cluster/acceptance/rc_sample0000000000?format=json">https://riggrade-674098696181.us-central1.run.app/riggrade/v1/cluster/acceptance/rc_sample0000000000?format=json</a>. To keep a copy for a dispute, print this page to PDF.</p>
+<p class=muted>The JSON form of this certificate is at <a href="https://riggrade-674098696181.us-central1.run.app/riggrade/v1/cluster/acceptance/rc_sample0000000000?format=json">https://riggrade-674098696181.us-central1.run.app/riggrade/v1/cluster/acceptance/rc_sample0000000000?format=json</a>; save it to verify offline. To keep a copy for a dispute, print this page to PDF and keep the JSON and the evidence pack beside it.</p>
 </body></html>

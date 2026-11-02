@@ -13,7 +13,7 @@ import hashlib
 import hmac
 import json
 
-from . import cluster_rules
+from . import cluster_rules, signing
 
 PRODUCT = "riggrade_cluster_acceptance"
 STATEMENT = ("Measured, not promised. What this cluster delivered during the named test, "
@@ -60,10 +60,38 @@ def certificate(pack, checks, result, secret, now, cert_id):
     return cert
 
 
+SIGNATURE_FIELDS = ("signature", "ed25519")
+
+
+def body(cert):
+    """The signed content: every field but the signatures themselves."""
+    return {k: v for k, v in cert.items() if k not in SIGNATURE_FIELDS}
+
+
 def sign(cert, secret):
-    body = {k: v for k, v in cert.items() if k != "signature"}
-    return hmac.new(secret, canonical(body), hashlib.sha256).hexdigest()
+    """The service's own check (HMAC); kept beside the Ed25519 signature."""
+    return hmac.new(secret, canonical(body(cert)), hashlib.sha256).hexdigest()
 
 
 def verify(cert, secret):
     return hmac.compare_digest(sign(cert, secret), cert.get("signature", ""))
+
+
+def attach_ed25519(cert, signer):
+    """Independently verifiable signature with the published key; a no-op
+    without a signer (HMAC-only certificate)."""
+    if signer is None:
+        return cert
+    cert["ed25519"] = {"kid": signer.kid, "alg": signing.ALG, "public_key": signer.public_key_b64,
+                       "signature": signer.sign(canonical(body(cert))),
+                       "canonicalisation": signing.CANONICAL_RULE}
+    return cert
+
+
+def verify_ed25519(cert, public_key_b64=None):
+    """True, False, or None when the certificate carries no Ed25519 object."""
+    sig = cert.get("ed25519") if isinstance(cert, dict) else None
+    if not isinstance(sig, dict):
+        return None
+    return signing.verify(public_key_b64 or sig.get("public_key", ""), canonical(body(cert)),
+                          sig.get("signature", ""))

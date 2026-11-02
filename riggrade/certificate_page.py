@@ -37,7 +37,7 @@ def _rows(checks):
     return "\n".join(out) or "<tr><td colspan=4>No checks recorded.</td></tr>"
 
 
-def render(cert, signature_valid, lookup_url=""):
+def render(cert, signature_valid, lookup_url="", ed25519_valid=None, keys_url=""):
     verdict = str(cert.get("verdict", "unknown"))
     css_class = "accept" if verdict == "accept" else ("exceptions" if "exception" in verdict else "reject")
     claims = cert.get("claims") or {}
@@ -50,9 +50,19 @@ def render(cert, signature_valid, lookup_url=""):
         lists += "<h2>Exceptions</h2><ul>%s</ul>" % "".join("<li>%s</li>" % _e(x) for x in exceptions)
     if rejections:
         lists += "<h2>Rejections</h2><ul>%s</ul>" % "".join("<li>%s</li>" % _e(x) for x in rejections)
-    sig = ("<span class=ok>valid by this service's own check (HMAC): the stored certificate is unchanged. "
-           "This is not an independent proof; the recomputation from the evidence pack is.</span>"
+    sig = ("<span class=ok>valid by this service's own check (HMAC): the stored certificate is unchanged.</span>"
            if signature_valid else "<span class=bad>INVALID: the stored certificate does not match its signature</span>")
+    ed = cert.get("ed25519") if isinstance(cert.get("ed25519"), dict) else None
+    if ed25519_valid is True and ed:
+        ed_line = ("<span class=ok>valid: Ed25519 signature by key <code>%s</code>, verifiable by anyone offline "
+                   "with the public key published at <a href=\"%s\">%s</a> "
+                   "(<code>python3 -m riggrade.verify certificate.json</code>).</span>"
+                   % (_e(ed.get("kid", "")), _e(keys_url), _e(keys_url)))
+    elif ed25519_valid is False:
+        ed_line = "<span class=bad>INVALID: the Ed25519 signature does not verify.</span>"
+    else:
+        ed_line = ("<span class=muted>none: this certificate predates independently verifiable signatures; "
+                   "the recomputation from the evidence pack is the independent check.</span>")
     is_sample = str(cert.get("certificate_id", "")).startswith("rc_sample")
     return """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -61,7 +71,8 @@ def render(cert, signature_valid, lookup_url=""):
 <h1>%(sample)sCluster acceptance certificate</h1>
 <p class=muted>RigGrade &middot; certificate <code>%(id)s</code> &middot; issued %(issued)s &middot; rules <code>%(rules)s</code></p>
 <p><span class="verdict %(cls)s">Verdict: %(verdict)s</span></p>
-<p>Signature check by this service: %(sig)s.</p>
+<p>Independent signature: %(ed)s</p>
+<p>Service check: %(sig)s</p>
 <h2>What the provider claimed</h2>
 <table><tr><th>Claim</th><th>Value</th></tr>
 %(claims)s
@@ -75,11 +86,11 @@ def render(cert, signature_valid, lookup_url=""):
 <h2>Evidence</h2>
 <p>Evidence pack SHA-256 <code>%(pack)s</code>. Anyone holding the pack can recompute every check with the open rules (<code>python3 -m runner.cluster evaluate</code>) and compare the hash.</p>
 <p class=muted>%(statement)s</p>
-<p class=muted>Signature: HMAC by this service (not independently verifiable); the JSON form of this certificate is at <a href="%(json)s">%(json)s</a>. To keep a copy for a dispute, print this page to PDF.</p>
+<p class=muted>The JSON form of this certificate is at <a href="%(json)s">%(json)s</a>; save it to verify offline. To keep a copy for a dispute, print this page to PDF and keep the JSON and the evidence pack beside it.</p>
 </body></html>
 """ % {"sample": "SAMPLE (fictional values, for illustration): " if is_sample else "",
        "id": _e(cert.get("certificate_id", "")), "css": CSS, "issued": _when(cert.get("issued_at")),
-       "rules": _e(cert.get("rules", "")), "cls": css_class, "verdict": _e(verdict), "sig": sig,
+       "rules": _e(cert.get("rules", "")), "cls": css_class, "verdict": _e(verdict), "sig": sig, "ed": ed_line,
        "claims": claim_rows, "nodes": _e(cert.get("nodes", "?")),
        "images": ", ".join("<code>%s</code>" % _e(i) for i in (cert.get("images") or [])) or "(unrecorded)",
        "checks": _rows(cert.get("checks")), "lists": lists, "pack": _e(cert.get("pack_sha256", "")),
