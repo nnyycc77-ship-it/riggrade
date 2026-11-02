@@ -585,10 +585,16 @@ def main(argv=None):
         tried = []
         for y in range(this, this - 4, -1):
             try:
-                data, year = fetch(EIA861_URL.format(year=y), timeout=300), y
-                break
+                blob = fetch(EIA861_URL.format(year=y), timeout=300)
             except SystemExit as exc:
                 tried.append(f"{y}: {str(exc)[:90]}")
+                continue
+            if not blob.startswith(b"PK"):
+                # EIA answers a year it has not published with a web page, not a 404.
+                tried.append(f"{y}: not a zip ({len(blob)} bytes, starts {blob[:15]!r})")
+                continue
+            data, year = blob, y
+            break
         require(data is not None, f"no EIA-861 zip found: {tried}")
         url = EIA861_URL.format(year=year)
         with zipfile.ZipFile(io.BytesIO(data)) as zf:
@@ -628,7 +634,7 @@ def main(argv=None):
     for key, job in (("nri", nri), ("price", price), ("mix", mix), ("reliability", reliability)):
         try:
             blob, meta, url = job()
-        except SystemExit as exc:
+        except (SystemExit, Exception) as exc:  # noqa: BLE001 - one source failing must not stop the others
             failures.append(str(exc))
             sys.stdout.write(f"{key}: FAILED: {exc}\n")
             continue

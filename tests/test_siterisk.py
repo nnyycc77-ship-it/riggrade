@@ -129,6 +129,51 @@ class ReliabilityTests(unittest.TestCase):
         self.assertIn(("TX", "County 0", 1000), out)
 
 
+class Eia861FetchTests(unittest.TestCase):
+    def test_a_web_page_for_an_unpublished_year_falls_back_and_a_crash_stays_in_its_source(self):
+        import tempfile as tf
+        import time as t
+        this = int(t.strftime("%Y", t.gmtime()))
+        rel = ReliabilityTests.table()
+        ter = [["Data Year", "Utility Number", "State", "County"]] + [[2024, 1000 + i % 50, "TX", f"C{i}"]
+                                                                      for i in range(1200)]
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr("Reliability_2025.xlsx", b"r")
+            zf.writestr("Service_Territory_2025.xlsx", b"t")
+        good_zip = buf.getvalue()
+        asked = []
+
+        def fake_fetch(url, timeout=120):
+            asked.append(url)
+            if url == ss.EIA861_URL.format(year=this):
+                return b"<!DOCTYPE html><html>Page not found</html>"
+            if url == ss.EIA861_URL.format(year=this - 1):
+                return good_zip
+            if url == ss.URLS["mix"]:
+                raise ValueError("a crash inside one source")
+            ss.fail(f"{url}: refused")
+
+        def sheets(data, name):
+            return [("S", rel if "Reliability" in name else ter)]
+
+        saved = ss.fetch, ss.excel_sheets
+        ss.fetch, ss.excel_sheets = fake_fetch, sheets
+        try:
+            with tf.TemporaryDirectory() as d:
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out), self.assertRaises(SystemExit) as cm:
+                    ss.main(["--out", d])
+                kept = json.loads(Path(d, "SOURCES.json").read_text())
+                self.assertEqual(kept["reliability"]["year"], this - 1)
+                self.assertEqual(kept["reliability"]["rows"], 210)
+                self.assertTrue(Path(d, "eia861_territory.csv").exists())
+                self.assertIn("mix: FAILED: a crash inside one source", out.getvalue())
+                self.assertIn("3 of 4 sources failed", str(cm.exception))
+        finally:
+            ss.fetch, ss.excel_sheets = saved
+
+
 class LatestPriceTests(unittest.TestCase):
     def table(self):
         # The shape EIA served on 2 Nov 2026: two title rows, the sector row, then
