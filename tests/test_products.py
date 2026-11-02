@@ -209,6 +209,9 @@ class ProductEndpointTests(unittest.TestCase):
         self.assertEqual((cert["verdict"], cert["nodes"], cert["paying_wallet"]),
                          (pack["verdict"], 2, PAYER))
         self.assertTrue(acceptance.verify(cert, b"s"))
+        if acceptance.signing.available():
+            self.assertTrue(acceptance.verify_ed25519(cert))
+            self.assertTrue(cert["keys_url"].endswith("/.well-known/riggrade-keys.json"))
         self.assertTrue(doc["lookup_url"].endswith("/riggrade/v1/cluster/acceptance/" + cert["certificate_id"]))
         status, _h, got = call(app, "GET", "/riggrade/v1/cluster/acceptance/" + cert["certificate_id"])
         self.assertEqual(status, "200 OK")

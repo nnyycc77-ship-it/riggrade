@@ -79,7 +79,9 @@ def verify(cert, secret):
 
 def attach_ed25519(cert, signer):
     """Independently verifiable signature with the published key; a no-op
-    without a signer (HMAC-only certificate)."""
+    without a signer (HMAC-only certificate). The certificate's keys_url
+    (set by the issuer before either signature) names the published key
+    set the signature is anchored to; both signatures cover it."""
     if signer is None:
         return cert
     cert["ed25519"] = {"kid": signer.kid, "alg": signing.ALG, "public_key": signer.public_key_b64,

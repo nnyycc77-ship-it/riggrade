@@ -572,6 +572,8 @@ class GradingApp:
             cert = acceptance.certificate(pack, checks, result, self.config.secret,
                                           self.clock(), cert_id)
             cert["paying_wallet"] = settled.get("payer")
+            if self.signer is not None:
+                cert["keys_url"] = _url(environ, signing.KEYS_PATH)   # the anchor, inside the signed body
             cert["signature"] = acceptance.sign(cert, self.config.secret)
             acceptance.attach_ed25519(cert, self.signer)
             self.store.put("cert:" + cert_id, cert)

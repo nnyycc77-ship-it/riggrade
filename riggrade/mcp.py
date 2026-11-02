@@ -94,11 +94,12 @@ TOOLS = [
                                                        "chip:h100 once published; all when omitted."}},
          "additionalProperties": False}},
     {"name": "verify_certificate",
-     "description": "Verify a RigGrade cluster acceptance certificate offline: checks its Ed25519 "
-                    "signature with the public key embedded in it and, when the published key "
-                    "document is given, that the key is in the service's published set. Nothing is "
-                    "sent anywhere. Returns valid or not, the key id and the evidence-pack hash to "
-                    "compare after recomputing with runner.cluster evaluate.",
+     "description": "Verify a RigGrade cluster acceptance certificate. Pass keys_document (the JSON "
+                    "from the certificate's keys_url, /.well-known/riggrade-keys.json on the issuing "
+                    "service) to prove RigGrade issued it: the result is then anchored. Without it the "
+                    "check proves only that the certificate matches its own embedded key, and the "
+                    "result says so. Nothing is sent anywhere. Returns valid, anchored, what the result "
+                    "proves, the key id and the evidence-pack hash to compare after recomputing.",
      "inputSchema": {"type": "object", "properties": {
          "certificate": {"type": "object", "description": "The certificate JSON, or the lookup response that wraps it."},
          "keys_document": {"type": "object", "description": "Optional: the JSON from /.well-known/riggrade-keys.json."},
@@ -178,8 +179,14 @@ def _verify_certificate(args):
     if isinstance(cert.get("certificate"), dict):   # the lookup response wraps it
         cert = cert["certificate"]
     keys_doc = args.get("keys_document") if isinstance(args.get("keys_document"), dict) else None
-    ok, lines = verify.check(cert, keys_doc, args.get("public_key") or None)
-    return _text(json.dumps({"valid": ok, "certificate_id": cert.get("certificate_id"),
+    ok, anchored, lines = verify.check(cert, keys_doc, args.get("public_key") or None)
+    return _text(json.dumps({"valid": ok, "anchored": anchored,
+                             "proves": ("RigGrade issued this certificate and it is unchanged" if ok and anchored
+                                        else ("only that the certificate matches its own embedded key; fetch "
+                                              + str(cert.get("keys_url") or "/.well-known/riggrade-keys.json")
+                                              + " and pass it as keys_document to prove issuance") if ok
+                                        else "nothing: the signature does not verify"),
+                             "certificate_id": cert.get("certificate_id"),
                              "verdict": cert.get("verdict"), "detail": lines}, indent=1))
 
 
