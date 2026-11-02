@@ -314,6 +314,14 @@ class ContextTests(unittest.TestCase):
             return set()
         self.assertFalse({k for k in keys(a) if "score" in k or "weight" in k or k == "total"})
 
+    def test_hosted_layer_provenance_is_named(self):
+        src = json.loads(Path(self.tmp.name, "SOURCES.json").read_text())
+        src["nri"].update({"via": "hosted layer", "layer": "NRI_Counties_Prod", "owner": "FEMA AGOL",
+                           "layer_last_edit_ms": 1791992778545})
+        Path(self.tmp.name, "SOURCES.json").write_text(json.dumps(src))
+        p = self.ctx({"fips": "48453"})["physical"]
+        self.assertIn("hosted layer NRI_Counties_Prod owned by FEMA AGOL, last edited 2026-10-14", p["source"])
+
     def test_watch_lists_only_the_sources_high_ratings(self):
         d = self.ctx({"state": "TX", "county": "Dallas"})
         self.assertEqual(d["physical"]["watch"], ["Heat wave"])
