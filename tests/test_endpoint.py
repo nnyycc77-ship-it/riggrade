@@ -264,7 +264,15 @@ class PaidTests(Harness):
         self.assertEqual(bazaar["schema"]["properties"]["output"]["properties"]["example"]["type"], "object")
         self.assertIn("labels", bazaar["schema"]["properties"]["output"]["properties"]["example"]["properties"])
         self.assertEqual(bazaar["info"]["input"]["body"], {"session_id": "rg_s_..."})
-        self.assertIn("gpu", bazaar["tags"])
+        # Spec shape: serviceName and tags on the resource, not in the extension;
+        # the schema names Draft 2020-12; the output type is "json".
+        self.assertNotIn("tags", bazaar)
+        self.assertNotIn("serviceName", bazaar)
+        self.assertEqual(bazaar["schema"]["$schema"], "https://json-schema.org/draft/2020-12/schema")
+        self.assertEqual(bazaar["info"]["output"]["type"], "json")
+        self.assertIn("gpu", doc["resource"]["tags"])
+        self.assertEqual(doc["resource"]["serviceName"], "RigGrade")
+        self.assertLessEqual(len(doc["resource"]["tags"]), 5)
         # An x402 v1 header is refused with a 402 that names the version; no settle.
         calls = len(self.adapter.calls)
         environ_v1 = {"REQUEST_METHOD": "POST", "PATH_INFO": "/riggrade/v1/grade",

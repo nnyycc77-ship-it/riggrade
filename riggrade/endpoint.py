@@ -469,10 +469,13 @@ class GradingApp:
         """x402 v2 challenge: the PaymentRequired object goes base64 in the
         PAYMENT-REQUIRED header (the canonical carrier) and, for people and
         older tooling, as the JSON body too, with charged false."""
+        # Service name and tags live on the resource object (bazaar extension
+        # spec), per product, at most five tags.
+        product = PAID_ROUTES.get(tuple(path[len(PREFIX):].strip("/").split("/")))
         doc = {"x402Version": X402_VERSION,
                "resource": {"url": _url(environ, path), "description": description,
                             "mimeType": "application/json", "serviceName": "RigGrade",
-                            "tags": ["gpu", "benchmark", "grading", "x402", "usdc"]},
+                            "tags": RESOURCE_TAGS.get(product, RESOURCE_TAGS["grade"])},
                "accepts": [self._accept(amount)]}
         if error:
             doc["error"] = error
@@ -709,6 +712,11 @@ class GradingApp:
                      self.heartbeats.beat(body["rig_id"], body.get("prev"), body.get("echo")))
 
 
+RESOURCE_TAGS = {"grade": ["gpu", "benchmark", "verification", "grading", "x402"],
+                 "fixit": ["gpu", "diagnosis", "host", "preflight", "x402"],
+                 "cluster": ["gpu", "cluster", "acceptance", "verification", "x402"]}
+
+
 def bazaar_extension(resource="grade"):
     """x402 Bazaar discovery metadata for a stable paid resource. A
     catalogue indexes it only after a paid call settles and echoes it, so
@@ -749,8 +757,11 @@ def bazaar_extension(resource="grade"):
     return {
         "info": {"input": {"type": "http", "method": "POST", "bodyType": "json",
                            "body": example_in},
-                 "output": {"type": "application/json", "example": example_out}},
-        "schema": {"type": "object",
+                 "output": {"type": "json", "example": example_out}},
+        # Draft 2020-12, as the bazaar extension spec requires; the listed
+        # items carry the $schema key, so this does too.
+        "schema": {"$schema": "https://json-schema.org/draft/2020-12/schema",
+                   "type": "object",
                    "properties": {
                        "input": {"type": "object",
                                  "properties": {"type": {"const": "http"},
@@ -759,12 +770,10 @@ def bazaar_extension(resource="grade"):
                                                 "body": body_schema},
                                  "required": ["type", "method", "bodyType", "body"]},
                        "output": {"type": "object",
-                                  "properties": {"type": {"const": "application/json"},
+                                  "properties": {"type": {"const": "json"},
                                                  "example": _schema_of(example_out)},
                                   "required": ["type", "example"]}},
                    "required": ["input", "output"]},
-        "serviceName": "RigGrade",
-        "tags": tags,
     }
 
 
