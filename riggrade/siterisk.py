@@ -47,13 +47,13 @@ WATCH = ("VH", "RH")
 BEARS_ON = {
     "physical": "Outage, cooling load and physical damage at the site; insurability.",
     "energy": "Running cost and its exposure to fuel prices; the source mix behind the grid.",
+    "grid": "How long and how often the utilities serving the county cut power to their customers.",
     "local": "Permits, moratoria, zoning, large-load tariffs and incentives that can stop or reprice a site.",
     "country": ("Sanctions and export rules that decide whether the hardware may sit or be paid for there. "
                 "Information only; these lines never replace the payer screening and logging on every paid call."),
     "measured": "What rigs at the site actually showed: cooling headroom and power events under load.",
 }
 NOT_COVERED = (
-    "Grid reliability at the utility level (outage duration and frequency); first for v1.",
     "Water stress for cooling; second for v1, after its licence is read at the source (drought above is the nearest line).",
     "Fibre route diversity and carrier count.",
     "Operator financial health and concentration.",
@@ -168,6 +168,54 @@ def energy(state, prices, mix, src):
             "scope": "state level: a site's own tariff or supply contract can differ", "lines": lines}
 
 
+GRID_MAX_LINES = 8
+
+
+def _f(v):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def grid(row, state_only, rel, ter, src):
+    """Outage duration (SAIDI, minutes a year per customer) and frequency (SAIFI,
+    interruptions a year per customer), IEEE standard, for every utility with
+    service territory in the county, from EIA-861."""
+    if state_only:
+        return {"status": "county not declared", "lines": []}
+    if row is None:
+        return {"status": "not covered", "lines": []}
+    if rel is None or ter is None:
+        return {"status": "not yet fetched", "lines": []}
+    serving = sorted({int(t["utility"]) for t in ter
+                      if t["state"] == row["state"] and _norm(t["county"]) == _norm(row["county"])})
+    by = {(int(r["utility"]), r["state"]): r for r in rel}
+    meta = src.get("reliability") or {}
+    reported = [by[(u, row["state"])] for u in serving if (u, row["state"]) in by]
+    usable = [r for r in reported if _f(r["saidi_no_med"]) is not None]
+    usable.sort(key=lambda r: r["name"])
+    lines = []
+    for r in usable[:GRID_MAX_LINES]:
+        lines.append({"item": r["name"] or f"utility {r['utility']}",
+                      "value": (f"{_f(r['saidi_no_med']):.0f} minutes a year over "
+                                f"{_f(r['saifi_no_med']) or 0:.2f} interruptions, without major event days"),
+                      "with_major_events": (f"{_f(r['saidi_all']):.0f} minutes" if _f(r["saidi_all"]) is not None
+                                            else "not reported"),
+                      "year": r["year"] or meta.get("year")})
+    all_saidi = sorted(v for v in (_f(r["saidi_no_med"]) for r in rel) if v is not None)
+    median = all_saidi[len(all_saidi) // 2] if all_saidi else None
+    return {"status": "read" if serving else "no utility listed for this county",
+            "source": meta.get("name", "EIA-861"), "fetched_at": meta.get("fetched_at", "date unknown"),
+            "year": meta.get("year"),
+            "scope": ("utilities with service territory in the county; the site's own utility is one of them, "
+                      "and a site's own feed can differ"),
+            "serving": len(serving), "reporting": len(usable),
+            "not_shown": max(0, len(usable) - GRID_MAX_LINES),
+            "us_median": f"{median:.0f} minutes a year without major event days" if median is not None else None,
+            "lines": lines}
+
+
 def hand_kept(rows, match):
     if rows is None:
         return {"status": "table missing", "lines": []}
@@ -243,6 +291,8 @@ def context(site, reports=(), site_dir=SITE_DIR, exact=False):
         "physical": ({"status": "county not declared", "lines": []} if state_only else
                      physical(row, src.get("nri")) if nri is not None else {"status": "not yet fetched", "lines": []}),
         "energy": energy(state, _rows("eia_state_prices.csv", site_dir), _rows("eia_state_mix.csv", site_dir), src),
+        "grid": grid(row, state_only, _rows("eia861_reliability.csv", site_dir),
+                     _rows("eia861_territory.csv", site_dir), src),
         "local": hand_kept(_rows("local_actions.csv", site_dir),
                            lambda r: r["state"] == state and (not r["county_fips"] or r["county_fips"] == fips)),
         "country": hand_kept(_rows("countries.csv", site_dir), lambda r: r["country"].upper() == country),
@@ -279,6 +329,18 @@ def render(doc):
             out.append(f"- {ln['item']} ({ln['year']}): {ln['value']}" + (f"; {extra}" if extra else ""))
     else:
         out.append(f"Status: {e['status']}.")
+    g = doc["grid"]
+    out += ["", "## Grid reliability", f"_{BEARS_ON['grid']}_"]
+    if g["status"] == "read":
+        out.append(f"Source: {g['source']}, data year {g['year']}, fetched {g['fetched_at']}; {g['scope']}.")
+        out.append(f"{g['serving']} utilities serve the county; {g['reporting']} report reliability figures."
+                   + (f" US median across reporting utilities: {g['us_median']}." if g.get("us_median") else ""))
+        for ln in g["lines"]:
+            out.append(f"- {ln['item']}: {ln['value']}; {ln['with_major_events']} with them")
+        if g["not_shown"]:
+            out.append(f"- {g['not_shown']} more reporting utilities not shown.")
+    else:
+        out.append(f"Status: {g['status']}.")
     for key, title in (("local", "Local and political"), ("country", "Country")):
         sec = doc[key]
         out += ["", f"## {title}", f"_{BEARS_ON[key]}_", f"Status: {sec['status']}."]

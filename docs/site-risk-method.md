@@ -22,12 +22,13 @@ It is not a grade and not a score. Five sentences open every page and the last l
 
 Last line: a missing line is a missing read, not a clean bill.
 
-## 2. The five sections
+## 2. The sections
 
 | Section | What it bears on | Source in v0 | Level |
 |---|---|---|---|
 | Physical hazards | outage, cooling load, damage, insurability | FEMA National Risk Index, county table: 15 hazard ratings, overall risk, social vulnerability, community resilience | county |
 | Energy | running cost, fuel-price exposure, the mix behind the grid | EIA: industrial and commercial average retail price for the latest year, its change since 2020, the US average; net generation share by source, all producers | state |
+| Grid reliability (v1, for review) | how long and how often the utilities serving the county cut power | EIA-861: SAIDI (minutes a year per customer) and SAIFI (interruptions a year per customer), IEEE standard, with and without major event days, for every utility with service territory in the county; the US median across reporting utilities | county, by utility |
 | Local and political | permits, moratoria, zoning, large-load tariffs, incentives | hand-kept table, one row per primary read | state or county |
 | Country | sanctions and export rules for the hardware and the payment; information only, never a replacement for the payer screening and logging on every paid call [A] | hand-kept table, one row per primary read | country |
 | Measured at the site | what rigs there showed under load | preflight reports from rigs at the declared site | rigs |
@@ -40,7 +41,7 @@ The energy section is state level. A site's own tariff or supply contract can di
 
 ## 3. Sources
 
-All three fetched sources are US federal government works in the public domain. The monthly workflow runs on
+All four fetched sources are US federal government works in the public domain. The monthly workflow runs on
 GitHub's runner, writes small extracts and a `SOURCES.json` naming each file's URL, fetch time, byte count and
 SHA-256. The fetcher stops with a red run on any shape it does not recognise: a missing column, an unknown
 rating word, fewer than 3,000 counties, fewer than 50 states.
@@ -51,6 +52,14 @@ rating word, fewer than 3,000 counties, fewer than 50 states.
 | price | EIA Electric Power Annual table 2.10, average price by state and sector, latest two years | eia.gov/electricity/annual/xls/epa_02_10.xlsx |
 | price base | EIA average retail price by state and sector, 1990 to 2020; the base year for the change line | eia.gov/electricity/data/state/avgprice_annual.xlsx |
 | mix | EIA net generation by state and energy source | eia.gov/electricity/data/state/annual_generation_state.xls |
+| reliability | EIA-861 annual: the reliability and service territory workbooks, newest data year available | eia.gov/electricity/data/eia861/zip/f861YYYY.zip |
+
+Grid reliability is read under the IEEE standard columns, never the "other standard" columns some utilities
+also report. A utility is listed for a county when EIA's service territory table names that county for it.
+That is not proof the site buys from that utility: the page says the site's own utility is one of those listed,
+and that a site's own feed can differ. Utilities that serve the county but report no figures are counted, not
+hidden. The US median is arithmetic on the same table, labelled as such. Up to eight utilities are listed by
+name; any more are counted.
 
 FEMA's download address for the county table now forwards to its Resilience Analysis and Planning Tool page
 (observed 2 November 2026). The fetcher tries the download first, then the same county table served as a
@@ -110,8 +119,6 @@ the nonce-drawn sample of section 4a.
 
 Printed on every page so its absence is visible:
 
-- Grid reliability at the utility level. First for v1: EIA-861 reliability tables (outage duration and
-  frequency), public domain. (Message 288, point 5.)
 - Water stress for cooling. Second for v1: WRI Aqueduct 4.0. No value is imported until its licence terms are
   read in full at the source and recorded, and the CC BY 4.0 attribution is carried on the page.
 - Fibre route diversity and carrier count.
@@ -136,3 +143,5 @@ points were answered as follows. County stays the finest level, with a state-onl
 high-rating list stays, with the note of condition C. The measured wording changed under condition D. The
 hand-kept tables are read by the coordinator for any row used in a decision or offered. The v1 order is grid
 reliability first, water stress second.
+
+v1, for review: grid reliability from EIA-861 is added as its own section, per Message 288 point 5.

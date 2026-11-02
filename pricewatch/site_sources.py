@@ -316,6 +316,86 @@ def parse_price_latest(rows):
     return out
 
 
+# EIA-861 annual files: one zip per data year, newest first. The zip holds the
+# reliability table (outage duration and frequency per utility) and the
+# service territory table (the counties each utility serves).
+EIA861_URL = "https://www.eia.gov/electricity/data/eia861/zip/f861{year}.zip"
+
+
+def _norm_header(cell):
+    return " ".join(str(cell or "").replace("\n", " ").lower().split())
+
+
+def parse_reliability(rows):
+    """Per utility and state: SAIDI and SAIFI under the IEEE standard, with and
+    without major event days. Rows: [utility, state, name, year, saidi_all,
+    saidi_no_med, saifi_all, saifi_no_med]."""
+    h = None
+    for i, row in enumerate(rows[:20]):
+        cells = [_norm_header(c) for c in row]
+        if "utility number" in cells and "state" in cells and any(c.startswith("saidi") for c in cells):
+            h = i
+            break
+    require(h is not None, "no reliability header row (Utility Number, State, SAIDI) in the first 20 rows")
+    head = [_norm_header(c) for c in rows[h]]
+    group = [_norm_header(c) for c in rows[h - 1]] if h > 0 else []
+    start = next((i for i, c in enumerate(group) if "ieee" in c), 0)
+
+    def first(prefix):
+        hit = next((i for i, c in enumerate(head) if i >= start and c.startswith(prefix)), None)
+        require(hit is not None, f"no column starting {prefix!r} at or after the IEEE group; header {rows[h]}")
+        return hit
+
+    iu, ist = head.index("utility number"), head.index("state")
+    iname = next((i for i, c in enumerate(head) if c.startswith("utility name")), None)
+    iyear = next((i for i, c in enumerate(head) if c.startswith("data year")), None)
+    cols = [first("saidi with med"), first("saidi without med"), first("saifi with med"), first("saifi without med")]
+    out = []
+    for r in rows[h + 1:]:
+        if len(r) <= max([iu, ist, *cols]):
+            continue
+        try:
+            util = int(float(r[iu]))
+        except (TypeError, ValueError):
+            continue
+        vals = []
+        for c in cols:
+            try:
+                vals.append(round(float(r[c]), 3))
+            except (TypeError, ValueError):
+                vals.append("")
+        if all(v == "" for v in vals):
+            continue
+        out.append([util, str(r[ist]).strip(), str(r[iname]).strip() if iname is not None else "",
+                    year_of(r[iyear]) if iyear is not None else "", *vals])
+    require(len(out) >= 200, f"only {len(out)} utilities report reliability")
+    return out
+
+
+def parse_territory(rows):
+    """[state, county, utility] for every county a utility serves."""
+    h = None
+    for i, row in enumerate(rows[:20]):
+        cells = [_norm_header(c) for c in row]
+        if "utility number" in cells and "state" in cells and "county" in cells:
+            h = i
+            break
+    require(h is not None, "no territory header row (Utility Number, State, County) in the first 20 rows")
+    head = [_norm_header(c) for c in rows[h]]
+    iu, ist, ico = head.index("utility number"), head.index("state"), head.index("county")
+    out = set()
+    for r in rows[h + 1:]:
+        if len(r) <= max(iu, ist, ico) or not r[ico]:
+            continue
+        try:
+            util = int(float(r[iu]))
+        except (TypeError, ValueError):
+            continue
+        out.add((str(r[ist]).strip(), str(r[ico]).strip(), util))
+    require(len(out) >= 1000, f"only {len(out)} utility-county rows")
+    return sorted(out)
+
+
 def parse_mix(rows):
     """Per state and energy source: the share of the latest year's total net
     generation, all producers ('Total Electric Power Industry')."""
@@ -373,6 +453,26 @@ def best_sheet(sheets, parse):
             best = (out, sheet)
     require(best is not None, f"no sheet parsed: {seen}")
     return best[0], best[1], seen
+
+
+def best_rows(sheets, parse):
+    """The first sheet that parses: (rows, sheet name, {sheet: reason it did not})."""
+    seen = {}
+    for sheet, rows in sheets:
+        try:
+            return parse(rows), sheet, seen
+        except SystemExit as exc:
+            seen[sheet] = str(exc)[:80]
+    fail(f"no sheet parsed: {seen}")
+    return None
+
+
+def dump(sheets, name, n=8):
+    """Print the first rows of a workbook whose shape was not recognised, for the next fix."""
+    for sheet, rows in sheets[:2]:
+        sys.stdout.write(f"{name} sheet {sheet!r}, first rows for the next fix:\n")
+        for r in rows[:n]:
+            sys.stdout.write(f"  {r[:14]}\n")
 
 
 def write_csv(path, header, rows):
@@ -479,7 +579,53 @@ def main(argv=None):
     # Each source stands alone: one refusing does not stop the others, and a
     # failed source keeps its last good snapshot and SOURCES entry. Any
     # failure still ends the run red.
-    for key, job in (("nri", nri), ("price", price), ("mix", mix)):
+    def reliability():
+        this = int(stamp[:4])
+        data = year = None
+        tried = []
+        for y in range(this, this - 4, -1):
+            try:
+                data, year = fetch(EIA861_URL.format(year=y), timeout=300), y
+                break
+            except SystemExit as exc:
+                tried.append(f"{y}: {str(exc)[:90]}")
+        require(data is not None, f"no EIA-861 zip found: {tried}")
+        url = EIA861_URL.format(year=year)
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            names = zf.namelist()
+
+            def member(prefix):
+                hit = [n for n in names if n.rsplit("/", 1)[-1].lower().startswith(prefix) and n.lower().endswith(".xlsx")]
+                require(hit, f"no {prefix}* workbook in {url}: {names}")
+                return hit[0], zf.read(hit[0])
+
+            rname, rdata = member("reliability")
+            tname, tdata = member("service_territory")
+        rel_sheets = excel_sheets(rdata, rname)
+        try:
+            rel, rsheet, _ = best_rows(rel_sheets, parse_reliability)
+        except SystemExit:
+            dump(rel_sheets, rname)
+            raise
+        ter_sheets = excel_sheets(tdata, tname)
+        territory = []
+        for sheet, rows in ter_sheets:
+            try:
+                territory += parse_territory(rows)
+            except SystemExit as exc:
+                sys.stdout.write(f"reliability: territory sheet {sheet!r} skipped: {exc}\n")
+        if not territory:
+            dump(ter_sheets, tname)
+            fail(f"no territory sheet parsed in {tname}")
+        write_csv(out / "eia861_reliability.csv",
+                  ["utility", "state", "name", "year", "saidi_all", "saidi_no_med", "saifi_all", "saifi_no_med"], rel)
+        write_csv(out / "eia861_territory.csv", ["state", "county", "utility"], sorted(set(territory)))
+        sys.stdout.write(f"reliability: {rname} sheet {rsheet!r}, {len(rel)} utilities; "
+                         f"{tname}, {len(set(territory))} utility-county rows\n")
+        return data, {"name": "EIA-861 reliability and service territory", "year": year, "rows": len(rel),
+                      "files": [rname, tname], "territory_rows": len(set(territory))}, url
+
+    for key, job in (("nri", nri), ("price", price), ("mix", mix), ("reliability", reliability)):
         try:
             blob, meta, url = job()
         except SystemExit as exc:
@@ -490,10 +636,10 @@ def main(argv=None):
                      "sha256": hashlib.sha256(blob).hexdigest(), "bytes": len(blob)})
         sources[key] = meta
         sys.stdout.write(f"{key}: {meta['rows']} rows, {meta['bytes']} bytes, sha256 {meta['sha256'][:16]}\n")
-    if len(failures) < 3:
+    if len(failures) < 4:
         old_path.write_text(json.dumps(sources, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     if failures:
-        fail(f"{len(failures)} of 3 sources failed; the others were written")
+        fail(f"{len(failures)} of 4 sources failed; the others were written")
     return 0
 
 
