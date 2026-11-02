@@ -66,6 +66,38 @@ H100 and A100, labelled by chip family rather than peer class, so the two
 most-rented data-centre chips are not absent. Under section 3 as written they
 are dropped. If accepted, it takes effect 14 days after the notice (section 5).
 
+### 3.1a Amendment A1: chip-family series for H100 and A100 (accepted 1 Nov 2026; publishes from 15 Nov 2026)
+
+Method text accepted in review on 1 November 2026; the 14 days' notice
+under section 5 runs from that review, so no chip-family value is published
+before **2026-11-15**. The importer carries that date as a constant and emits
+nothing earlier. Method version from that date: `reconstructed-v0-draft-A1`.
+
+- **What it adds.** A second, separate series for source names that name a
+  chip family without the form or memory the peer classes require: in v0
+  exactly `nvidia-h100` and `nvidia-a100`.
+- **Namespace and label.** Keys `chip:h100` and `chip:a100`, which no peer
+  class uses, in the JSON, the CSV, the service route, the MCP tool and
+  every document. Each entry carries the label "chip family (form and
+  memory not stated by the source)" and the sentence stating what the
+  figure mixes (for H100: h100-sxm-80 and h100-pcie-80; for A100: the
+  40 GB and 80 GB, SXM and PCIe parts) in whatever shares the source's
+  offerings had that week.
+- **Alongside, never spliced.** The series sits beside the peer-class
+  series (`chip_families` beside `classes`); no peer-class value is filled
+  from it and no chip-family value from a peer class.
+- **Never for grading.** It is never used for a grade, a bar, a reference, a
+  consistency rule or a performance-adjusted price. A test holds the
+  chip-family keys out of every grading input.
+- **Section 3 unchanged.** `nvidia-h100` and `nvidia-a100` stay ambiguous for
+  the peer-class series, stay dropped there and stay counted. The chip-family
+  series replaces nothing; the peer-class series is identical with or
+  without A1.
+- **Figures and rules.** As sections 4 and 5: on-demand rows only, the
+  source's own medians as stated, weekly stays weekly, each source
+  separate, gaps stay gaps, history append-only with corrections beside
+  originals, every import recorded, attribution on every row.
+
 ### 3.2 Import record
 
 Each weekly import appends to `imports` in the published file: retrieval

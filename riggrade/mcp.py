@@ -90,7 +90,8 @@ TOOLS = [
                     "from GetDeploying's CC BY 4.0 record. Information, not an offer. Reads the "
                     "published copy; falls back to the copy shipped in this package.",
      "inputSchema": {"type": "object", "properties": {
-         "class_id": {"type": "string", "description": "One peer class, e.g. rtx4090-24; all when omitted."}},
+         "class_id": {"type": "string", "description": "One peer class, e.g. rtx4090-24, or a chip family such as "
+                                                       "chip:h100 once published; all when omitted."}},
          "additionalProperties": False}},
     {"name": "riggrade_service_info",
      "description": "How a RigGrade grade works and what it costs; the live service descriptor "
@@ -145,9 +146,16 @@ def _price_index(args, fetch=None):
         doc["refresh_note"] = "published copy unreachable (%s); packaged copy shown" % idx.last_error
     wanted = args.get("class_id")
     if wanted:
-        if wanted not in doc["classes"]:
-            return _text("unknown class %r; known: %s" % (wanted, ", ".join(sorted(doc["classes"]))), error=True)
-        doc["classes"] = {wanted: doc["classes"][wanted]}
+        families = doc.get("chip_families") or {}
+        if wanted in doc["classes"]:
+            doc["classes"] = {wanted: doc["classes"][wanted]}
+            doc["chip_families"] = {}
+        elif wanted in families:
+            doc["classes"] = {}
+            doc["chip_families"] = {wanted: families[wanted]}
+        else:
+            known = sorted(doc["classes"]) + sorted(families)
+            return _text("unknown class %r; known: %s" % (wanted, ", ".join(known)), error=True)
     return _text(json.dumps(doc, indent=1, sort_keys=True))
 
 
