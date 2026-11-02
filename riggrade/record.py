@@ -105,7 +105,7 @@ def history(rows, card_id):
     unheld = sorted((r for r in mine if not r.get("held")), key=lambda r: r.get("at", 0))
     physical = [r for r in unheld if not is_operator_series(r)]
     operator = [r for r in unheld if is_operator_series(r)]
-    strip = lambda r: {k: v for k, v in r.items() if k != "held"}  # noqa: E731
+    strip = lambda r: {k: v for k, v in r.items() if k != "held"}
     return {"card_id": card_id, "records": len(physical), "held": len(mine) - len(unheld),
             "entries": [strip(r) for r in physical],
             "operator_series": {"records": len(operator), "entries": [strip(r) for r in operator],
