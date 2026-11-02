@@ -59,6 +59,7 @@ also report. A utility is listed for a county when EIA's service territory table
 The scope line reads: the utilities named are the ones EIA names for this county; the site's own utility may
 be one of them, a listing is not proof that the site buys from any named utility, and the site's own feed can
 differ. A retail supplier, a private feed or a gap in the territory table can sit outside the list. [G1]
+The count line on the page reads "EIA names N utilities for this county; M report reliability figures."
 Utilities EIA names for the county that report no figures are counted, not hidden. Up to eight utilities are
 named, from public EIA filings; any more are counted. (Message 293, point 1.)
 
@@ -162,4 +163,5 @@ reliability first, water stress second.
 
 Coordinator verdict, Message 293: grid reliability (v1) accepted with named conditions A to C (scope line,
 median basis, lead order), all written in above and marked [G1], [G2] and [G3] so they are not confused with
-the conditions of Message 288.
+the conditions of Message 288. Confirmation read, Message 295: accepted with no condition outstanding; the
+count line is quoted in section 3 per its non-blocking note.
