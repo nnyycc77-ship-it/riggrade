@@ -22,6 +22,14 @@ class IdentityTests(unittest.TestCase):
         self.assertEqual(got["card_count"], 2)
         self.assertTrue(got["rig_id"].startswith("rg_"))
 
+    def test_serial_recorded_where_exposed_and_uuid_never_written(self):
+        got = identity.parse("NVIDIA H100 80GB HBM3, 81559, 550.54, 0:03:00.0, GPU-aaaa, 1650123456789\n"
+                             "NVIDIA H100 80GB HBM3, 81559, 550.54, 0:04:00.0, GPU-bbbb, [N/A]\n")
+        self.assertEqual([c["serial"] for c in got["cards"]], ["1650123456789", None])
+        self.assertTrue(all(c["card_id"].startswith("gc_") for c in got["cards"]))
+        self.assertNotIn("GPU-aaaa", repr(got))
+        self.assertEqual(identity.card_id("GPU-aaaa"), got["cards"][0]["card_id"])
+
     def test_rig_id_ignores_order_and_changes_with_cards(self):
         self.assertEqual(identity.rig_id(["a", "b"]), identity.rig_id(["b", "a"]))
         self.assertNotEqual(identity.rig_id(["a", "b"]), identity.rig_id(["a", "c"]))

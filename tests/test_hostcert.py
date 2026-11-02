@@ -29,9 +29,12 @@ def header_from(wallet):
 
 
 class HostCertTests(Harness):
-    def app(self, priced=True, products="hostcert", adapter="default"):
+    def app(self, priced=True, products="hostcert", adapter="default", free_until=None):
         env = dict(self.env, RIGGRADE_PRODUCTS=products)
-        if priced:
+        if free_until:
+            env["RIGGRADE_HOSTCERT_PRICE_ATOMIC"] = "0"
+            env["RIGGRADE_HOSTCERT_FREE_UNTIL"] = free_until
+        elif priced:
             env["RIGGRADE_HOSTCERT_PRICE_ATOMIC"] = "1000000"
         self.adapter = FakeAdapter() if adapter == "default" else adapter
         return GradingApp(env, self.clock, adapter=self.adapter, references=_with_references())
@@ -170,6 +173,34 @@ class HostCertTests(Harness):
         self.assertIsNone(got["superseded_by"])      # rig-2 is a different recorded identity
         _s, _h, got = call(app, "GET", f"/riggrade/v1/host/{third}")
         self.assertIsNone(got["superseded_by"])
+
+    def test_free_launch_window_issues_on_a_verified_zero_authorisation(self):
+        app = self.app(free_until="2027-01-15")       # the clock reads 2027-01-15 04:00 UTC
+        sid, _g = self.graded(app)
+        _s, _h, desc = call(app, "GET", "/riggrade/v1")
+        self.assertEqual((desc["products"]["hostcert"]["price_usdc"], desc["products"]["hostcert"]["free_until"]),
+                         ("0", "2027-01-15"))
+        self.assertTrue(desc["products"]["hostcert"]["on_sale"])
+        status, _h, doc = call(app, "POST", "/riggrade/v1/host/certificate", {"session_id": sid})
+        self.assertEqual((status, doc["accepts"][0]["amount"]), ("402 Payment Required", "0"))
+        self.assertIn("never settled", doc["resource"]["description"])
+        before = len(self.adapter.calls)
+        status, _h, doc = call(app, "POST", "/riggrade/v1/host/certificate", {"session_id": sid},
+                               payment="pay")
+        self.assertEqual(status, "200 OK", doc)
+        self.assertEqual(self.adapter.calls[before][0], "verify")      # verified, never settled
+        self.assertEqual(len(self.adapter.calls), before + 1)
+        entry = next(e for e in salelog.read_chain(self.log) if e["product"] == hostcert.PRODUCT)
+        self.assertEqual((entry["amount_atomic"], entry["status"]), ("0", "free_launch"))
+        # the window ends: off again, with the reason, nothing issued
+        self.clock.t = 1_800_000_000 + 400 * 86400
+        sid2, _g = self.graded(app, rig_id="rig-9")
+        status, _h, doc = call(app, "POST", "/riggrade/v1/host/certificate", {"session_id": sid2},
+                               payment="pay")
+        self.assertEqual(status, "503 Service Unavailable")
+        self.assertIn("free launch window for hostcert ended on 2027-01-15", doc["reasons_off"][0])
+        _s, _h, desc = call(app, "GET", "/riggrade/v1")
+        self.assertNotIn("hostcert", desc["products"])
 
     def test_badge_text_passes_the_promise_lint(self):
         cert = {"grades": [{"grade": 2, "peer_class": "rtx4090-24", "workload_class": "inference",
