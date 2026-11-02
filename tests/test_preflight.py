@@ -185,6 +185,8 @@ class RunTests(unittest.TestCase):
     def test_cards_parse_and_never_reach_the_share(self):
         got = pf.parse_cards_csv("0, GPU-1111, 1650000000001\n1, GPU-2222, [N/A]\n")
         self.assertEqual(got["cards"][0]["serial"], "1650000000001")
+        self.assertEqual([c["index"] for c in got["cards"]], [0, 1])
+        self.assertIsInstance(got["cards"][0]["index"], int)
         self.assertIsNone(got["cards"][1]["serial"])
         self.assertTrue(got["rig_id"].startswith("rg_"))
         self.assertNotIn("GPU-1111", repr(got))
