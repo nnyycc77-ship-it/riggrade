@@ -43,12 +43,13 @@ from . import certificate_page
 from . import signing
 from . import pool
 from . import ledger
+from . import hostcert
 
 PREFIX = "/riggrade/v1"
 X402_VERSION = 2
 NETWORK_BASE = "eip155:8453"
 PAID_ROUTES = {("grade",): "grade", ("fixit",): "fixit", ("cluster", "acceptance"): "cluster",
-               ("ledger",): "ledger"}
+               ("ledger",): "ledger", ("host", "certificate"): "hostcert"}
 V1_REFUSED = ("x402 v1 (X-PAYMENT) is not accepted; send PAYMENT-SIGNATURE with "
               "x402Version 2, as the PAYMENT-REQUIRED header of this answer describes")
 DISCOVERY_PATHS = ("/", "/favicon.ico", "/favicon.png", "/favicon.svg", "/.well-known/agent.json",
@@ -72,6 +73,8 @@ USE_WHEN = {
     "ledger": "Use when an agent needs the compute supply ledger's weekly listed-price series per "
               "GPU class, the derived figures with their bands, and the signal states, as one "
               "machine-readable document with its method and posture attached.",
+    "hostcert": "Use when a host wants its own graded rig's measured facts re-issued as a signed, "
+                "dated certificate with a public verify page and a badge for its own pages.",
 }
 PRODUCT_NOTES = {
     "fixit": USE_WHEN["fixit"] + " Host fix-it report, 2 USDC: POST /riggrade/v1/fixit with "
@@ -90,6 +93,14 @@ PRODUCT_NOTES = {
               "every section 4 signal with its state and missing series, provenance, and the "
               "four posture statements first and last. Information, not advice, an offer, a rate "
               "or a forecast. Free weekly note in the repository; the feed is the per-call form.",
+    "hostcert": USE_WHEN["hostcert"] + " Host certificate: POST /riggrade/v1/host/certificate with "
+                "{session_id} of a graded session, paid by the wallet that paid the grade; where that "
+                "wallet is not the session's registered host wallet, the host first consents with a "
+                "0 USDC authorisation at POST /riggrade/v1/host/consent. GET /riggrade/v1/host/{id} "
+                "returns the certificate (JSON, or the verify page), /badge.svg the badge. Measured, not "
+                "promised; declared runner printed as declared, not observed; grade kind and evidence "
+                "tag on certificate, page and badge. No marketplace is recorded as permitting the badge "
+                "in its listings; it is for the host's own pages.",
 }
 WALLET = re.compile(r"^0x[0-9a-fA-F]{40}$")
 OPERATOR_CLAIM_NOTE = ("A free reference session is claimed with a PAYMENT-SIGNATURE authorisation "
@@ -135,6 +146,8 @@ class Config:
         # sets one here (USDC atomic units) and names it in RIGGRADE_PRODUCTS.
         raw_price = env.get("RIGGRADE_LEDGER_PRICE_ATOMIC", "").strip()
         self.ledger_price = int(raw_price) if raw_price.isdigit() and int(raw_price) > 0 else None
+        raw_hc = env.get("RIGGRADE_HOSTCERT_PRICE_ATOMIC", "").strip()
+        self.hostcert_price = int(raw_hc) if raw_hc.isdigit() and int(raw_hc) > 0 else None
 
     def reasons_off(self, adapter):
         reasons = []
@@ -180,17 +193,19 @@ class GradingApp:
         if name not in self.config.products:
             reasons.append("RIGGRADE_PRODUCTS does not include %s" % name)
         if self.product_price(name) is None:
-            reasons.append(f"no price is set for {name} (RIGGRADE_LEDGER_PRICE_ATOMIC)")
+            reasons.append(f"no price is set for {name} (RIGGRADE_{name.upper()}_PRICE_ATOMIC)")
         return reasons
 
     def product_price(self, name):
         """USDC atomic units, or None while the owner has set no price."""
         if name == "ledger":
             return self.config.ledger_price
+        if name == "hostcert":
+            return self.config.hostcert_price
         return PRODUCT_PRICE_ATOMIC.get(name)
 
     def priced_products(self):
-        return sorted(name for name in list(PRODUCT_PRICE_ATOMIC) + ["ledger"]
+        return sorted(name for name in list(PRODUCT_PRICE_ATOMIC) + ["ledger", "hostcert"]
                       if self.product_price(name) is not None)
 
     def __call__(self, environ, start_response):
@@ -216,6 +231,9 @@ class GradingApp:
                 # Free: the reconstructed weekly listed-price series per class.
                 return _json(start_response, "200 OK", price_index.latest(self.index.current()),
                              [("Cache-Control", "public, max-age=3600")])
+            if method == "GET" and len(rest) in (2, 3) and rest[0] == "host" and rest[1].startswith("rh_") \
+                    and (len(rest) == 2 or rest[2] == "badge.svg"):
+                return self.host_lookup(start_response, environ, rest[1], badge=len(rest) == 3)
             if method == "GET" and len(rest) == 3 and rest[:2] == ["cluster", "acceptance"]:
                 return self.certificate_lookup(start_response, rest[2], environ)
             if method != "POST" and tuple(rest) in PAID_ROUTES:
@@ -258,6 +276,10 @@ class GradingApp:
                 return self.cluster_acceptance(start_response, environ, body)
             if rest == ["ledger"]:
                 return self.ledger_feed(start_response, environ, body)
+            if rest == ["host", "consent"]:
+                return self.host_consent(start_response, environ, body)
+            if rest == ["host", "certificate"]:
+                return self.host_certificate(start_response, environ, body)
         except BadRequest as exc:
             return _json(start_response, "400 Bad Request", {"error": str(exc), "charged": False})
         except SessionError as exc:
@@ -430,6 +452,8 @@ class GradingApp:
                                      host_paid=host_paid, operator=operator)
         pack["paying_wallet"] = result.get("payer")
         pack["operator"] = operator
+        session["grade"] = {"labels": labels, "pack": pack, "payer": result.get("payer"),
+                            "host_paid": host_paid, "at": self.clock()}
         badges = [badge_text(lab, "") for lab in labels]
         if lint(badges):
             raise RuntimeError("promise words in badge text: %s" % lint(badges))
@@ -471,7 +495,7 @@ class GradingApp:
             return _json(start_response, "503 Service Unavailable",
                          {"charged": False, "reasons_off": off})
         path = {"fixit": PREFIX + "/fixit", "cluster": PREFIX + "/cluster/acceptance",
-                "ledger": PREFIX + "/ledger"}[name]
+                "ledger": PREFIX + "/ledger", "hostcert": PREFIX + "/host/certificate"}[name]
         return self._payment_required(start_response, environ, path, self.product_price(name),
                                       PRODUCT_NOTES[name], bazaar=bazaar_extension(name),
                                       error=self._v1_error(environ)
@@ -538,7 +562,8 @@ class GradingApp:
                                           description, bazaar=bazaar_extension(name),
                                           error=self._v1_error(environ), preview=preview_doc)
         result = self.adapter.settle(header, requirement)
-        product = {"fixit": fixit.PRODUCT, "cluster": acceptance.PRODUCT, "ledger": ledger.PRODUCT}[name]
+        product = {"fixit": fixit.PRODUCT, "cluster": acceptance.PRODUCT, "ledger": ledger.PRODUCT,
+                   "hostcert": hostcert.PRODUCT}[name]
         if not result.get("ok") and result.get("charged") in (True, "unknown"):
             salelog.append(self.config.sale_log,
                            {"product": product, "status": "charged_without_delivery",
@@ -663,6 +688,153 @@ class GradingApp:
         return self._sell(start_response, environ, "ledger", PREFIX + "/ledger", description,
                           prev, deliver)
 
+    # ------------------------------------------------------------ host certificate
+
+    def _graded_session(self, body):
+        sid = body.get("session_id") if isinstance(body, dict) else None
+        if not isinstance(sid, str) or not sid:
+            return None, None, "session_id is required"
+        session = self.store.get(sid)
+        if session is None or not isinstance(session.get("grade"), dict):
+            return None, None, "no graded session with that id"
+        return sid, session, None
+
+    def host_consent(self, start_response, environ, body):
+        """[261b-3] The registered host wallet consents to publication of a
+        grade someone else paid for: a 0 USDC x402 authorisation naming the
+        session, verified and never settled, screened like a payer."""
+        sid, session, err = self._graded_session(body)
+        if err:
+            raise BadRequest(err)
+        if not session.get("host_wallet"):
+            return _json(start_response, "409 Conflict",
+                         {"error": "this session registered no host wallet, so no host can consent",
+                          "charged": False})
+        wallet, refused = self._operator_claim(environ, sid)
+        if wallet is None:
+            return self._payment_required(start_response, environ, PREFIX + "/host/consent", "0",
+                                          "RigGrade host consent: 0 USDC authorisation from the "
+                                          "session's registered host wallet; verified, never settled.",
+                                          error=refused)
+        if wallet.lower() != session["host_wallet"].lower():
+            return _json(start_response, "403 Forbidden",
+                         {"error": "the authorisation is not from the session's registered host wallet",
+                          "charged": False})
+        session["host_consent"] = wallet
+        self.store.put(sid, session)
+        return _json(start_response, "200 OK", {"consented": True, "session_id": sid,
+                                                "host_wallet": wallet, "charged": False})
+
+    def host_certificate(self, start_response, environ, body):
+        """Paid: the grade's facts re-issued as a signed certificate the
+        host may publish (docs/host-certificate-method.md). Off until the
+        owner sets a price; one certificate per session; consent rule
+        before any settlement."""
+        sid, session, err = self._graded_session(body)
+        if err:
+            if not self._payment_header(environ):
+                return self.probe(start_response, environ, "hostcert")
+            raise BadRequest(err)
+        if self.product_reasons_off("hostcert"):
+            return self._sell(start_response, environ, "hostcert", PREFIX + "/host/certificate",
+                              "", {"session_id": sid}, None)
+        if session.get("hostcert_id"):
+            return _json(start_response, "409 Conflict",
+                         {"error": "a certificate was already issued for this session: one per session",
+                          "certificate_id": session["hostcert_id"], "charged": False})
+        state = hostcert.consent_state(session, session["grade"])
+        if state == "impossible":
+            return _json(start_response, "403 Forbidden",
+                         {"error": "this session registered no host wallet, so the rig's host cannot "
+                                   "consent and the grade is not published", "charged": False})
+        if state == "needed":
+            return _json(start_response, "403 Forbidden",
+                         {"error": "the grade was not paid by the session's registered host wallet and "
+                                   "that wallet has not consented: POST /riggrade/v1/host/consent "
+                                   "with a 0 USDC authorisation from it first", "charged": False})
+        grade = session["grade"]
+        claimed = self._header_payer(environ)
+        if claimed and claimed.lower() != (grade.get("payer") or "").lower():
+            return _json(start_response, "403 Forbidden",
+                         {"error": "the certificate must be paid by the wallet that paid the grade",
+                          "charged": False})
+        description = ("RigGrade host certificate: the graded session's measured facts, signed, with "
+                       "a verify page and a badge; declared runner printed as declared")
+
+        def deliver(result):
+            payer = (result.get("payer") or "").lower()
+            if payer != (grade.get("payer") or "").lower():
+                raise RuntimeError("the certificate must be paid by the wallet that paid the grade")
+            cert_id = "rh_" + secrets.token_hex(8)
+            keys_url = _url(environ, signing.KEYS_PATH) if self.signer is not None else None
+            cert = hostcert.build(session, grade, self.clock(), cert_id, keys_url,
+                                  self.config.secret, self.signer, paying_wallet=result.get("payer"))
+            self.store.put("hostcert:" + cert_id, cert)
+            ident = cert["rig_identity"]
+            index = self.store.get("hostcert_rig:" + ident[0]) or []
+            index.append({"certificate_id": cert_id, "issued_at": cert["issued_at"], "identity": ident})
+            self.store.put("hostcert_rig:" + ident[0], index)
+            session["hostcert_id"] = cert_id
+            self.store.put(sid, session)
+            base = _url(environ, PREFIX + "/host/" + cert_id)
+            return ({"certificate": cert, "lookup_url": base, "badge_url": base + "/badge.svg"},
+                    {"certificate_id": cert_id, "session_id": sid, "consent": state})
+        return self._sell(start_response, environ, "hostcert", PREFIX + "/host/certificate",
+                          description, {"session_id": sid, "consent": state}, deliver)
+
+    @staticmethod
+    def _header_payer(environ):
+        """The payer a PAYMENT-SIGNATURE header names (authorization.from),
+        read locally before any settlement; None when unreadable."""
+        header = environ.get("HTTP_PAYMENT_SIGNATURE")
+        if not header:
+            return None
+        try:
+            payload = json.loads(base64.b64decode(header))
+            payer = ((payload.get("payload") or {}).get("authorization") or {}).get("from")
+        except (ValueError, AttributeError, TypeError):
+            return None
+        return payer if isinstance(payer, str) and WALLET.match(payer) else None
+
+    def _superseded_by(self, environ, cert):
+        """[261b-4] A later certificate for the same recorded rig identity,
+        else None. Identity differing in any field: no link, nothing said."""
+        ident = cert.get("rig_identity") or []
+        if not ident or ident[0] == "rg_unknown":
+            return None
+        later = [e for e in (self.store.get("hostcert_rig:" + ident[0]) or [])
+                 if e.get("identity") == ident and e.get("issued_at", 0) > cert.get("issued_at", 0)
+                 and e.get("certificate_id") != cert.get("certificate_id")]
+        if not later:
+            return None
+        newest = max(later, key=lambda e: e["issued_at"])
+        return {"certificate_id": newest["certificate_id"],
+                "url": _url(environ, PREFIX + "/host/" + newest["certificate_id"])}
+
+    def host_lookup(self, start_response, environ, cert_id, badge=False):
+        cert = self.store.get("hostcert:" + cert_id)
+        if cert is None:
+            return _json(start_response, "404 Not Found", {"error": "no such certificate"})
+        base = _url(environ, PREFIX + "/host/" + cert_id)
+        if badge:
+            date_text = certificate_page._when((cert.get("run") or {}).get("graded_at"))
+            data = hostcert.badge_svg(cert, base, date_text).encode("utf-8")
+            start_response("200 OK", [("Content-Type", "image/svg+xml"), ("Content-Length", str(len(data))),
+                                      ("Cache-Control", "public, max-age=3600")])
+            return [data]
+        valid = acceptance.verify(cert, self.config.secret)
+        ed_valid = acceptance.verify_ed25519(cert)
+        keys_url = _url(environ, signing.KEYS_PATH)
+        sup = self._superseded_by(environ, cert)
+        if certificate_page.wants_html(environ):
+            data = hostcert.render(cert, valid, base + "?format=json", ed_valid, keys_url, sup).encode("utf-8")
+            start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"),
+                                      ("Content-Length", str(len(data)))])
+            return [data]
+        return _json(start_response, "200 OK", {"certificate": cert, "signature_valid": valid,
+                                                "ed25519_valid": ed_valid, "public_keys_url": keys_url,
+                                                "superseded_by": sup, "badge_url": base + "/badge.svg"})
+
     def preflight_share(self, start_response, body):
         """Opt-in intake of an anonymised preflight summary. Stores the
         cleaned record only (riggrade.pool.clean); never the sender."""
@@ -755,6 +927,10 @@ class GradingApp:
                                      operator=operator)
         pack["free_reference_session"] = True
         pack["operator"] = operator
+        session["grade"] = {"labels": labels, "pack": pack, "payer": operator,
+                            "host_paid": bool(session.get("host_wallet"))
+                            and operator.lower() == session["host_wallet"].lower(),
+                            "at": self.clock()}
         badges = [badge_text(lab, "") for lab in labels]
         if lint(badges):
             raise RuntimeError("promise words in badge text: %s" % lint(badges))
@@ -785,7 +961,8 @@ class GradingApp:
 RESOURCE_TAGS = {"grade": ["gpu", "benchmark", "verification", "grading", "x402"],
                  "fixit": ["gpu", "diagnosis", "host", "preflight", "x402"],
                  "cluster": ["gpu", "cluster", "acceptance", "verification", "x402"],
-                 "ledger": ["gpu", "pricing", "market-data", "compute", "x402"]}
+                 "ledger": ["gpu", "pricing", "market-data", "compute", "x402"],
+                 "hostcert": ["gpu", "host", "certificate", "verification", "x402"]}
 
 
 def _usdc(atomic):
@@ -832,6 +1009,15 @@ def bazaar_extension(resource="grade"):
                     "implied_gross_usd_per_gpu_year": {"bands": {}}}}, "signals": {},
                     "read_this_last": ["..."]},
                    ["gpu", "pricing", "market-data", "compute"]),
+        "hostcert": ({"session_id": "rs_..."},
+                     {"session_id": {"type": "string",
+                                     "description": "A graded session of the host's own rig, paid by "
+                                                    "this wallet; the host wallet consents first "
+                                                    "where it is not the payer."}},
+                     {"certificate": {"certificate_id": "rh_...", "grades": ["..."],
+                                      "evidence_tag": "declared:host attestation:unattested"},
+                      "lookup_url": "...", "badge_url": "..."},
+                     ["gpu", "host", "certificate", "verification"]),
     }
     example_in, props, example_out, tags = shapes[resource]
     # "schema" is the JSON Schema of the "info" object (x402 bazaar extension):
