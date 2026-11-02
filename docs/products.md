@@ -38,10 +38,12 @@ node reports with the same published rules. A pack whose verdict does
 not recompute is refused (422) and nothing is charged. The free answer is
 the recomputed verdict and check statuses. The paid answer is a
 certificate: the claims, the images every node ran, each check with its
-numbers, the verdict, the pack's SHA-256, and an HMAC signature by the
-server. The certificate is stored, and anyone holding its id can fetch it at
+numbers, the verdict, the pack's SHA-256, an Ed25519 signature verifiable
+offline with the public key at `/.well-known/riggrade-keys.json`
+(`python3 -m riggrade.verify certificate.json`), and the server's own HMAC
+check. The certificate is stored, and anyone holding its id can fetch it at
 `GET /riggrade/v1/cluster/acceptance/{certificate_id}`, where the service
-checks the signature against its own secret and stored record and answers
+reports both checks and stored record and answers
 `signature_valid`. That is verification by the service, not independent
 verification: the key is symmetric, so a copy of the certificate alone
 cannot be checked without asking the service. Measured, not
