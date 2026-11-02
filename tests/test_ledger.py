@@ -30,6 +30,9 @@ class FeedTests(unittest.TestCase):
         self.assertEqual(bands["80%"], ledger.implied_revenue(c["link4"][-1]["median"], 0.8))
         self.assertIn("listed, not paid", c["implied_gross_usd_per_gpu_year"]["arithmetic"])
         self.assertIn("not a signal", c["flat_tolerance"]["note"])
+        self.assertEqual(out["flat_rule"], ledger.FLAT_RULE)
+        self.assertIn("reconstructed", out["series"])
+        self.assertIn("widest_departure_week", c["flat_tolerance"]["offerings"])
         self.assertEqual(out["provenance"]["corrections"], 0)
 
     def test_class_filter_and_preview_name_unknown_classes(self):

@@ -33,6 +33,24 @@ class NoteTests(unittest.TestCase):
         self.assertEqual(ln.is_flat([1.0, 1.0, 1.06])[0], False)     # end move over 5%
         self.assertEqual(ln.is_flat([1.0])[0], None)
 
+    def test_flat_reading_prints_the_breach_week_and_figure(self):
+        r = ln.flat_reading([("w1", 84.0), ("w2", 90.0), ("w3", 102.0), ("w4", 83.0)])
+        self.assertEqual((r["flat"], r["band_breach"]), (False, True))
+        self.assertEqual((r["widest_departure_week"], r["widest_departure_value"]), ("w3", 102.0))
+        self.assertIn("102 in week w3 is +21.4% from the start", r["detail"])
+        self.assertIn("end move -1.2%", r["detail"])
+        r = ln.flat_reading([("w1", 1.0), ("w2", 1.04), ("w3", 1.02)])
+        self.assertEqual((r["flat"], r["band_breach"]), (True, False))
+        self.assertIn("no week outside the 10% band", r["detail"])
+
+    def test_page_prints_the_flat_rule_and_the_reconstructed_label(self):
+        text = "\n".join(ln.build(index.load_packaged(), "2026-11-02"))
+        self.assertIn("Flat rule: " + ln.FLAT_RULE, text)
+        self.assertIn("## Link 4, marketplace (reconstructed series)", text)
+        self.assertIn("Series: reconstructed, from GetDeploying", text)
+        self.assertIn(ln.INDEX_METHOD_CITATION, text)
+        self.assertIn("in week 2026-", text)    # every breach label shows its week
+
 
 if __name__ == "__main__":
     unittest.main()
