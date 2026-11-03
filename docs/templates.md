@@ -5,7 +5,7 @@ published yet. Field names follow each marketplace's template form as Adviser 1 
 checks them in the form at publish time, and any field that differs is corrected here.
 
 A template puts the free preflight where renters already are: they pick the template when they rent, and the
-check runs once on start. It changes nothing on the box, sends no results anywhere, and writes its verdict to
+check runs once on start. It changes nothing on the box. No results are sent anywhere. It writes its verdict to
 `/workspace/riggrade-preflight.txt` and `/workspace/preflight-report.json` (`docs/preflight.md`).
 
 ## Rules for both templates
