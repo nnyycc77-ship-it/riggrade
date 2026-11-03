@@ -119,10 +119,16 @@ run the pinned image by digest:
 3. Write the session id and the workload (inference) on the run sheet against the box, then release the box.
 4. The claim is signed afterwards from the operator's wallet: on the service's checkout page
    (`/riggrade/v1/checkout`), "Grade a benchmark session", paste the session id, sign the 0 USDC claim. No money
-   moves. For the first run the owner directed (3 Nov 2026, in his own chat with the coordinator) that the
+   moves. For the first run the owner directed (3 Nov 2026, in the owner's own chat with the coordinator) that the
    coordinator does this step in the browser with a dedicated claims wallet the owner set up and that holds no
-   funds; that wallet is the operator on the record. Before every signature the signer checks that the amount is
-   exactly 0 USDC and the recipient is the payout address the page shows, and signs nothing else.
+   funds; that wallet is the operator on the record. Before every signature the signer makes three checks, and
+   signs nothing else:
+   - **Wallet.** The wallet the browser offers for the signature is that dedicated claims wallet.
+   - **Amount.** The amount is exactly 0 USDC.
+   - **Recipient.** The recipient is the payout address the page shows.
+
+   **If any check fails, nothing is signed.** The session id is held, and the claim is reported as not signed,
+   naming the check that failed (wallet, amount or recipient) (Coordinator Message 348).
 
 If any step fails, the box's audit stands as recorded and the run sheet notes what failed.
 
