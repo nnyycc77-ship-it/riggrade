@@ -14,8 +14,9 @@ check runs once on start. It changes nothing on the box. No results are sent any
   leaves it unused and says so here, because those marketplaces' hosts are graded parties
   (`docs/independence.md` section 3).
 - **No claim of endorsement.** The README says RigGrade is not affiliated with the marketplace.
-- **Pinned version.** The start line installs exactly `riggrade==0.2.0`, so a later release cannot change the
-  preflight a renter gets without a change here (coordinator condition (b), Message 310).
+- **Pinned version.** The start line installs exactly `riggrade==0.3.1`, so a later release cannot change the
+  preflight a renter gets without a change here (coordinator condition (b), Message 310). Moved from 0.2.0 to
+  0.3.1 on 3 Nov 2026 (Message 320): 0.3.1 carries the no-torch warning and the monitor's alert retry.
 - **The base image is the marketplace's own current PyTorch image**, so the template adds nothing to the box but
   the pip package. The tag is chosen at publish time and written below.
 
@@ -33,7 +34,7 @@ check runs once on start. It changes nothing on the box. No results are sent any
 
 On-start script:
 
-    pip install --quiet "riggrade==0.2.0" && \
+    pip install --quiet "riggrade==0.3.1" && \
       riggrade-preflight --dir /workspace > /workspace/riggrade-preflight.txt 2>&1 &
 
 ## RunPod
@@ -52,7 +53,7 @@ On-start script:
 
 Container start command:
 
-    bash -c "pip install --quiet 'riggrade==0.2.0' && \
+    bash -c "pip install --quiet 'riggrade==0.3.1' && \
       (riggrade-preflight --dir /workspace > /workspace/riggrade-preflight.txt 2>&1 &); /start.sh"
 
 ## README text (both templates)
