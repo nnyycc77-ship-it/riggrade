@@ -123,6 +123,7 @@ def llms_txt(base, prefix, on_sale):
         "- Host fix-it report, 2 USDC: POST " + api + "/fixit with {preflight_report}",
         "- Cluster acceptance certificate, 25 USDC: POST " + api + "/cluster/acceptance with {evidence_pack}",
         "- Browser checkout for people (the same routes, paid from your own wallet): " + api + "/checkout",
+        "- Rental check, free: POST " + api + "/rental/plan before renting, then run the preflight and POST its report to " + api + "/rental/check for keep, keep with warnings or cancel",
         "- Free GPU price index (latest listed on-demand price per class, weekly): GET " + api + "/index",
         "- Pooled preflight results per class (opt in with --share; aggregates at GET " + api + "/index/quality once published)",
         "- OpenAPI: " + api + "/openapi.json",
@@ -222,6 +223,19 @@ def openapi(base, prefix, contact_email=None):
                             "422": {"description": "nothing gradable in this session"},
                             "503": {"description": "sale off; nothing charged"}}, paid="grade"),
             "/heartbeat": post("Subscription heartbeat chain", {"type": "object"}),
+            "/rental/plan": post("Free, before renting a GPU: what to require for the workload, which preflight "
+                                 "check confirms each requirement, and the keep rules. Names no marketplace, host "
+                                 "or price", {"type": "object",
+                                              "properties": {"workload": {"type": "string", "enum": ["inference", "training"]},
+                                                             "gpus": {"type": "object"},
+                                                             "needs": {"type": "array", "items": {"type": "string"}}},
+                                              "required": ["workload"]}),
+            "/rental/check": post("Free, in the first minutes after renting: keep, keep with warnings or cancel, "
+                                  "from the preflight report, with each card's record history. Advice at that "
+                                  "moment; nothing stored", {"type": "object",
+                                                             "properties": {"preflight_report": {"type": "object"},
+                                                                            "plan": {"type": "object"}},
+                                                             "required": ["preflight_report"]}),
             "/preflight/share": post("Opt in: share an anonymised preflight summary with the pool (free; "
                                      "no identifiers stored; the runner's --share flag or the MCP tool's "
                                      "share flag sends it)", {"type": "object"},

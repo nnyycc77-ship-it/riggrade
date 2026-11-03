@@ -5,6 +5,12 @@ chat ("build a marketplace with our grade for agents to pick a GPU rental channe
 Adviser 1's side; it binds nothing until the coordinator records the owner's confirmation in his own chat. No
 price, listing, outreach or spend is proposed for action here.
 
+
+**v0 built (3 November 2026, owner go):** both routes are live, free, with no payment and no wallet, and store
+nothing. The plan returns no site context, because the site layer stays internal until the owner launches it. The
+check does not add runs to the GPU record yet; that waits for the record method's consent step. Any price is set
+later by the owner directly.
+
 ## 1. The question and the answer in one paragraph
 
 An agent about to rent a GPU wants to know where to rent and whether the box it got is the box it paid for.

@@ -17,6 +17,16 @@ for exactly that amount on Base, and posts again with the signed x402 v2
 payload. Prices, screening, settlement and the sale log are the route's own;
 the page holds no price, no address and no key, and loads no outside script.
 
+## Rental check (free)
+
+Before renting, `POST /riggrade/v1/rental/plan` with `{"workload": "inference"|"training", "needs": [...],
+"gpus": {"peer_class": ...}}`. It returns what to require for that workload, which preflight check confirms each
+requirement, and the keep rules. It names no marketplace, host or price. After renting, run `riggrade-preflight`
+and `POST /riggrade/v1/rental/check` with `{"preflight_report": ..., "plan": ...}`. The answer is keep, keep with
+warnings or cancel, with the measured reasons and each card's record history. That answer is advice measured at
+that moment; cancelling and refunds sit under the marketplace's own terms. Free, with nothing stored
+(`docs/rental-check-design.md`).
+
 ## Host fix-it report, 2 USDC
 
 For a host or renter whose free preflight warned or failed. Send the

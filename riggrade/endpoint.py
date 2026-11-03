@@ -43,6 +43,7 @@ from . import index as price_index
 from . import certificate_page
 from . import checkout
 from . import landing
+from . import rental
 from . import signing
 from . import pool
 from . import ledger
@@ -333,6 +334,11 @@ class GradingApp:
                                   resource_path=PREFIX + "/grade")
             if rest == ["heartbeat"]:
                 return self.heartbeat(start_response, body)
+            if rest == ["rental", "plan"]:
+                return _json(start_response, "200 OK", rental.plan(body))
+            if rest == ["rental", "check"]:
+                rows = record.read(self.config.record_path) if self.config.record_path else []
+                return _json(start_response, "200 OK", rental.check(body, rows, int(self.clock())))
             if rest == ["preflight", "share"]:
                 return self.preflight_share(start_response, body)
             if rest == ["record"]:
@@ -347,7 +353,7 @@ class GradingApp:
                 return self.host_consent(start_response, environ, body)
             if rest == ["host", "certificate"]:
                 return self.host_certificate(start_response, environ, body)
-        except BadRequest as exc:
+        except (BadRequest, rental.BadRequest) as exc:
             return _json(start_response, "400 Bad Request", {"error": str(exc), "charged": False})
         except SessionError as exc:
             return _json(start_response, "409 Conflict", {"error": str(exc), "charged": False})
