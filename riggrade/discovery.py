@@ -141,6 +141,17 @@ def llms_txt(base, prefix, on_sale):
     ])
 
 
+def robots_txt(base):
+    """Everything may be crawled; the machine-readable documents are named."""
+    return "\n".join([
+        "User-agent: *",
+        "Allow: /",
+        "",
+        "# RigGrade: " + base + "/llms.txt, " + base + "/openapi.json, " + base + "/.well-known/agent.json",
+        "",
+    ])
+
+
 # Discovery profile read by x402scan (its parser is @agentcash/discovery;
 # docs/SPECIFICATION.md there): every operation declares security, and a
 # paid one is "security: []" plus x-payment-info with protocols and a USD

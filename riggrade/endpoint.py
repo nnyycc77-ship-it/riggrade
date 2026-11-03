@@ -57,7 +57,10 @@ PAID_ROUTES = {("grade",): "grade", ("fixit",): "fixit", ("cluster", "acceptance
                ("ledger",): "ledger", ("host", "certificate"): "hostcert"}
 V1_REFUSED = ("x402 v1 (X-PAYMENT) is not accepted; send PAYMENT-SIGNATURE with "
               "x402Version 2, as the PAYMENT-REQUIRED header of this answer describes")
-DISCOVERY_PATHS = ("/", "/favicon.ico", "/favicon.png", "/favicon.svg", "/.well-known/agent.json",
+# /.well-known/agent-card.json is the A2A card's current path (agent.json is
+# the older one; both serve the same card). robots.txt allows everything.
+AGENT_CARD_PATHS = ("/.well-known/agent.json", "/.well-known/agent-card.json")
+DISCOVERY_PATHS = ("/", "/favicon.ico", "/favicon.png", "/favicon.svg", *AGENT_CARD_PATHS, "/robots.txt",
                    signing.KEYS_PATH, "/llms.txt", "/openapi.json", PREFIX + "/openapi.json")
 MAX_BODY = 4 * 1024 * 1024
 USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
@@ -374,8 +377,13 @@ class GradingApp:
             start_response("200 OK", [("Content-Type", "text/plain; charset=utf-8"),
                                       ("Content-Length", str(len(data)))])
             return [data]
-        if path == "/.well-known/agent.json":
+        if path in AGENT_CARD_PATHS:
             return _json(start_response, "200 OK", discovery.agent_card(base, PREFIX, self.on_sale))
+        if path == "/robots.txt":
+            data = discovery.robots_txt(base).encode()
+            start_response("200 OK", [("Content-Type", "text/plain; charset=utf-8"),
+                                      ("Content-Length", str(len(data)))])
+            return [data]
         if path == signing.KEYS_PATH:
             return _json(start_response, "200 OK",
                          signing.keys_document(self.signer, self.config.prior_public_keys),
