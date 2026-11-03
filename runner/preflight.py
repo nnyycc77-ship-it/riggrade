@@ -358,6 +358,8 @@ def evaluate(obs):
         add("compute", WARN if obs.get("idle") else None,
             "load checks did not run: they need torch with CUDA installed (%s); "
             "install it (pip install torch) and run again" % err)
+        # Machine-readable too (Message 321 condition 2): the warn says why.
+        findings[-1].update({"basis": "not measured", "hint": "pip install torch"})
     elif err:
         add("compute", FAIL, err)
     return findings
