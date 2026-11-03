@@ -49,6 +49,16 @@ class CheckoutPageTests(unittest.TestCase):
         self.assertIn('"path": "/cluster/acceptance"', body)
         self.assertNotIn("__", re.sub(r"__init__", "", body))  # every placeholder filled
 
+    def test_grade_sessions_can_be_claimed_or_paid_from_the_page(self):
+        # Owner direction, 3 Nov 2026: grade sessions on the io.net sample rentals. The operator claim
+        # (spec 13) is a 0 USDC authorisation from the operator's own wallet; the page takes a session id.
+        _s, _h, body = self.page()
+        self.assertIn('<option value="grade">', body)
+        self.assertIn('"path": "/grade"', body)
+        self.assertIn('id=sid', body)
+        self.assertIn("free_reference_session", body)
+        self.assertIn("0 USDC operator claim", body)
+
     def test_page_names_every_payer_role_the_endpoint_accepts(self):
         self.assertEqual(checkout.ROLES, acceptance.PAYER_ROLES)
 

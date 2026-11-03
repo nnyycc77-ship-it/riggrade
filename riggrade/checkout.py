@@ -34,6 +34,14 @@ PRODUCTS = {
                 "what": "The server recomputes every check from your evidence pack and issues a signed, "
                         "stored certificate with a public lookup page."},
 }
+# A grade session (spec section 13): the session id the benchmark container
+# printed. While the class is building its reference the service asks for a
+# 0 USDC operator claim (verified, never settled); otherwise the grade price.
+PRODUCTS["grade"] = {"title": "Grade a benchmark session (claim or pay)", "path": "/grade", "field": "session_id",
+                     "text": "the session id the benchmark container printed (rg_s_...)",
+                     "what": "Grades a session whose result bundle was accepted. While its GPU class is still "
+                             "building its reference, the first session per rig is free and your wallet signs a "
+                             "0 USDC operator claim; no money moves."}
 ROLES = ("buyer", "provider", "lender", "insurer", "other", "undeclared")
 
 
@@ -56,7 +64,8 @@ body{font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;max-width:46rem;m
 color:#1b1b1b;background:#fafaf8}
 h1{font-size:1.5rem;margin:0 0 .25rem}h2{font-size:1.05rem;margin:1.5rem 0 .5rem}
 .muted{color:#666;font-size:.9rem}.box{background:#fff;border:1px solid #ddd;border-radius:8px;padding:1rem;margin:.75rem 0}
-label{display:block;margin:.5rem 0 .25rem;font-weight:600}select,input[type=file]{font:inherit;max-width:100%}
+label{display:block;margin:.5rem 0 .25rem;font-weight:600}select,input[type=file],input[type=text]{font:inherit;max-width:100%}
+input[type=text]{width:100%;box-sizing:border-box;padding:.35rem}
 button{font:inherit;padding:.5rem 1rem;border-radius:6px;border:1px solid #1b1b1b;background:#1b1b1b;color:#fff;
 cursor:pointer;margin:.5rem .5rem 0 0}button[disabled]{opacity:.4;cursor:default}
 pre{white-space:pre-wrap;word-break:break-word;background:#f3f3f0;padding:.75rem;border-radius:6px;font-size:.85rem;
@@ -76,8 +85,10 @@ The price is the same whatever the result, and a failed check stays failed.</p>
 <label for=product>1. What do you want?</label>
 <select id=product>__OPTIONS__</select>
 <p class=muted id=what></p>
-<label for=file>2. Your file: <span id=filename></span></label>
-<input type=file id=file accept=".json,application/json">
+<div id=filebox><label for=file>2. Your file: <span id=filename></span></label>
+<input type=file id=file accept=".json,application/json"></div>
+<div id=textbox hidden><label for=sid>2. Your session: <span id=textname></span></label>
+<input type=text id=sid autocomplete=off spellcheck=false></div>
 <div id=rolebox hidden><label for=role>Who is paying? (printed on the certificate, not verified)</label>
 <select id=role>__ROLES__</select></div>
 <button id=quote>See the price and preview</button>
@@ -118,12 +129,21 @@ function choose() {
   product = $("product").value;
   const p = CFG.products[product];
   $("what").textContent = p.what;
-  $("filename").textContent = p.file;
+  $("filename").textContent = p.file || "";
+  $("textname").textContent = p.text || "";
+  $("filebox").hidden = Boolean(p.text);
+  $("textbox").hidden = !p.text;
   $("rolebox").hidden = product !== "cluster";
   $("quotebox").hidden = true; $("resultbox").hidden = true; quote = null;
 }
 
 async function readFile() {
+  const p0 = CFG.products[product];
+  if (p0.text) {
+    const v = $("sid").value.trim();
+    if (!/^[A-Za-z0-9_-]{4,128}$/.test(v)) throw new Error("Paste the session id the container printed.");
+    const out0 = {}; out0[p0.field] = v; return out0;
+  }
   const f = $("file").files[0];
   if (!f) throw new Error("Choose your JSON file first.");
   let doc;
@@ -156,7 +176,9 @@ async function getQuote() {
     quote = doc;
     const req = doc.accepts[0];
     const free = req.amount === "0";
-    say($("price"), free
+    say($("price"), doc.free_reference_session
+      ? "Free reference session: this GPU class is still building its reference. Your wallet signs a 0 USDC operator claim to the address the service names; it is verified and never settled, and no money moves."
+      : free
       ? "Free during the current free period. Your wallet still signs a 0 USDC authorisation, so the payer can be screened like any other; no money moves."
       : "Price: " + usdc(req.amount) + " USDC on Base, paid to " + req.payTo + ".", "");
     $("preview").textContent = JSON.stringify(doc.preview || {}, null, 2);
@@ -232,6 +254,7 @@ function download() {
 
 $("product").addEventListener("change", choose);
 $("file").addEventListener("change", () => { $("quotebox").hidden = true; });
+$("sid").addEventListener("input", () => { $("quotebox").hidden = true; });
 $("role").addEventListener("change", () => { $("quotebox").hidden = true; });
 $("quote").addEventListener("click", getQuote);
 $("pay").addEventListener("click", pay);
