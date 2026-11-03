@@ -16,6 +16,7 @@ import csv
 import json
 import sys
 import time
+import unicodedata
 from pathlib import Path
 
 METHOD_VERSION = "site-context-v0-draft"
@@ -80,12 +81,40 @@ def _sources(site_dir):
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
-def _norm(county):
-    c = " ".join(county.lower().replace(".", "").split())
+# Independent cities that share a name with a county in the same state (Baltimore, St. Louis, and Virginia's
+# cities, county codes 510 and up) are told apart by FIPS; EIA-861 names them "<name> City".
+CITY_FIPS = {"24510", "29510", "32510"}
+
+
+# States whose county lines changed after the ones EIA-861 still lists; a name that does not join there is a
+# boundary mismatch, not a county with no utility.
+BOUNDARY_CHANGED = {
+    "CT": "not joined: Connecticut's 2022 planning regions replaced the counties EIA-861 lists",
+    "AK": "not joined: this Alaska area's boundaries changed after the census areas EIA-861 lists",
+}
+
+
+def _is_city(fips):
+    f = str(fips or "")
+    return len(f) == 5 and f.isdigit() and (f in CITY_FIPS or (f[:2] == "51" and int(f[2:]) >= 510))
+
+
+def _norm(county, fips=None):
+    """Join key for a county name across FEMA NRI and EIA-861. Accents, case, dots, apostrophes, hyphens and
+    spaces are folded ("Doña Ana" = "Dona Ana", "Prince George's" = "Prince Georges", "De Witt" = "DeWitt",
+    "Miami-Dade" = "Miami Dade") and the county-type suffix is dropped. With a FIPS, an independent city keys
+    apart from the county of the same name ("Fairfax" 51600 = EIA "Fairfax City", not "Fairfax")."""
+    c = unicodedata.normalize("NFKD", county).encode("ascii", "ignore").decode().lower()
+    for ch in ".'\u2019":
+        c = c.replace(ch, "")
+    c = " ".join(c.replace("-", " ").split())
     for suffix in (" city and borough", " county", " parish", " borough", " census area", " municipality"):
         if c.endswith(suffix):
-            return c.removesuffix(suffix)
-    return c
+            c = c.removesuffix(suffix)
+            break
+    if _is_city(fips) and not c.endswith(" city"):
+        c += " city"
+    return c.replace(" ", "")
 
 
 def resolve(site, nri):
@@ -188,8 +217,9 @@ def grid(row, state_only, rel, ter, src):
         return {"status": "not covered", "lines": []}
     if rel is None or ter is None:
         return {"status": "not yet fetched", "lines": []}
+    key = _norm(row["county"], row.get("fips"))
     serving = sorted({int(t["utility"]) for t in ter
-                      if t["state"] == row["state"] and _norm(t["county"]) == _norm(row["county"])})
+                      if t["state"] == row["state"] and _norm(t["county"]) == key})
     by = {(int(r["utility"]), r["state"]): r for r in rel}
     meta = src.get("reliability") or {}
     reported = [by[(u, row["state"])] for u in serving if (u, row["state"]) in by]
@@ -211,7 +241,15 @@ def grid(row, state_only, rel, ter, src):
                       "year": r["year"] or meta.get("year")})
     all_saidi = sorted(v for v in (_f(r["saidi_no_med"]) for r in rel) if v is not None)
     median = all_saidi[len(all_saidi) // 2] if all_saidi else None
-    return {"status": "read" if serving else "no utility listed for this county",
+    if serving:
+        status = "read"
+    elif not any(t["state"] == row["state"] for t in ter):
+        status = "state not in the EIA-861 territory file"
+    elif row["state"] in BOUNDARY_CHANGED:
+        status = BOUNDARY_CHANGED[row["state"]]
+    else:
+        status = "no utility listed for this county"
+    return {"status": status,
             "source": meta.get("name", "EIA-861"), "fetched_at": meta.get("fetched_at", "date unknown"),
             "year": meta.get("year"),
             # Scope wording (Message 293, condition A).
