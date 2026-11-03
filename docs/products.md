@@ -7,6 +7,16 @@ shows `products` with `on_sale` per product. Prices are USDC on Base,
 paid by x402 from the buyer's own wallet, screened like every payer, and
 every sale is appended to the hash-chained sale log.
 
+## Paying from a browser
+
+People without an x402 client can buy the fix-it report and the cluster
+certificate at `GET /riggrade/v1/checkout`. The page posts the file to the
+same paid route, reads the 402 challenge (price, payout address, preview),
+asks the person's own browser wallet to sign an EIP-3009 USDC authorisation
+for exactly that amount on Base, and posts again with the signed x402 v2
+payload. Prices, screening, settlement and the sale log are the route's own;
+the page holds no price, no address and no key, and loads no outside script.
+
 ## Host fix-it report, 2 USDC
 
 For a host or renter whose free preflight warned or failed. Send the
