@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "riggrade"
-version = "0.2.0"
+version = "0.3.0"
 description = "Independent GPU rig grading: free preflight check, paid x402 grade, MCP server"
 readme = "README.md"
 license = "Apache-2.0"
@@ -22,6 +22,7 @@ Service = "https://riggrade-674098696181.us-central1.run.app/riggrade/v1"
 
 [project.scripts]
 riggrade-mcp = "riggrade.mcp:main"
+riggrade-monitor = "runner.monitor:main"
 riggrade-preflight = "runner.preflight:main"
 riggrade-verify = "riggrade.verify:main"
 

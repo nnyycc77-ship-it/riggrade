@@ -7,6 +7,7 @@ Status (1 Nov 2026): live at https://riggrade-674098696181.us-central1.run.app/r
 - [Grading spec, v0.1](docs/grading-spec.md)
 - [Sample grading of three fictional rigs](docs/sample-grading.md)
 - [Preflight check](docs/preflight.md): the kind of acceptance test big buyers run before paying for GPUs, for everyone else. Free one-minute check of a rented or hosted GPU box (throttling, foreign processes, driver vs CUDA, PCIe link, download and disk speed). `python3 -m runner.preflight`. Not a grade.
+- [GPU health monitor](docs/monitor.md) for hosts: `riggrade-monitor` runs the light checks every 6 hours, never while a renter's job holds the card, and alerts on your own webhook when a check gets worse or recovers. Free; nothing is sent to RigGrade.
 - [GPU index method, v0 draft](docs/index-method.md): daily listed price per GPU-hour by peer class, and price per unit of measured work once graded rigs exist. Method published before any value. Recorder: `python3 -m pricewatch.record --out PATH`.
 - [Cluster acceptance test, spec v0 draft](docs/cluster-acceptance.md): checks a rented multi-node cluster against its provider's own claims (inventory, node health, stragglers, inter-node fabric, storage) and writes an evidence pack. The signed certificate is on sale at 25 USDC (see the offer below).
 - MCP server for agents: `riggrade-mcp` (or `python3 -m riggrade.mcp`) exposes `gpu_preflight`, `gpu_price_index`, `verify_certificate` and `riggrade_service_info` over stdio. `pip install riggrade`.
