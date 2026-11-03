@@ -94,6 +94,10 @@ The audit comes first and is never changed by the grade step.
   applies to grade and audit together: no new box, and no grade session, starts if spend so far plus its billed
   hours at the listed rate would pass 20 USD. A grade session left unstarted by the cap is reported as such; the
   box's audit result stands.
+- **Workload.** The first run's grade sessions run the inference workload only (`--workloads inference`). Each
+  session counts only toward its class's inference provisional reference, never toward training, and the run
+  sheet and the audit report record the workload beside the session id. No other workload is counted from a
+  session unless it was run in full under the grading spec (Coordinator Message 339).
 - **What it records.** Each graded rig counts toward its class's provisional reference under the operator rules,
   tagged as declared by the buyer and unattested. No speed grade is issued in a class until its reference meets
   the spec (5 rigs, 3 distinct verified operators); RigGrade's own rentals can never meet that alone. The audit
