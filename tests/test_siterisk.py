@@ -555,5 +555,60 @@ class PreflightReasonsTests(unittest.TestCase):
         self.assertNotIn("hw_power_brake", json.dumps(shared))
 
 
+class CountyJoinTest(unittest.TestCase):
+    """The NRI-to-EIA-861 name join (buildout research item 1b): 148 of 3,232 NRI counties failed it."""
+
+    def test_names_fold_across_the_two_sources(self):
+        for nri, eia in [("Doña Ana", "Dona Ana"), ("Miami-Dade", "Miami Dade"), ("Prince George's", "Prince Georges"),
+                         ("St. Mary's", "St Marys"), ("De Witt", "DeWitt"), ("De Soto", "DeSoto"),
+                         ("LaSalle", "La Salle"), ("Matanuska-Susitna", "Matanuska Susitna")]:
+            self.assertEqual(sr._norm(nri), sr._norm(eia), nri)
+        self.assertEqual(sr._norm("Travis County"), sr._norm("Travis"))
+
+    def test_independent_cities_key_apart_from_the_county_of_the_same_name(self):
+        self.assertEqual(sr._norm("Fairfax", "51600"), sr._norm("Fairfax City"))
+        self.assertNotEqual(sr._norm("Fairfax", "51600"), sr._norm("Fairfax"))
+        self.assertEqual(sr._norm("Fairfax", "51059"), sr._norm("Fairfax"))
+        self.assertEqual(sr._norm("Baltimore", "24510"), sr._norm("Baltimore City"))
+        self.assertEqual(sr._norm("St. Louis", "29510"), sr._norm("St Louis City"))
+        self.assertEqual(sr._norm("Carson City", "32510"), sr._norm("Carson City"))
+        self.assertEqual(sr._norm("Yoakum", "48501"), sr._norm("Yoakum"))  # Texas codes 501+ are counties
+
+    def _grid(self, row, ter):
+        rel = [{"utility": "1", "state": row["state"], "name": "Util One", "year": "2025", "saidi_no_med": "100",
+                "saifi_no_med": "1.0", "saidi_all": "150", "saifi_all": "1.5"}]
+        return sr.grid(row, False, rel, ter, {})
+
+    def test_grid_joins_accented_and_city_names(self):
+        g = self._grid({"fips": "35013", "state": "NM", "county": "Doña Ana"},
+                       [{"state": "NM", "county": "Dona Ana", "utility": "1"}])
+        self.assertEqual((g["status"], g["serving"]), ("read", 1))
+        ter = [{"state": "VA", "county": "Fairfax", "utility": "1"},
+               {"state": "VA", "county": "Fairfax City", "utility": "2"}]
+        self.assertEqual(self._grid({"fips": "51059", "state": "VA", "county": "Fairfax"}, ter)["serving"], 1)
+        city = self._grid({"fips": "51600", "state": "VA", "county": "Fairfax"}, ter)
+        self.assertEqual((city["serving"], city["reporting"]), (1, 0))
+
+    def test_a_failed_join_says_why(self):
+        ter = [{"state": "CT", "county": "Hartford", "utility": "1"}, {"state": "VA", "county": "Fairfax", "utility": "1"}]
+        self.assertIn("planning regions", self._grid({"fips": "09110", "state": "CT", "county": "Capitol"}, ter)["status"])
+        self.assertEqual(self._grid({"fips": "72127", "state": "PR", "county": "San Juan"}, ter)["status"],
+                         "state not in the EIA-861 territory file")
+        self.assertEqual(self._grid({"fips": "51770", "state": "VA", "county": "Roanoke"}, ter)["status"],
+                         "no utility listed for this county")
+
+    def test_snapshot_join_failures_are_only_the_known_structural_ones(self):
+        site = Path(__file__).resolve().parents[1] / "riggrade" / "site"
+        nri = list(csv.DictReader(io.StringIO((site / "nri_counties.csv").read_text(encoding="utf-8"))))
+        ter = list(csv.DictReader(io.StringIO((site / "eia861_territory.csv").read_text(encoding="utf-8"))))
+        keys = {(t["state"], sr._norm(t["county"])) for t in ter}
+        states = {t["state"] for t in ter}
+        miss = [r for r in nri if (r["state"], sr._norm(r["county"], r["fips"])) not in keys]
+        unexplained = [(r["state"], r["county"]) for r in miss
+                       if r["state"] in states and r["state"] not in sr.BOUNDARY_CHANGED]
+        # Galax, Lynchburg and Roanoke City have no EIA-861 territory row; everything else is structural.
+        self.assertEqual(sorted(unexplained), [("VA", "Galax"), ("VA", "Lynchburg"), ("VA", "Roanoke")])
+
+
 if __name__ == "__main__":
     unittest.main()

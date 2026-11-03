@@ -78,6 +78,17 @@ Events" and for "Without Major Event Days"; the "Loss of Supply Removed" columns
 complete fetch (2 November 2026) read data year 2025: 757 utility-state rows with figures and 11,803
 utility-county links. Many utilities that serve a county report no figures; the page counts them.
 
+FEMA and EIA spell county names differently, so the join folds accents, case, dots, apostrophes, hyphens and
+spaces ("Doña Ana" and "Dona Ana", "Prince George's" and "Prince Georges", "De Witt" and "DeWitt") and drops
+the county-type suffix. An independent city that shares a name with a county (Baltimore, St. Louis, and
+Virginia's cities, county codes 510 and up) is told apart by its FIPS code and joins EIA's "<name> City"
+row, never the county's. Where a county still does not join, the status says why instead of reporting zero
+utilities: "state not in the EIA-861 territory file" (Puerto Rico and the territories); "not joined" with
+the reason where county lines changed after the list EIA uses (Connecticut's 2022 planning regions; seven
+Alaska areas); or "no utility listed for this county" where EIA names none (Galax, Lynchburg and Roanoke
+City, Virginia, on the 2025 file). Before this fix 148 of 3,232 counties failed the join; after it, every
+remaining failure is one of those three kinds, and a test holds the snapshot to that.
+
 FEMA's download address for the county table now forwards to its Resilience Analysis and Planning Tool page
 (observed 2 November 2026). The fetcher tries the download first, then the same county table served as a
 hosted ArcGIS layer, and uses that layer only when the organisation owning it names itself as FEMA. The
