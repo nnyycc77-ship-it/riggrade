@@ -97,6 +97,21 @@ class MonitorTests(unittest.TestCase):
         self.assertFalse(sent["sent"])
         self.assertIn("connection refused", sent["error"])
 
+    def test_a_failed_alert_is_tried_again_on_the_next_run(self):
+        # Reported in an outside review (3 Nov 2026): the new status was saved
+        # even when the webhook failed, so the next run stayed silent.
+        self.tick(FakeProbes())
+        self.hook = Hook(fail=True)
+        _r, events, sent = self.tick(Throttled())
+        self.assertTrue(events)
+        self.assertFalse(sent["sent"])
+        self.hook = Hook()
+        _r, again, sent = self.tick(Throttled())
+        self.assertEqual({e["check"] for e in again}, {e["check"] for e in events})
+        self.assertTrue(sent["sent"])
+        _r, quiet, _s = self.tick(Throttled())
+        self.assertEqual(quiet, [])
+
     def test_a_load_that_cannot_run_is_a_finding(self):
         result, events, _s = self.tick(FakeProbes(fail_load=True))
         self.assertEqual(result["verdict"], pf.FAIL)

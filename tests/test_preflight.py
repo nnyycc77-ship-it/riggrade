@@ -182,6 +182,17 @@ class RunTests(unittest.TestCase):
         self.assertEqual(status["gpu_visible"], pf.FAIL)
         self.assertEqual(status["compute"], "skipped")
 
+    def test_a_visible_gpu_without_torch_is_never_a_pass(self):
+        # Reported in an outside review (3 Nov 2026): compute skipped, verdict PASS.
+        class NoTorch(FakeProbes):
+            def load(self, seconds):
+                raise ModuleNotFoundError("No module named 'torch'")
+        report = pf.run(NoTorch(), seconds=1, download=False, out=io.StringIO())
+        status = {f["check"]: f["status"] for f in report["findings"]}
+        self.assertEqual(status["compute"], pf.WARN)
+        self.assertEqual(report["verdict"], pf.WARN)
+        self.assertIn("pip install torch", next(f["detail"] for f in report["findings"] if f["check"] == "compute"))
+
     def test_cards_parse_and_never_reach_the_share(self):
         got = pf.parse_cards_csv("0, GPU-1111, 1650000000001\n1, GPU-2222, [N/A]\n")
         self.assertEqual(got["cards"][0]["serial"], "1650000000001")
