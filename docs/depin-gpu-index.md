@@ -1,7 +1,8 @@
 # DePIN GPU reality index: method
 
-Status: v0, 3 November 2026. Published weekly on RigGrade's X account. Information, not advice, an offer or a
-forecast. It says nothing about any token, and RigGrade holds no position on it in this method.
+Status: v1, 3 November 2026. Built for weekly publication on RigGrade's X account; posting starts only once the
+owner confirms the X posting route (board Messages 326 and 332b). Information, not advice, an offer or a forecast.
+It says nothing about any token, and RigGrade holds no position on it in this method.
 
 ## What it shows
 
@@ -16,6 +17,9 @@ network's own public figures once an hour, keeps the readings for 60 days, and p
 
 ## Rules
 
+- **Readings behind every figure.** Each weekly average prints how many hourly readings stand behind it. A week
+  with fewer than 84 readings for a network (half of the 168 hours) is printed as a partial week, with the date
+  the readings began, and never reads as a full week.
 - **Each network's own numbers.** Nothing is estimated, adjusted or filled in. A network that does not answer in an
   hour has no reading for that hour; a week with no readings has no post.
 - **The same words for every network.** No network is called better or worse, and none is ranked.
