@@ -41,8 +41,9 @@ payer screened, every sale in the hash-chained sale log. During the free trial b
     and peer class), `hours`, optional `needs` (ECC on, minimum host memory, storage throughput, PCIe width,
     interconnect), optional `regions` (US state or country codes the agent is choosing between).
   - Out: `filters` (each requirement, why it matters for the workload, and the preflight check that will
-    confirm it); `site` (the site context lines for each region named, no score); `preflight` (the command, the
-    image digest, the expected run time); `keep_rules` (the published thresholds the check will apply).
+    confirm it); `site` (the site context lines for each region named, no score); `preflight` (the install line
+    and command, `pip install riggrade` then `riggrade-preflight`, with the expected run time); `keep_rules` (the
+    published thresholds the check will apply).
   - It names no marketplace, no host and no price.
 - `POST /riggrade/v1/rental/check`
   - In: the `preflight-report.json` from the rented box, and optionally the `plan` answer it follows.
