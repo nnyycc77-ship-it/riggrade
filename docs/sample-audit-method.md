@@ -147,6 +147,27 @@ run the pinned image by digest:
 
 If any step fails, the box's audit stands as recorded and the run sheet notes what failed.
 
+### On a network with no shell (io.net): one container start
+
+Where the network gives the renter no shell, a graded box runs the audit and the grade in one container start,
+audit first. Both run inside the **pinned benchmark image**, never the network's PyTorch image: the grade's bundle
+declares the image digest, so a grade run in any other image would declare an image it did not run in.
+
+- **Image:** `ghcr.io/nnyycc77-ship-it/riggrade-bench@sha256:6c2087bee4ee2d31b139fcfe96679d2d35e806d3e5d6def5fd32a71b3b3a767d`.
+- **Environment:** `RIGGRADE_IMAGE_DIGEST=sha256:6c2087bee4ee2d31b139fcfe96679d2d35e806d3e5d6def5fd32a71b3b3a767d` and `RIGGRADE_ENDPOINT=https://riggrade-674098696181.us-central1.run.app/riggrade/v1`.
+- **Start command**, which must replace the image's entrypoint (the image's own entrypoint is the grade runner):
+
+      sh -c 'cd /tmp && pip install -q riggrade==0.3.1 && riggrade-preflight --skip-download --seconds 20 >/dev/null 2>&1; python3 -c "import json, urllib.request as u; from runner import preflight as p; d = p.anonymise(json.load(open(\"preflight-report.json\"))); print(\"RGAUDIT <box> \" + json.dumps(d)); r = u.Request(\"https://riggrade-674098696181.us-central1.run.app/riggrade/v1/audit/line\", json.dumps({\"run\": \"<run>\", \"box\": \"<box>\", \"line\": d}).encode(), {\"Content-Type\": \"application/json\"}); print(\"SERVER \" + u.urlopen(r, timeout=20).read().decode())"; cd /opt/riggrade && python3 -m runner.main --endpoint https://riggrade-674098696181.us-central1.run.app/riggrade/v1 --workloads inference --runner buyer'
+
+  It installs the published package in `/tmp` (no dependencies; the grade still runs the image's own code from
+  `/opt/riggrade`), prints the `RGAUDIT` line and the `SERVER` line, then starts the grade session, which prints the
+  session id at the end. A failed upload does not stop the grade.
+- **Before any spend:** check in the network's deploy form that the start command replaces the entrypoint. If the
+  form only passes arguments to it, no grade runs on that network and the run plan says so; nothing is rented to
+  find out.
+- **Time and the spend stop:** a grade session takes about 1.5 hours, so each graded box counts as 2 billed hours
+  at its listed rate, as above.
+
 ## Reporting
 
 - Totals by `python3 -m runner.sample_audit --sheet sheet.csv --lines lines.txt`: counts per outcome, verdicts,
