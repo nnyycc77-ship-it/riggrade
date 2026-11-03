@@ -41,6 +41,7 @@ from . import fixit
 from . import acceptance
 from . import index as price_index
 from . import certificate_page
+from . import checkout
 from . import signing
 from . import pool
 from . import ledger
@@ -284,6 +285,8 @@ class GradingApp:
         try:
             if rest == [""] and method == "GET":
                 return _json(start_response, "200 OK", self.descriptor())
+            if rest == ["checkout"] and method == "GET":
+                return self.checkout_page(start_response)
             if rest == ["index", "quality"] and method == "GET":
                 return self.pool_quality(start_response)
             if method == "GET" and len(rest) == 2 and rest[0] == "record":
@@ -389,7 +392,7 @@ class GradingApp:
             sale["facilitators"] = [urlsplit(b).netloc for b in bases]
         references = {cid: {w: self.references.basis(cid, w) for w in WORKLOAD_CLASSES}
                       for cid in PEER_CLASSES}
-        return {"product": "RigGrade", "bench_version": BENCH_VERSION,
+        return {"product": "RigGrade", "bench_version": BENCH_VERSION, "checkout": PREFIX + "/checkout",
                 "spec": "docs/grading-spec.md", "statement": STATEMENT,
                 "point_grade_price_usdc": {"data_centre": "5", "consumer": "3"},
                 **({"point_grade_free_trial": {"until": self.free_until_text("grade"),
@@ -944,6 +947,16 @@ class GradingApp:
         return _json(start_response, "200 OK", {"certificate": cert, "signature_valid": valid,
                                                 "ed25519_valid": ed_valid, "public_keys_url": keys_url,
                                                 "superseded_by": sup, "badge_url": base + "/badge.svg"})
+
+    def checkout_page(self, start_response):
+        """The browser checkout (riggrade.checkout): the same paid routes, paid
+        from a person's own wallet. Holds no price or address of its own."""
+        page, csp = checkout.render(PREFIX)
+        data = page.encode("utf-8")
+        start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Content-Length", str(len(data))),
+                                  ("Content-Security-Policy", csp), ("X-Content-Type-Options", "nosniff"),
+                                  ("Referrer-Policy", "no-referrer"), ("Cache-Control", "no-store")])
+        return [data]
 
     def preflight_share(self, start_response, body):
         """Opt-in intake of an anonymised preflight summary. Stores the

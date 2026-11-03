@@ -122,6 +122,7 @@ def llms_txt(base, prefix, on_sale):
         "- Service descriptor (JSON, includes reasons the sale is off and which products are on): " + api,
         "- Host fix-it report, 2 USDC: POST " + api + "/fixit with {preflight_report}",
         "- Cluster acceptance certificate, 25 USDC: POST " + api + "/cluster/acceptance with {evidence_pack}",
+        "- Browser checkout for people (the same routes, paid from your own wallet): " + api + "/checkout",
         "- Free GPU price index (latest listed on-demand price per class, weekly): GET " + api + "/index",
         "- Pooled preflight results per class (opt in with --share; aggregates at GET " + api + "/index/quality once published)",
         "- OpenAPI: " + api + "/openapi.json",
