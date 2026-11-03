@@ -104,6 +104,25 @@ The audit comes first and is never changed by the grade step.
   report lists which boxes were graded and their session outcomes; grades are published under the grading spec,
   not in the audit report.
 
+### Grade steps on a graded box (run book)
+
+Only for the boxes named above, only after the box's audit line is copied, and only if the network lets the renter
+run the pinned image by digest:
+
+1. Start the pinned benchmark container by digest, never by tag. Image:
+   `ghcr.io/nnyycc77-ship-it/riggrade-bench@sha256:6c2087bee4ee2d31b139fcfe96679d2d35e806d3e5d6def5fd32a71b3b3a767d`
+   (the digest in `container/bench-image.env`). Environment: `RIGGRADE_IMAGE_DIGEST` set to that same
+   `sha256:...` value, and `RIGGRADE_ENDPOINT=https://riggrade-674098696181.us-central1.run.app/riggrade/v1`.
+2. Inside it, run the session for the inference workload as the buyer:
+   `python -m runner.main --endpoint https://riggrade-674098696181.us-central1.run.app/riggrade/v1 --workloads inference --runner buyer`.
+   It takes about 1.5 hours and ends by printing the session id and the grade URL.
+3. Write the session id and the workload (inference) on the run sheet against the box, then release the box.
+4. The operator signs the claim afterwards, from their own wallet: on the service's checkout page
+   (`/riggrade/v1/checkout`), "Grade a benchmark session", paste the session id, sign the 0 USDC claim. No money
+   moves. Nobody else signs it.
+
+If any step fails, the box's audit stands as recorded and the run sheet notes what failed.
+
 ## Reporting
 
 - Totals by `python3 -m runner.sample_audit --sheet sheet.csv --lines lines.txt`: counts per outcome, verdicts,
