@@ -50,10 +50,11 @@ DESCRIPTION = ("Independent grading of rented or hosted GPU rigs. A free one-min
                "published bars for the GPU's peer class. Measured, not promised.")
 
 
-def agent_card(base, prefix, on_sale):
-    """A2A-style agent card. `base` is scheme://host, `prefix` the API path."""
+def agent_card(base, prefix, on_sale, pricecheck=False):
+    """A2A-style agent card. `base` is scheme://host, `prefix` the API path.
+    pricecheck: list the 0.01 USDC price check (only while it is on sale)."""
     api = base + prefix
-    return {
+    card = {
         "name": "RigGrade",
         "description": DESCRIPTION,
         "url": api,
@@ -104,9 +105,18 @@ def agent_card(base, prefix, on_sale):
         "payments": {"protocol": "x402", "x402Version": 2, "network": "eip155:8453", "asset": "USDC",
                      "on_sale": bool(on_sale), "descriptor": api},
     }
+    if pricecheck:
+        card["skills"].append(
+            {"id": "price_check", "name": "GPU price check",
+             "description": "Use when you hold a quote for a GPU class and want to know where its hourly price "
+                            "sits against this week's listed on-demand prices. Paid (0.01 USDC, x402). POST "
+                            f"{api}/price/check with {{peer_class, usd_per_gpu_hour}}. Listed asks, not paid "
+                            "prices; information, not advice.",
+             "tags": ["gpu", "price", "x402"]})
+    return card
 
 
-def llms_txt(base, prefix, on_sale):
+def llms_txt(base, prefix, on_sale, pricecheck=False):
     api = base + prefix
     return "\n".join([
         "# RigGrade",
@@ -125,6 +135,8 @@ def llms_txt(base, prefix, on_sale):
         "- Browser checkout for people (the same routes, paid from your own wallet): " + api + "/checkout",
         "- Rental check, free: POST " + api + "/rental/plan before renting, then run the preflight and POST its report to " + api + "/rental/check for keep, keep with warnings or cancel",
         "- Free GPU price index (latest listed on-demand price per class, weekly): GET " + api + "/index",
+        *(["- GPU price check, 0.01 USDC: POST " + api + "/price/check with {peer_class, usd_per_gpu_hour}: "
+            "where that hourly price sits in this week's listed prices for the class"] if pricecheck else []),
         "- Pooled preflight results per class (opt in with --share; aggregates at GET " + api + "/index/quality once published)",
         "- OpenAPI: " + api + "/openapi.json",
         "- Agent card: " + base + "/.well-known/agent.json",
@@ -163,15 +175,17 @@ def robots_txt(base):
 PAYMENT_PROTOCOLS = [{"x402": {}}]
 PRICES_USD = {"grade": {"mode": "dynamic", "currency": "USD", "min": "3.00", "max": "10.00"},
               "fixit": {"mode": "fixed", "currency": "USD", "amount": "2.00"},
-              "cluster": {"mode": "fixed", "currency": "USD", "amount": "25.00"}}
-PAID_PATHS = {"grade": "/grade", "fixit": "/fixit", "cluster": "/cluster/acceptance"}
+              "cluster": {"mode": "fixed", "currency": "USD", "amount": "25.00"},
+              "pricecheck": {"mode": "fixed", "currency": "USD", "amount": "0.01"}}
+PAID_PATHS = {"grade": "/grade", "fixit": "/fixit", "cluster": "/cluster/acceptance",
+              "pricecheck": "/price/check"}
 
 
 def payment_info(product):
     return {"protocols": PAYMENT_PROTOCOLS, "price": PRICES_USD[product]}
 
 
-def openapi(base, prefix, contact_email=None):
+def openapi(base, prefix, contact_email=None, pricecheck=False):
     """contact_email: published as info.contact.email when the service is
     configured with one (RIGGRADE_CONTACT_EMAIL); registries use it for
     ownership verification. Never defaulted to anything."""
@@ -185,7 +199,9 @@ def openapi(base, prefix, contact_email=None):
                 "fixit": "Use when the free RigGrade preflight reported a warn or fail and you need the "
                          "cause, the fix steps and who can act.",
                 "cluster": "Use when a rented multi-node GPU cluster must pass an independent "
-                           "acceptance test before a long run, a handover or a dispute."}
+                           "acceptance test before a long run, a handover or a dispute.",
+                "pricecheck": "Use when you hold a quote for a GPU class and want to know where its hourly "
+                              "price sits against this week's listed on-demand prices for that class."}
     post = lambda summary, body=None, extra=None, paid=None: {"post": {  # noqa: E731
         "summary": summary,
         **({"description": use_when[paid]} if paid else {}),
@@ -279,5 +295,16 @@ def openapi(base, prefix, contact_email=None):
             "/cluster/acceptance/{id}": {"get": {"summary": "Fetch an issued certificate; the service checks its signature",
                                                  "security": [], "responses": {"200": {"description": "OK"},
                                                                "404": {"description": "no such certificate"}}}},
+            **({"/price/check": post("GPU price check (0.01 USDC): where one hourly price sits in the latest "
+                                     "listed week for its peer class; answers 402 with the x402 requirement",
+                                     {"type": "object",
+                                      "properties": {"peer_class": {"type": "string"},
+                                                     "usd_per_gpu_hour": {"type": "number", "exclusiveMinimum": 0,
+                                                                          "maximum": 1000}},
+                                      "required": ["peer_class", "usd_per_gpu_hour"]},
+                                     {"402": {"description": "x402 payment required (USDC on Base)"},
+                                      "422": {"description": "no listed week for that peer class"},
+                                      "503": {"description": "product off; nothing charged"}},
+                                     paid="pricecheck")} if pricecheck else {}),
         },
     }
