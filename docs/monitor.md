@@ -18,7 +18,8 @@ Options: `--every HOURS` (default 6), `--label NAME` (how alerts name the box), 
    temperature and the PCIe link, with the same rules and thresholds as the preflight (`docs/preflight.md`).
 3. Compares each check with its last known status. A check that got worse (pass to warn or fail, warn to fail) or
    recovered is posted to your webhook. A check that stays bad is not repeated every run. A busy run changes
-   nothing.
+   nothing. On the very first run there is no last status, so any check that is not a pass is posted once,
+   marked "new". If the webhook cannot be reached, the alert is tried again on the next run.
 
 No results are sent to RigGrade. The only network call is the alert to the URL you give, and only when something
 changed. The message body has `content` (read by Discord) and `text` (read by Slack), plus the events as JSON for
@@ -26,7 +27,8 @@ any other receiver.
 
 ## Running it as a service
 
-A systemd unit, one per box:
+A systemd unit, one per box. `ExecStart` must be the path pip installed the command to on that box: check it with
+`command -v riggrade-monitor`; `/usr/local/bin` below is only an example.
 
     [Unit]
     Description=RigGrade GPU monitor
