@@ -78,6 +78,14 @@ class CheckTests(unittest.TestCase):
         self.assertIn("not measured", out["reasons"][0]["rule"])
         self.assertEqual(self.verdict(CLEAN, rental.plan({"workload": "inference"}))["verdict"], "keep")
 
+    def test_ecc_asked_for_and_absent_from_the_report_cancels(self):
+        plan = rental.plan({"workload": "inference", "needs": ["ecc"]})
+        no_ecc = [(c, st) for c, st in CLEAN if not c.endswith("ecc_errors")]
+        out = self.verdict(no_ecc, plan)
+        self.assertEqual(out["verdict"], "cancel")
+        self.assertEqual(out["reasons"][0]["check"], "ecc_errors")
+        self.assertEqual(self.verdict(no_ecc, rental.plan({"workload": "inference"}))["verdict"], "keep")
+
     def test_wrong_peer_class_cancels(self):
         plan = rental.plan({"workload": "inference", "gpus": {"peer_class": "h100-sxm-80"}})
         out = self.verdict(CLEAN, plan)

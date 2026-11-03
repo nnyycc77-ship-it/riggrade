@@ -172,6 +172,11 @@ def check(body, rows, now):
                 warn.append({"rule": "fail not named in the plan", "check": name, "detail": detail})
             elif status == "warn":
                 warn.append({"rule": "warn", "check": name, "detail": detail})
+    if "ecc_errors" in required and "ecc_errors" not in by_kind:
+        # Asked for, and the report has no ECC line at all (the read failed or
+        # an older runner): not measured, so it cannot count as met.
+        cancel.append({"rule": "required check not met (not measured on this box)", "check": "ecc_errors",
+                       "detail": "the preflight report has no ECC finding"})
     mismatch = _peer_mismatch(report, the_plan)
     if mismatch:
         cancel.append({"rule": "not the peer class the plan asked for", "check": "peer_class",
