@@ -32,6 +32,22 @@ class DiscoveryTests(unittest.TestCase):
                          {"gpu_price_index", "gpu_preflight", "grade", "fixit", "cluster_acceptance"})
         self.assertFalse(card["payments"]["on_sale"])
 
+    def test_the_current_a2a_path_serves_the_same_card(self):
+        # Seen in the 3 Nov digest: crawlers asked for agent-card.json and got 404.
+        _s, _h, old = get(self.app, "/.well-known/agent.json")
+        status, _h, new = get(self.app, "/.well-known/agent-card.json")
+        self.assertTrue(status.startswith("200"))
+        self.assertEqual(json.loads(new), json.loads(old))
+
+    def test_robots_txt_allows_crawling_and_names_the_documents(self):
+        status, headers, out = get(self.app, "/robots.txt")
+        self.assertTrue(status.startswith("200"))
+        self.assertTrue(headers["Content-Type"].startswith("text/plain"))
+        text = out.decode()
+        self.assertIn("User-agent: *\nAllow: /", text)
+        self.assertNotIn("Disallow", text)
+        self.assertIn("https://grade.example/llms.txt", text)
+
     def test_favicon_is_served_at_the_root(self):
         status, headers, out = get(self.app, "/favicon.ico")
         self.assertTrue(status.startswith("200"))
