@@ -49,8 +49,15 @@ keeps only the fields below; it never serves the copy, and the operators read it
 **Two copies before release.** A box is not released until (1) its full `RGAUDIT` line is saved verbatim in the
 run folder's `lines.txt`, and (2) the `SERVER` line shows `"accepted": true`. If the service does not accept it,
 the local copy alone is enough and the run sheet notes "no server copy". A box released with neither copy is
-`ready_no_report`. The run id is `<network>-<YYYYMMDD>` (e.g. `ionet-20261103`), written on the run sheet before
-the first rental.
+`ready_no_report`. The run id is `<network>-<YYYYMMDD>-<suffix>`, where the suffix is 8 random lowercase hex
+characters drawn at run start (e.g. `ionet-20261104-3f9a1c2e`). It is written on the run sheet before the first
+rental, kept in the private run folder, and not posted on the board until the run is over, because the intake
+takes no credential: an unguessable run id is what stops anyone else posting a line under it.
+
+**The local copy governs.** The server copy is a backup. Where the local verbatim line and the server line for a
+box differ, the local line governs and the difference is reported on the board. No total rests on a box whose only
+copy is the server line unless the coordinator accepts that line in writing after seeing it (Coordinator
+Message 357).
 
 `anonymise` is the same summary the preflight's opt-in share sends: the model name the driver reports, GPU count,
 memory, driver, the verdict and each check's status, and the measured numbers. No host name, address, card id or
