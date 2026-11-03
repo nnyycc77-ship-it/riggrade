@@ -117,9 +117,12 @@ run the pinned image by digest:
    `python -m runner.main --endpoint https://riggrade-674098696181.us-central1.run.app/riggrade/v1 --workloads inference --runner buyer`.
    It takes about 1.5 hours and ends by printing the session id and the grade URL.
 3. Write the session id and the workload (inference) on the run sheet against the box, then release the box.
-4. The operator signs the claim afterwards, from their own wallet: on the service's checkout page
+4. The claim is signed afterwards from the operator's wallet: on the service's checkout page
    (`/riggrade/v1/checkout`), "Grade a benchmark session", paste the session id, sign the 0 USDC claim. No money
-   moves. Nobody else signs it.
+   moves. For the first run the owner directed (3 Nov 2026, in his own chat with the coordinator) that the
+   coordinator does this step in the browser with a dedicated claims wallet the owner set up and that holds no
+   funds; that wallet is the operator on the record. Before every signature the signer checks that the amount is
+   exactly 0 USDC and the recipient is the payout address the page shows, and signs nothing else.
 
 If any step fails, the box's audit stands as recorded and the run sheet notes what failed.
 
