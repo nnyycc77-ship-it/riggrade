@@ -1,8 +1,8 @@
 # GPU health monitor for hosts: design note (draft for the coordinator's review)
 
-Status: design, 3 November 2026, Adviser 1, at the owner's direction in Adviser 1's chat (the income plan's second
-step, after the checkout and the home page). Under the standing rule (board Message 307) it counts as the owner's
-decision once recorded on the board. The price is the owner's, under the price exception. Nothing here is built yet.
+Status: accepted with conditions by the coordinator (board Message 312b); the conditions are written in below as
+section 8. The free agent is built (riggrade PR 110). The price, 5 USDC per box per month after a free first month,
+was confirmed by the owner directly (Message 315). The paid part is not built yet.
 
 ## 1. The problem and the product
 
@@ -42,8 +42,8 @@ service, which the host cannot edit, and the public reliability page that shows 
 
 - **A subscription is per box per month,** paid by x402 or at the checkout from the host's own wallet. The paying
   wallet is the box's operator, with the payer role "provider" printed.
-- **[Owner decision] The price.** Proposed: free for the first month, then 5 USDC per box per month, in line with
-  uptime monitors at $5–20 a month. The price never depends on the results.
+- **The price.** Free for the first month, then 5 USDC per box per month (owner, Message 315). The price never
+  depends on the results.
 - **The token.** The subscription returns a random monitor token. The agent keeps it on the host and sends it with
   each report. It is the host's own secret, never logged by the service, and can be rotated.
 
@@ -80,3 +80,22 @@ For the owner:
 About five days: the agent and its local alerts, the report route and history store, the reliability page, the
 subscription through the existing x402 and checkout paths, tests, and docs. The first two days (the agent and its
 local alerts) are useful on their own, free, before any paid part exists.
+
+## 8. Conditions from the coordinator's review (Message 312b), part of the method
+
+1. **Diagnostics only.** Monitor checks and thresholds never enter a grade pillar, bar, reference or consistency rule
+   unless a grading spec revision carrying them is reviewed first.
+2. **Busy runs and gaps are neither pass nor fail.** The reliability page keeps them out of the pass and fail
+   denominator and prints pass, fail, skipped (busy) and gap counts separately, so a box that is rented often never
+   reads as failing.
+3. **Page wording.** The page prints the window and the counts behind every share, says in plain words that the
+   share is past measured checks only, is not a grade and is not a promise of later performance, and keeps every
+   failure and gap visible.
+4. **Record entries only under the GPU record method.** Before any send, the consent text names the fields sent,
+   the public lookup, the retention and that an entry cannot be withdrawn. Entries carry the evidence tag
+   "declared:host, monitor", stay in that tagged series, and never enter a grading reference, a provisional median
+   or any count beyond what the record method allows.
+5. **Payment like every paid call.** The subscription goes through the same payer screening and sale logging. The
+   monitor token is issued only after a screened and settled (or, in the free month, verified) payment, and is
+   never logged.
+6. **The checkpoint counts outside boxes only;** our own and test boxes are left out.
