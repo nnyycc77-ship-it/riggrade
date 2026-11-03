@@ -42,6 +42,7 @@ from . import acceptance
 from . import index as price_index
 from . import certificate_page
 from . import checkout
+from . import landing
 from . import signing
 from . import pool
 from . import ledger
@@ -376,6 +377,8 @@ class GradingApp:
         if path in ("/openapi.json", PREFIX + "/openapi.json"):
             return _json(start_response, "200 OK",
                          discovery.openapi(base, PREFIX, self.config.contact_email))
+        if path == "/" and certificate_page.wants_html(environ):
+            return self.landing_page(start_response)
         return _json(start_response, "200 OK",
                      {"product": "RigGrade", "descriptor": base + PREFIX,
                       "openapi": base + PREFIX + "/openapi.json",
@@ -947,6 +950,47 @@ class GradingApp:
         return _json(start_response, "200 OK", {"certificate": cert, "signature_valid": valid,
                                                 "ed25519_valid": ed_valid, "public_keys_url": keys_url,
                                                 "superseded_by": sup, "badge_url": base + "/badge.svg"})
+
+    def _price_line(self, name, normal):
+        """The price as a person should read it today, from the live configuration."""
+        off = (not self.on_sale) if name == "grade" else bool(self.product_reasons_off(name))
+        if name == "hostcert" and self.config.hostcert_free_until is not None:
+            if off:
+                return "not on sale right now"
+            return f"free until {self.free_until_text('hostcert')} (UTC); price after that not set yet"
+        if off:
+            return "not on sale right now"
+        if self.trial_active(name):
+            return f"free until {self.free_until_text(name)} (UTC), then {normal}"
+        return normal
+
+    def landing_page(self, start_response):
+        """The human page at "/" (riggrade.landing); prices from live config."""
+        def usd(atomic):
+            return f"{atomic / 1_000_000:g} USDC"
+        offers = [
+            ("Fix-it report", self._price_line("fixit", usd(PRODUCT_PRICE_ATOMIC["fixit"])),
+             "For each warn or fail: the likely cause, the fix steps and who can act (host or renter).",
+             "Upload preflight-report.json at the checkout."),
+            ("Cluster acceptance certificate", self._price_line("cluster", usd(PRODUCT_PRICE_ATOMIC["cluster"])),
+             ("The service recomputes every check from your multi-node test and issues a certificate with an "
+              "Ed25519 signature anyone can check offline against the published key."),
+             "Run the acceptance test, then upload acceptance.json at the checkout."),
+            ("Point grade of a rig", self._price_line(
+                "grade", f"{usd(POINT_PRICE_ATOMIC['consumer'])} per workload class (consumer cards), "
+                         f"{usd(POINT_PRICE_ATOMIC[DATA_CENTRE])} (data-centre cards)"),
+             "A label against fixed, published bars for the card's class, with its evidence pack.",
+             "Run the pinned benchmark container (see the grading spec)."),
+            ("Host certificate", self._price_line("hostcert", "price not set"),
+             ("For hosts: a graded rig's measured facts as a certificate with a public verify page and a badge "
+              "for your own pages."), "After a graded session."),
+        ]
+        page, csp = landing.render(PREFIX, offers)
+        data = page.encode("utf-8")
+        start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Content-Length", str(len(data))),
+                                  ("Content-Security-Policy", csp), ("X-Content-Type-Options", "nosniff"),
+                                  ("Cache-Control", "public, max-age=300")])
+        return [data]
 
     def checkout_page(self, start_response):
         """The browser checkout (riggrade.checkout): the same paid routes, paid
