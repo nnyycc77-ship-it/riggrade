@@ -76,8 +76,33 @@ cannot be checked without asking the service. Measured, not
 promised: it states what the cluster delivered during that test against
 what its provider claimed.
 
+## Price check, 0.01 USDC
+
+Price set by the owner directly on 3 November 2026. An agent holding a
+quote sends `POST /riggrade/v1/price/check` with
+`{"peer_class": "h100-sxm-80", "usd_per_gpu_hour": 2.4}` and gets back,
+for the latest listed week of that class in the free price index:
+
+- the median, provider median, minimum and maximum, with provider and
+  offering counts;
+- where the price sits: below the listed minimum, between the minimum
+  and the median, at the median (within 5%), between the median and the
+  maximum, or above the listed maximum;
+- its gap to the median in percent, and the last eight weekly medians.
+
+The figures are the ones `GET /riggrade/v1/index` serves free; the call
+only does the placing. It opens with the posture lines: information, not
+advice, an offer, a rate or a forecast; listed asks, not paid prices; a
+price says nothing about a box's health. It names no host or marketplace
+and ranks no offers. A class with no listed week is refused with 422
+before any charge; bad input is refused with 400 and never charged.
+
+The route enters the OpenAPI document, the agent card and llms.txt only
+while the product is on sale, so crawlers never probe it while it answers
+503. Every sale is logged as `riggrade_price_check` with the class.
+
 ## Turning a product on
 
 Add its name to `RIGGRADE_PRODUCTS` on the service (`fixit`, `cluster`,
-comma-separated). With the sale switch on and the product named, the
+`pricecheck`, comma-separated). With the sale switch on and the product named, the
 descriptor shows it `on_sale: true`. Both default to off.

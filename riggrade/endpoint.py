@@ -38,6 +38,7 @@ from .session import MemoryStore, SessionError, Sessions
 from . import salelog
 from . import discovery
 from . import fixit
+from . import pricecheck
 from . import acceptance
 from . import index as price_index
 from . import certificate_page
@@ -54,7 +55,7 @@ PREFIX = "/riggrade/v1"
 X402_VERSION = 2
 NETWORK_BASE = "eip155:8453"
 PAID_ROUTES = {("grade",): "grade", ("fixit",): "fixit", ("cluster", "acceptance"): "cluster",
-               ("ledger",): "ledger", ("host", "certificate"): "hostcert"}
+               ("ledger",): "ledger", ("host", "certificate"): "hostcert", ("price", "check"): "pricecheck"}
 V1_REFUSED = ("x402 v1 (X-PAYMENT) is not accepted; send PAYMENT-SIGNATURE with "
               "x402Version 2, as the PAYMENT-REQUIRED header of this answer describes")
 # /.well-known/agent-card.json is the A2A card's current path (agent.json is
@@ -68,7 +69,8 @@ USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 POINT_PRICE_ATOMIC = {DATA_CENTRE: 5_000_000, "consumer": 3_000_000}
 # Products beyond the point grade (decided 1 Nov 2026; each is on
 # sale only when RIGGRADE_PRODUCTS names it). USDC atomic units.
-PRODUCT_PRICE_ATOMIC = {"fixit": 2_000_000, "cluster": 25_000_000}
+# The price check, 0.01 USDC: owner decision, 3 Nov 2026 (Adviser 1's chat).
+PRODUCT_PRICE_ATOMIC = {"fixit": 2_000_000, "cluster": 25_000_000, "pricecheck": 10_000}
 # Products a free trial may cover (owner decision 2 Nov 2026, set only once
 # the coordinator records his confirmation): the host fix-it report and the
 # point grade. Trial grades are verified on a 0 USDC authorisation, never
@@ -98,8 +100,15 @@ USE_WHEN = {
               "machine-readable document with its method and posture attached.",
     "hostcert": "Use when a host wants its own graded rig's measured facts re-issued as a signed, "
                 "dated certificate with a public verify page and a badge for its own pages.",
+    "pricecheck": "Use when you hold a quote for renting a GPU class and want to know where its hourly "
+                  "price sits against this week's listed on-demand prices for that class.",
 }
 PRODUCT_NOTES = {
+    "pricecheck": USE_WHEN["pricecheck"] + " Price check, 0.01 USDC: POST /riggrade/v1/price/check with "
+                  "{peer_class, usd_per_gpu_hour}; returns the latest week's median, provider median, minimum "
+                  "and maximum for the class, where the price sits among them, its gap to the median and the "
+                  "last eight weekly medians. Listed asks, not paid prices; information, not advice. The same "
+                  "weekly figures are free at GET /riggrade/v1/index.",
     "fixit": USE_WHEN["fixit"] + " Host fix-it report, 2 USDC: POST /riggrade/v1/fixit with "
              "{preflight_report}; for every warn or fail finding, the likely cause, the fix "
              "steps and who can act. Free preview first; nothing is sold when every finding passed.",
@@ -239,6 +248,11 @@ class GradingApp:
                 reasons.append(f"no price is set for {name} (RIGGRADE_{name.upper()}_PRICE_ATOMIC)")
         return reasons
 
+    def _listed(self, name):
+        """A product enters the discovery documents only while it is on sale,
+        so crawlers never probe a route that answers 503."""
+        return not self.product_reasons_off(name)
+
     def trial_active(self, name):
         until = self.config.trial_until
         return name in self.config.trial_products and until is not None and self.clock() <= until
@@ -352,11 +366,13 @@ class GradingApp:
                 return self.cluster_acceptance(start_response, environ, body)
             if rest == ["ledger"]:
                 return self.ledger_feed(start_response, environ, body)
+            if rest == ["price", "check"]:
+                return self.price_check(start_response, environ, body)
             if rest == ["host", "consent"]:
                 return self.host_consent(start_response, environ, body)
             if rest == ["host", "certificate"]:
                 return self.host_certificate(start_response, environ, body)
-        except (BadRequest, rental.BadRequest) as exc:
+        except (BadRequest, rental.BadRequest, pricecheck.BadRequest) as exc:
             return _json(start_response, "400 Bad Request", {"error": str(exc), "charged": False})
         except SessionError as exc:
             return _json(start_response, "409 Conflict", {"error": str(exc), "charged": False})
@@ -373,12 +389,12 @@ class GradingApp:
                                       ("Cache-Control", "public, max-age=86400")])
             return [data]
         if path == "/llms.txt":
-            data = discovery.llms_txt(base, PREFIX, self.on_sale).encode()
+            data = discovery.llms_txt(base, PREFIX, self.on_sale, self._listed("pricecheck")).encode()
             start_response("200 OK", [("Content-Type", "text/plain; charset=utf-8"),
                                       ("Content-Length", str(len(data)))])
             return [data]
         if path in AGENT_CARD_PATHS:
-            return _json(start_response, "200 OK", discovery.agent_card(base, PREFIX, self.on_sale))
+            return _json(start_response, "200 OK", discovery.agent_card(base, PREFIX, self.on_sale, self._listed("pricecheck")))
         if path == "/robots.txt":
             data = discovery.robots_txt(base).encode()
             start_response("200 OK", [("Content-Type", "text/plain; charset=utf-8"),
@@ -390,7 +406,8 @@ class GradingApp:
                          [("Cache-Control", "public, max-age=3600")])
         if path in ("/openapi.json", PREFIX + "/openapi.json"):
             return _json(start_response, "200 OK",
-                         discovery.openapi(base, PREFIX, self.config.contact_email))
+                         discovery.openapi(base, PREFIX, self.config.contact_email,
+                                           pricecheck=self._listed("pricecheck")))
         if path == "/" and certificate_page.wants_html(environ):
             return self.landing_page(start_response)
         return _json(start_response, "200 OK",
@@ -606,7 +623,8 @@ class GradingApp:
             return _json(start_response, "503 Service Unavailable",
                          {"charged": False, "reasons_off": off})
         path = {"fixit": PREFIX + "/fixit", "cluster": PREFIX + "/cluster/acceptance",
-                "ledger": PREFIX + "/ledger", "hostcert": PREFIX + "/host/certificate"}[name]
+                "ledger": PREFIX + "/ledger", "hostcert": PREFIX + "/host/certificate",
+                "pricecheck": PREFIX + "/price/check"}[name]
         return self._payment_required(start_response, environ, path, self.product_price(name),
                                       PRODUCT_NOTES[name], bazaar=bazaar_extension(name),
                                       error=self._v1_error(environ)
@@ -686,7 +704,7 @@ class GradingApp:
         else:
             result = self.adapter.settle(header, requirement)
         product = {"fixit": fixit.PRODUCT, "cluster": acceptance.PRODUCT, "ledger": ledger.PRODUCT,
-                   "hostcert": hostcert.PRODUCT}[name]
+                   "hostcert": hostcert.PRODUCT, "pricecheck": pricecheck.PRODUCT}[name]
         if not result.get("ok") and result.get("charged") in (True, "unknown"):
             salelog.append(self.config.sale_log,
                            {"product": product, "status": "charged_without_delivery",
@@ -816,6 +834,30 @@ class GradingApp:
             out["paying_wallet"] = result.get("payer")
             return out, {"weeks": weeks, "classes": len(prev["classes"])}
         return self._sell(start_response, environ, "ledger", PREFIX + "/ledger", description,
+                          prev, deliver)
+
+    def price_check(self, start_response, environ, body):
+        """0.01 USDC: where one asking price sits in the latest listed week
+        for its class (riggrade.pricecheck). Bad input with no payment
+        header is a probe; an uncovered class is refused before any charge."""
+        try:
+            cls, price = pricecheck.parse(body)
+        except pricecheck.BadRequest:
+            if not self._payment_header(environ):
+                return self.probe(start_response, environ, "pricecheck")
+            raise
+        doc = self.index.current() or {}
+        prev = pricecheck.preview(doc, cls)
+        if not prev["covered"] and not self.product_reasons_off("pricecheck"):
+            return _json(start_response, "422 Unprocessable Entity",
+                         {"error": "no listed week for peer class " + cls, "preview": prev, "charged": False})
+        description = f"RigGrade price check: {cls} at {price:g} USD per GPU-hour against week {prev['latest_week']}"
+
+        def deliver(result):
+            out = pricecheck.check(doc, cls, price)
+            out["paying_wallet"] = result.get("payer")
+            return out, {"peer_class": cls}
+        return self._sell(start_response, environ, "pricecheck", PREFIX + "/price/check", description,
                           prev, deliver)
 
     # ------------------------------------------------------------ host certificate
@@ -1172,7 +1214,8 @@ RESOURCE_TAGS = {"grade": ["gpu", "benchmark", "verification", "grading", "x402"
                  "fixit": ["gpu", "diagnosis", "host", "preflight", "x402"],
                  "cluster": ["gpu", "cluster", "acceptance", "verification", "x402"],
                  "ledger": ["gpu", "pricing", "market-data", "compute", "x402"],
-                 "hostcert": ["gpu", "host", "certificate", "verification", "x402"]}
+                 "hostcert": ["gpu", "host", "certificate", "verification", "x402"],
+                 "pricecheck": ["gpu", "pricing", "price-check", "market-data", "x402"]}
 
 
 def _usdc(atomic):
@@ -1229,6 +1272,15 @@ def bazaar_extension(resource="grade"):
                       "lookup_url": "...", "badge_url": "..."},
                      ["gpu", "host", "certificate", "verification"]),
     }
+    shapes["pricecheck"] = (
+        {"peer_class": "h100-sxm-80", "usd_per_gpu_hour": 2.4},
+        {"peer_class": {"type": "string", "description": "A peer class id from GET /riggrade/v1/index."},
+         "usd_per_gpu_hour": {"type": "number", "exclusiveMinimum": 0, "maximum": 1000,
+                              "description": "The hourly price per GPU you were quoted."}},
+        {"read_this_first": ["..."], "peer_class": "h100-sxm-80", "latest_week": "2026-10-26",
+         "week": {"usd_per_gpu_hour_median": 2.5}, "position": "at the median (within 5%)",
+         "vs_median_pct": -4.0, "recent_weeks": ["..."]},
+        ["gpu", "pricing", "price-check", "market-data"])
     example_in, props, example_out, tags = shapes[resource]
     # "schema" is the JSON Schema of the "info" object (x402 bazaar extension):
     # readers take input.properties.body as the request schema and
