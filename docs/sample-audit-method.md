@@ -104,6 +104,9 @@ The audit comes first and is never changed by the grade step.
 
 - Totals by `python3 -m runner.sample_audit --sheet sheet.csv --lines lines.txt`: counts per outcome, verdicts,
   model matches, failed checks, cost. Every box tried is counted, including the ones that never started.
+- **The tilt, in words.** With a full billed hour assumed per box and attempts in ascending listed rate, the
+  tried set leans toward single-GPU and lower-rate picks. The report says so in words and shows the
+  `not_attempted` counts beside the tried counts (Coordinator Message 336).
 - Published with this method, the run date, the seed and the run sheet. No host is named, and no box's line can
   be traced to its host.
 - **What it is not.** A count of a small sample, measured once, at rental time. It is not an estimate of the whole

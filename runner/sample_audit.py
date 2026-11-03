@@ -6,8 +6,8 @@ Counts only; no host, address or card identifier is read or written.
     python3 -m runner.sample_audit --sheet sheet.csv --lines lines.txt [--out audit.json]
 
 sheet.csv columns: box, network, listed_model, listed_region, usd_per_hour,
-outcome (ready | deploy_failed | not_reachable | gone_before_check |
-not_attempted), minutes_to_ready, minutes_billed; optional listed_gpus.
+outcome (ready | ready_no_report | deploy_failed | not_reachable |
+gone_before_check | not_attempted), minutes_to_ready, minutes_billed; optional listed_gpus.
 A pick the spend cap left untried is "not_attempted": counted apart and
 never as tried.
 lines.txt: the lines each box printed, "RGAUDIT <box> {json}", in any order.
@@ -21,7 +21,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-OUTCOMES = ("ready", "deploy_failed", "not_reachable", "gone_before_check", "not_attempted")
+OUTCOMES = ("ready", "ready_no_report", "deploy_failed", "not_reachable", "gone_before_check", "not_attempted")
 LINE = re.compile(r"^RGAUDIT\s+(\S+)\s+(\{.*\})\s*$")
 LOAD_CHECKS = ("clocks_under_load", "slowdown_reasons", "temperature", "memory_bandwidth")
 
