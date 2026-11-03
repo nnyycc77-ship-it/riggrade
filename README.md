@@ -24,8 +24,8 @@ Status (1 Nov 2026): live at https://riggrade-674098696181.us-central1.run.app/r
 
 ## Use the MCP server
 
-Standard library only, stdio, no secrets. Two tools: `gpu_preflight` (free, runs
-on the box the server runs on) and `riggrade_service_info`.
+Standard library only, stdio, no secrets. Four tools: `gpu_preflight` (free, runs
+on the box the server runs on), `gpu_price_index`, `verify_certificate` and `riggrade_service_info`.
 
 Claude Desktop or Claude Code (`claude mcp add riggrade -- riggrade-mcp`),
 or in any MCP client config:
@@ -39,8 +39,9 @@ or in any MCP client config:
 ## Install
 
 ```bash
-pip install riggrade          # PyPI, v0.1.0, no dependencies
+pip install riggrade          # PyPI, no dependencies (torch, if present, runs the GPU load checks)
 riggrade-preflight            # the free one-minute check, on the box you rented
+riggrade-monitor --once       # the free host monitor (docs/monitor.md)
 riggrade-mcp                  # the MCP server (stdio) for an agent
 riggrade-verify cert.json     # verify a cluster acceptance certificate offline
 ```

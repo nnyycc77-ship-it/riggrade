@@ -145,7 +145,17 @@ def tick(probes, state_path, webhook=None, label="this box", seconds=LOAD_SECOND
     sent = None
     if events and webhook:
         sent = alert(webhook, message(label, events, result["at"]), events, opener=opener)
-    stored["last"] = remember(stored.get("last", {}), result)
+    last = remember(stored.get("last", {}), result)
+    if sent is not None and not sent["sent"]:
+        # The host was not told: keep the old status for these checks so the
+        # next run sees the same change and tries the alert again.
+        for e in events:
+            if e["from"] is None:
+                last.pop(e["check"], None)
+            else:
+                last[e["check"]] = e["from"]
+        stored["unsent_alerts"] = int(stored.get("unsent_alerts", 0)) + 1
+    stored["last"] = last
     stored["runs"] = int(stored.get("runs", 0)) + 1
     stored["last_run"] = {"at": result["at"], "state": result["state"], "verdict": result["verdict"]}
     save_state(state_path, stored)

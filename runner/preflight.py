@@ -352,7 +352,12 @@ def evaluate(obs):
         "not measured" if disk is None else "%.0f MB/s sequential write%s" % (disk, where))
     err = obs.get("compute_error")
     if err and err.startswith("ModuleNotFoundError"):
-        add("compute", None, "load checks need torch with CUDA installed (%s)" % err)
+        # With a GPU visible, the load checks (clocks, slowdown, temperature, PCIe,
+        # bandwidth) did not run: a warn, so the verdict is never PASS on a box
+        # whose compute was not tested. With no GPU visible, gpu_visible already fails.
+        add("compute", WARN if obs.get("idle") else None,
+            "load checks did not run: they need torch with CUDA installed (%s); "
+            "install it (pip install torch) and run again" % err)
     elif err:
         add("compute", FAIL, err)
     return findings

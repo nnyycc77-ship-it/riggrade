@@ -9,7 +9,8 @@ testing. Preflight is that first check for everyone else: a renter with no
 lawyers and no test plan gets a verdict in a minute.
 
 Install and run on the rented box (`pip install riggrade`; torch optional,
-the GPU load checks need it):
+the GPU load checks need it; without torch, a box with a visible GPU reads at most
+WARN, never PASS, because its compute was not tested):
 
     riggrade-preflight [--seconds 30] [--url URL] [--skip-download] [--dir PATH]
                        [--shared] [--fail-on-warn]
