@@ -48,6 +48,7 @@ from . import rental
 from . import signing
 from . import pool
 from . import ledger
+from . import auditlog
 from . import hostcert
 from . import record
 
@@ -174,6 +175,10 @@ class Config:
         # unset or "off" keeps the record closed until the method is accepted.
         raw_record = env.get("RIGGRADE_RECORD", "").strip()
         self.record_path = raw_record if raw_record and raw_record.lower() != "off" else None
+        # Sample-audit lines (docs/sample-audit-method.md): server copy of each
+        # box's anonymised line; never served; closed unless a path is set.
+        raw_audit = env.get("RIGGRADE_AUDIT_LOG", "").strip()
+        self.audit_log = raw_audit if raw_audit and raw_audit.lower() != "off" else None
         # Prior certificate-signing public keys (base64, comma-separated) stay
         # published after a secret rotation so older certificates still verify.
         self.prior_public_keys = [k for k in env.get("RIGGRADE_PRIOR_PUBLIC_KEYS", "").split(",") if k.strip()]
@@ -360,6 +365,8 @@ class GradingApp:
                 return self.preflight_share(start_response, body)
             if rest == ["record"]:
                 return self.record_submit(start_response, body)
+            if rest == ["audit", "line"]:
+                return self.audit_line(start_response, body)
             if rest == ["fixit"]:
                 return self.fixit_report(start_response, environ, body)
             if rest == ["cluster", "acceptance"]:
@@ -1075,6 +1082,22 @@ class GradingApp:
                       "note": "Only this record is kept: no identifier of the box, the host or you. "
                               "Aggregates per peer class publish at GET /index/quality once the "
                               "class has %d records and the method is reviewed." % pool.MIN_N})
+
+    def audit_line(self, start_response, body):
+        """Server copy of one sample-audit box's line (riggrade.auditlog)."""
+        if not self.config.audit_log:
+            return _json(start_response, "503 Service Unavailable",
+                         {"accepted": False, "error": "audit intake is closed on this service"})
+        try:
+            entry = auditlog.clean(body, self.clock())
+        except ValueError as exc:
+            raise BadRequest(f"not an audit line: {exc}")
+        stored, copies = auditlog.append(self.config.audit_log, entry)
+        if not stored:
+            return _json(start_response, "429 Too Many Requests",
+                         {"accepted": False, "error": "this run is at its line cap"})
+        return _json(start_response, "200 OK", {"accepted": True, "run": entry["run"], "box": entry["box"],
+                                                "copies_of_this_box": copies, "stored": entry["line"]})
 
     def record_submit(self, start_response, body):
         """Consented entry for the GPU record (riggrade.record.clean); free;

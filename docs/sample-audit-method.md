@@ -34,10 +34,23 @@ are listed as? A network's own supply figure cannot answer that. A renter can, b
 
 ## On each box
 
-Within 30 minutes of the box being ready, one command, then the box is released:
+Within 30 minutes of the box being ready, one command. `<run>` is the run id and `<box>` the run sheet label
+(e.g. `b10`):
 
     pip install -q riggrade==0.3.1 && riggrade-preflight --skip-download --seconds 20 >/dev/null 2>&1; \
-      python3 -c "import json; from runner import preflight as p; print('RGAUDIT <box> ' + json.dumps(p.anonymise(json.load(open('preflight-report.json')))))"
+      python3 -c "import json, urllib.request as u; from runner import preflight as p; d = p.anonymise(json.load(open('preflight-report.json'))); print('RGAUDIT <box> ' + json.dumps(d)); r = u.Request('https://riggrade-674098696181.us-central1.run.app/riggrade/v1/audit/line', json.dumps({'run': '<run>', 'box': '<box>', 'line': d}).encode(), {'Content-Type': 'application/json'}); print('SERVER ' + u.urlopen(r, timeout=20).read().decode())"
+
+It prints the `RGAUDIT` line, then sends the same summary to the service, which keeps a server copy and answers
+on a `SERVER` line with `"accepted": true` (owner direction, 3 Nov 2026, after the first io.net run lost its full
+lines with the destroyed containers). The service passes the summary through the preflight pool's cleaner, so it
+keeps only the fields below; it never serves the copy, and the operators read it back with the riggrade-ops
+`audit-read` workflow, which writes `lines.txt` for the run.
+
+**Two copies before release.** A box is not released until (1) its full `RGAUDIT` line is saved verbatim in the
+run folder's `lines.txt`, and (2) the `SERVER` line shows `"accepted": true`. If the service does not accept it,
+the local copy alone is enough and the run sheet notes "no server copy". A box released with neither copy is
+`ready_no_report`. The run id is `<network>-<YYYYMMDD>` (e.g. `ionet-20261103`), written on the run sheet before
+the first rental.
 
 `anonymise` is the same summary the preflight's opt-in share sends: the model name the driver reports, GPU count,
 memory, driver, the verdict and each check's status, and the measured numbers. No host name, address, card id or
@@ -82,9 +95,11 @@ The audit comes first and is never changed by the grade step.
   L40S in the first run. In attempt order, the first eligible box of each such model is graded. Grading spec
   section 13 counts at most 2 rigs per operator in a class; the first run grades 1 per model. No other choice is
   made: a box is graded because of its place in the attempt order, never its host, price or reviews.
-- **Order on the box.** The audit command runs first and its `RGAUDIT` line is copied. Only then does the grade
-  session start, with the pinned benchmark container named in `container/bench-image.env` (the server accepts no
-  other). The grade never changes the box's audit outcome or line.
+- **Order on the box.** The audit command runs first and its `RGAUDIT` line is saved (both copies, above). Only
+  then does the grade session start, with the pinned benchmark container named in `container/bench-image.env` (the
+  server accepts no other). The grade never changes the box's audit outcome or line. A box picked for grading is
+  not released until its grade session has run or is recorded as not run, with the reason. The grade picks and
+  this instruction are part of the run plan before the first rental, never sent mid-run.
 - **What it needs.** (1) The network must let a renter run that container image; if it does not, no grade
   session runs and the audit goes ahead unchanged. (2) Each session is a free reference session, so it needs the
   operator claim: a 0 USDC x402 authorisation to the payout address, signed by the operator's own wallet, verified
