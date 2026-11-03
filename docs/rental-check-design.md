@@ -68,6 +68,18 @@ Published with the method, versioned, no hidden weights. v0 draft:
 
 The thresholds are the grading spec's own. The check never invents a threshold the free preflight does not print.
 
+Conditions from the coordinator's review (Message 308), part of the method:
+
+- **History-based cancels print their evidence.** A cancel that rests on a card's record history prints the
+  evidence tag and attestation state beside it. An unattested history never reads as proof that the same physical
+  card failed before.
+- **Site lines keep their grain.** Any site context line the plan returns for a region states its grain in the
+  site layer's scope wording, so a state-level line never reads as a county finding.
+- **The verdict is advice at that moment.** The check answer says the verdict was measured at that moment, and that
+  cancelling and any refund sit under the marketplace's own terms.
+- **Ranking agent-supplied offers stays off, fail closed,** until a primary terms read for a marketplace is recorded
+  as permitting it. No public claim about competing aggregators is made until that question is checked.
+
 ## 5. What it does not do, and why
 
 - **No live listings, no prices, no host ranking.** No source is cleared for it (section 1). A ranking of offers

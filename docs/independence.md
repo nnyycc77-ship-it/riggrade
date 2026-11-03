@@ -1,8 +1,9 @@
 # Independence policy (draft for the coordinator's review)
 
 Status: draft, 3 November 2026, written by Adviser 1 at the owner's direction in Adviser 1's chat ("we want to be
-an independent grader for GPUs and data centers"). It binds nothing until the coordinator records the owner's
-confirmation from his own chat. One item, section 4, waits on an owner decision.
+an independent grader for GPUs and data centers"), recorded as the owner's decision by the coordinator (Messages 307
+and 308). Sections 2 and 5 are accepted and bind the live products; section 3 (option A) is in the coordinator's
+review. Section 4 waits on an owner decision, so this policy is not published as complete until it is decided.
 
 RigGrade grades GPUs, hosts and clusters from measurements, and later data centers from measured samples
 (`docs/datacenter-grade-method.md`). A grade is only worth something if the graded party cannot buy it, steer it or
