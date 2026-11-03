@@ -5,7 +5,7 @@ published yet. Field names follow each marketplace's template form as Adviser 1 
 checks them in the form at publish time, and any field that differs is corrected here.
 
 A template puts the free preflight where renters already are: they pick the template when they rent, and the
-check runs once on start. It changes nothing on the box, sends nothing anywhere, and writes its verdict to
+check runs once on start. It changes nothing on the box, sends no results anywhere, and writes its verdict to
 `/workspace/riggrade-preflight.txt` and `/workspace/preflight-report.json` (`docs/preflight.md`).
 
 ## Rules for both templates
@@ -14,8 +14,8 @@ check runs once on start. It changes nothing on the box, sends nothing anywhere,
   leaves it unused and says so here, because those marketplaces' hosts are graded parties
   (`docs/independence.md` section 3).
 - **No claim of endorsement.** The README says RigGrade is not affiliated with the marketplace.
-- **Pinned version.** The start line installs `riggrade>=0.2.0`; it is raised here when a release changes the
-  preflight.
+- **Pinned version.** The start line installs exactly `riggrade==0.2.0`, so a later release cannot change the
+  preflight a renter gets without a change here (coordinator condition (b), Message 310).
 - **The base image is the marketplace's own current PyTorch image**, so the template adds nothing to the box but
   the pip package. The tag is chosen at publish time and written below.
 
@@ -33,7 +33,7 @@ check runs once on start. It changes nothing on the box, sends nothing anywhere,
 
 On-start script:
 
-    pip install --quiet --upgrade "riggrade>=0.2.0" && \
+    pip install --quiet "riggrade==0.2.0" && \
       riggrade-preflight --dir /workspace > /workspace/riggrade-preflight.txt 2>&1 &
 
 ## RunPod
@@ -52,7 +52,7 @@ On-start script:
 
 Container start command:
 
-    bash -c "pip install --quiet --upgrade 'riggrade>=0.2.0' && \
+    bash -c "pip install --quiet 'riggrade==0.2.0' && \
       (riggrade-preflight --dir /workspace > /workspace/riggrade-preflight.txt 2>&1 &); /start.sh"
 
 ## README text (both templates)
@@ -65,7 +65,7 @@ Container start command:
 > numbers) is in `/workspace/riggrade-preflight.txt` and `/workspace/preflight-report.json` about a minute after
 > start.
 >
-> Nothing is sent anywhere unless you run it yourself with `--share`, which sends an anonymised summary. It does
+> No results are sent anywhere unless you run it yourself with `--share`, which sends an anonymised summary. It does
 > not change the box. A warn or fail is a measurement, not a judgement of the host, and you decide what to do with
 > it under the marketplace's own terms.
 >
@@ -74,7 +74,8 @@ Container start command:
 
 ## Checks before publishing (coordinator)
 
-1. The form's field names match the tables above, and the base image tag is filled in.
+1. The form's field names match the tables above (they are Adviser 1's understanding, not verified), and the base
+   image tag is filled in. Any field that differs is corrected here before publishing.
 2. One start on the cheapest box of each marketplace shows the verdict files appearing within about two minutes,
    and the box's own SSH or Jupyter still works. That start costs a few cents of rental, which is the owner's
    spend to approve.
