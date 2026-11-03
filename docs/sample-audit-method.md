@@ -1,6 +1,7 @@
 # Sample audit of a GPU network's listed supply: method
 
-Status: v1, 3 November 2026, before the first rental. v0 was published before any box was rented; v1 writes in
+Status: v2, 3 November 2026, before the first rental. v2 adds grade sessions on the same rentals, inside the same
+20 USD (owner direction, 3 Nov 2026: no extra money). v0 was published before any box was rented; v1 writes in
 the coordinator's review conditions (board Messages 332 and 333) and the draw exactly as the first run recorded it,
 also before any rental. Owner approval for the first run: up to 20 USD of rentals.
 
@@ -71,6 +72,33 @@ the reported GPU count matches the listed count; whether the load checks ran; an
 **Compute measured** means at least one load check (clocks under load, slowdown, temperature, memory bandwidth)
 has a pass, warn or fail. A box without torch reads compute warn with basis "not measured" and has no load-check
 result, so it is never counted as compute measured.
+
+## Grade sessions on the same rentals (v2)
+
+The owner asked that the same rentals also add grade sessions to RigGrade's reference data, inside the same 20 USD.
+The audit comes first and is never changed by the grade step.
+
+- **Which boxes.** Only single-GPU picks whose model has a grading class (`riggrade/classes.py`): A100, H100 and
+  L40S in the first run. In attempt order, the first eligible box of each such model is graded. Grading spec
+  section 13 counts at most 2 rigs per operator in a class; the first run grades 1 per model. No other choice is
+  made: a box is graded because of its place in the attempt order, never its host, price or reviews.
+- **Order on the box.** The audit command runs first and its `RGAUDIT` line is copied. Only then does the grade
+  session start, with the pinned benchmark container named in `container/bench-image.env` (the server accepts no
+  other). The grade never changes the box's audit outcome or line.
+- **What it needs.** (1) The network must let a renter run that container image; if it does not, no grade
+  session runs and the audit goes ahead unchanged. (2) Each session is a free reference session, so it needs the
+  operator claim: a 0 USDC x402 authorisation to the payout address, signed by the operator's own wallet, verified
+  and never settled (grading spec section 13). No money moves. Without the claim the session is not graded.
+- **Time and the spend stop.** A grade session runs about 1.5 hours (model download, gate, warm-up, ruler passes,
+  the 60-minute sustained run), so a graded box is counted as 2 billed hours in the running spend stop. The stop
+  applies to grade and audit together: no new box, and no grade session, starts if spend so far plus its billed
+  hours at the listed rate would pass 20 USD. A grade session left unstarted by the cap is reported as such; the
+  box's audit result stands.
+- **What it records.** Each graded rig counts toward its class's provisional reference under the operator rules,
+  tagged as declared by the buyer and unattested. No speed grade is issued in a class until its reference meets
+  the spec (5 rigs, 3 distinct verified operators); RigGrade's own rentals can never meet that alone. The audit
+  report lists which boxes were graded and their session outcomes; grades are published under the grading spec,
+  not in the audit report.
 
 ## Reporting
 
