@@ -729,7 +729,10 @@ class GradingApp:
 
     def cluster_acceptance(self, start_response, environ, body):
         pack = body.get("evidence_pack") if isinstance(body, dict) else None
+        role = (body.get("payer_role") if isinstance(body, dict) else None) or "undeclared"
         error = acceptance.validate(pack)
+        if not error and role not in acceptance.PAYER_ROLES:
+            error = "payer_role must be one of: " + ", ".join(acceptance.PAYER_ROLES)
         if error:
             if not self._payment_header(environ):
                 return self.probe(start_response, environ, "cluster")
@@ -751,6 +754,8 @@ class GradingApp:
             cert = acceptance.certificate(pack, checks, result, self.config.secret,
                                           self.clock(), cert_id)
             cert["paying_wallet"] = settled.get("payer")
+            cert["payer_role"] = role
+            cert["payer_role_note"] = acceptance.PAYER_ROLE_NOTE
             if self.signer is not None:
                 cert["keys_url"] = _url(environ, signing.KEYS_PATH)   # the anchor, inside the signed body
             cert["signature"] = acceptance.sign(cert, self.config.secret)

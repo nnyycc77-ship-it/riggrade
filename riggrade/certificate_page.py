@@ -75,7 +75,7 @@ def render(cert, signature_valid, lookup_url="", ed25519_valid=None, keys_url=""
 <p><span class="verdict %(cls)s">Verdict: %(verdict)s</span></p>
 <p>Independent signature: %(ed)s</p>
 <p>Service check: %(sig)s</p>
-<h2>What the provider claimed</h2>
+%(payer)s<h2>What the provider claimed</h2>
 <table><tr><th>Claim</th><th>Value</th></tr>
 %(claims)s
 </table>
@@ -96,7 +96,18 @@ def render(cert, signature_valid, lookup_url="", ed25519_valid=None, keys_url=""
        "claims": claim_rows, "nodes": _e(cert.get("nodes", "?")),
        "images": ", ".join("<code>%s</code>" % _e(i) for i in (cert.get("images") or [])) or "(unrecorded)",
        "checks": _rows(cert.get("checks")), "lists": lists, "pack": _e(cert.get("pack_sha256", "")),
-       "statement": _e(cert.get("statement", "")), "json": _e(lookup_url)}
+       "statement": _e(cert.get("statement", "")), "json": _e(lookup_url),
+       "payer": _payer_line(cert)}
+
+
+def _payer_line(cert):
+    """Who paid and in what declared role; certificates issued before the role was asked show none."""
+    if not cert.get("paying_wallet") and not cert.get("payer_role"):
+        return ""
+    wallet = _e(cert.get("paying_wallet") or "not recorded")
+    role = _e(cert.get("payer_role") or "not asked")
+    note = _e(cert.get("payer_role_note") or "this certificate predates the declared role")
+    return f"<p>Paid for by wallet <code>{wallet}</code>, declared role: <b>{role}</b> <span class=muted>({note})</span></p>\n"
 
 
 def wants_html(environ):

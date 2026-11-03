@@ -31,7 +31,13 @@ For a renter of a multi-node cluster. Run the acceptance test
 it wrote:
 
     POST /riggrade/v1/cluster/acceptance
-    {"evidence_pack": { ...acceptance.json... }}
+    {"evidence_pack": { ...acceptance.json... }, "payer_role": "buyer"}
+
+`payer_role` is optional: `buyer`, `provider`, `lender`, `insurer`, `other` or
+`undeclared` (the default). The certificate prints the paying wallet and this
+role, marked as the payer's own declaration and not verified. The price and the
+rules are the same whoever pays, so a provider may certify its own cluster and
+the certificate says so (`docs/independence.md` section 2).
 
 The server recomputes every check and the verdict from the claims and
 node reports with the same published rules. A pack whose verdict does
