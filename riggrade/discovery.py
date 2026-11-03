@@ -240,7 +240,12 @@ def openapi(base, prefix, contact_email=None):
             "/cluster/acceptance": post("Cluster acceptance certificate (25 USDC): recomputes the "
                                         "evidence pack and issues a signed, stored certificate",
                                         {"type": "object",
-                                         "properties": {"evidence_pack": {"type": "object"}},
+                                         "properties": {"evidence_pack": {"type": "object"},
+                                                        "payer_role": {"type": "string",
+                                                                       "enum": ["buyer", "provider", "lender",
+                                                                                "insurer", "other", "undeclared"],
+                                                                       "description": "who is paying, declared "
+                                                                                      "and printed, not verified"}},
                                          "required": ["evidence_pack"]},
                                         {"402": {"description": "x402 payment required (USDC on Base)"},
                                          "422": {"description": "evidence pack does not recompute"},

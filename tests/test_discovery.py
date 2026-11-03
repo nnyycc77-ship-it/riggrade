@@ -242,3 +242,12 @@ class Discovery402Tests(unittest.TestCase):
         status, doc = self.probe(app, header="eyJ...")
         self.assertTrue(status.startswith("400"), doc)
         self.assertEqual(adapter.calls, [])
+
+class PayerRoleSchemaTest(unittest.TestCase):
+    def test_the_published_enum_is_the_endpoints_list(self):
+        from riggrade import acceptance
+        from riggrade import discovery as d
+        doc = d.openapi("https://example.test", "/riggrade/v1")
+        schema = doc["paths"]["/cluster/acceptance"]["post"]["requestBody"]["content"]["application/json"]["schema"]
+        self.assertEqual(tuple(schema["properties"]["payer_role"]["enum"]), acceptance.PAYER_ROLES)
+

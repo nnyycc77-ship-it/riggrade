@@ -44,6 +44,13 @@ def recompute(pack):
     return cluster_rules.evaluate(pack["claims"], nodes)
 
 
+# Who paid, in the payer's own words (docs/independence.md section 2). The role is
+# declared, not verified, and the price is the same whatever the verdict.
+PAYER_ROLES = ("buyer", "provider", "lender", "insurer", "other", "undeclared")
+PAYER_ROLE_NOTE = ("declared by the payer, not verified; the price is the same whatever the verdict, "
+                   "and a provider paying for its own cluster gets the same rules as anyone")
+
+
 def certificate(pack, checks, result, secret, now, cert_id):
     nodes = pack["nodes"]
     cert = {"product": PRODUCT, "certificate_id": cert_id, "issued_at": now,

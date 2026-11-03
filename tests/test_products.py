@@ -7,7 +7,7 @@ import unittest
 import unittest.mock
 from pathlib import Path
 
-from riggrade import acceptance, cluster_rules, fixit, salelog
+from riggrade import acceptance, certificate_page, cluster_rules, fixit, salelog
 from riggrade.endpoint import GradingApp
 from tests.test_endpoint import IMAGE, PAYER, WALLET, FakeAdapter, call
 
@@ -223,6 +223,35 @@ class ProductEndpointTests(unittest.TestCase):
         (entry,) = salelog.read_chain(self.log)
         self.assertEqual((entry["product"], entry["amount_atomic"], entry["certificate_id"]),
                          ("riggrade_cluster_acceptance", "25000000", cert["certificate_id"]))
+
+    def test_cluster_certificate_prints_the_payers_declared_role(self):
+        app = self.app()
+        pack = pack_for(CLAIMS, [node(0, fabric=45.0, storage=6.0), node(1, storage=6.0)])
+        status, _h, doc = call(app, "POST", "/riggrade/v1/cluster/acceptance",
+                               {"evidence_pack": pack, "payer_role": "provider"}, payment="pay")
+        self.assertEqual(status, "200 OK")
+        cert = doc["certificate"]
+        self.assertEqual(cert["payer_role"], "provider")
+        self.assertIn("not verified", cert["payer_role_note"])
+        self.assertTrue(acceptance.verify(cert, b"s"))  # the role is inside the signed body
+        page = certificate_page.render(cert, True)
+        self.assertIn("declared role: <b>provider</b>", page)
+        status, _h, doc = call(app, "POST", "/riggrade/v1/cluster/acceptance",
+                               {"evidence_pack": pack}, payment="pay")
+        self.assertEqual(doc["certificate"]["payer_role"], "undeclared")
+
+    def test_an_unknown_payer_role_is_refused_before_payment(self):
+        app = self.app()
+        pack = pack_for(CLAIMS, [node(0, fabric=45.0, storage=6.0), node(1, storage=6.0)])
+        calls = len(self.adapter.calls)
+        status, _h, doc = call(app, "POST", "/riggrade/v1/cluster/acceptance",
+                               {"evidence_pack": pack, "payer_role": "auditor"}, payment="pay")
+        self.assertEqual(status, "400 Bad Request")
+        self.assertIn("payer_role", doc["error"])
+        self.assertEqual(len(self.adapter.calls), calls)
+        status, _h, _d = call(app, "POST", "/riggrade/v1/cluster/acceptance",
+                              {"evidence_pack": pack, "payer_role": "auditor"})
+        self.assertEqual(status, "402 Payment Required")
 
     def test_findings_that_are_not_objects_are_refused_not_crashed(self):
         # Seen live on 1 Nov 2026 (four 500s): findings given as strings.
