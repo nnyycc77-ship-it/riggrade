@@ -193,6 +193,30 @@ class RunTests(unittest.TestCase):
         self.assertEqual(report["verdict"], pf.WARN)
         self.assertIn("pip install torch", next(f["detail"] for f in report["findings"] if f["check"] == "compute"))
 
+    def test_unmeasured_compute_is_never_counted_as_a_pass(self):
+        # Message 321 condition 2: the warn stays a warn in the machine-readable
+        # report, the shared summary, the record entry and the pooled figures.
+        from riggrade import pool
+
+        class NoTorch(FakeProbes):
+            def load(self, seconds):
+                raise ModuleNotFoundError("No module named 'torch'")
+        report = pf.run(NoTorch(), seconds=1, download=False, out=io.StringIO())
+        compute = next(f for f in report["findings"] if f["check"] == "compute")
+        self.assertEqual((compute["status"], compute["basis"], compute["hint"]),
+                         (pf.WARN, "not measured", "pip install torch"))
+        load_kinds = ("clocks_under_load", "slowdown_reasons", "temperature", "memory_bandwidth")
+        for f in report["findings"]:
+            if f["check"].split(".", 1)[-1] in load_kinds:
+                self.assertNotEqual(f["status"], pf.PASS, f["check"])
+        for doc in (pf.anonymise(report), pf.record_doc(report, "buyer")):
+            self.assertEqual(doc["verdict"], pf.WARN)
+            self.assertEqual(doc["statuses"]["compute"], pf.WARN)
+        rows = [dict(pf.anonymise(report), peer_class="rtx-4090-24") for _ in range(pool.MIN_N)]
+        agg = pool.aggregate(rows)["rtx-4090-24"]
+        self.assertEqual(agg["verdict_share"]["pass"], 0)
+        self.assertNotIn("pass", agg["check_status_share"]["compute"])
+
     def test_cards_parse_and_never_reach_the_share(self):
         got = pf.parse_cards_csv("0, GPU-1111, 1650000000001\n1, GPU-2222, [N/A]\n")
         self.assertEqual(got["cards"][0]["serial"], "1650000000001")
