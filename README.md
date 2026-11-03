@@ -68,6 +68,13 @@ docker run --rm --gpus all -e RIGGRADE_IMAGE_DIGEST=$RIGGRADE_IMAGE_DIGESTS \
 The container carries the runner and the spec only. The grading server,
 payment code and screen list never ship in it.
 
+## Independence
+
+Payment never buys the outcome: the method, the price and the verdict rules are the same whoever pays, the payer is
+printed, and failed results stay in the record. RigGrade takes no referral, affiliate, listing or sponsorship money
+from marketplaces, hosts or operators, including referral credits for marketplace templates. See
+`docs/independence.md` (draft under review).
+
 ## Licence
 
 Apache License 2.0; see `LICENSE`. The benchmark is open so that anyone can

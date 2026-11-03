@@ -23,15 +23,22 @@ hide it. This policy writes down the rules that make that true, so that a buyer,
 - **The price never depends on the outcome.** A grade, a certificate or a check costs the same whether it passes
   or fails. A request whose evidence does not recompute is refused and charges nothing (422).
 - **Who paid is printed.** A host-paid grade carries the `host-paid` flag and the declared runner, as the grading
-  spec already requires. A buyer-paid grade of someone else's rig says so.
+  spec already requires. A buyer-paid grade of someone else's rig says so. A cluster certificate prints the paying
+  wallet and the payer's declared role (buyer, provider, lender, insurer, other), marked as declared and not
+  verified.
 - **Free runs grade the same way.** The launch window and the free trial change the price, never the method or
   the verdict.
 - **No paid retest after a result.** An appeal is decided on the evidence already held (grading spec 10a).
 
-## 3. No money from anyone we grade
+## 3. Payment never buys the outcome, and no side money
 
-RigGrade takes no money from a marketplace, host, data center operator, chipmaker or cloud for anything other
-than the published products at their published prices. In particular, it takes:
+The rule is that payment never buys the outcome, not that graded parties never pay. A host, provider or operator
+may buy the published products for its own boxes at the published price, as it would pay any testing service. That
+is allowed because the method, the price and the verdict rules are the same whoever pays, the payer is printed,
+and a failed result stays in the record (section 6). (Owner direction, option A, 3 November 2026.)
+
+Beyond the published products at their published prices, RigGrade takes no money from a marketplace, host, data
+center operator, chipmaker or cloud. In particular, it takes:
 
 - no referral, affiliate or listing fee;
 - no equity, token allocation, grant or sponsorship tied to a graded party;
