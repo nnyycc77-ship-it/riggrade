@@ -98,6 +98,15 @@ class SampleAuditTests(unittest.TestCase):
         for word in ("card_id", "serial", "rig_id"):
             self.assertNotIn(word, dumped)
 
+    def test_ready_no_report_written_on_the_sheet(self):
+        # Coordinator Message 336 condition (1): the outcome the method prescribes is accepted,
+        # counted as tried, never as checked or as a pass.
+        out = sa.total([{"box": "b1", "listed_model": "A100", "outcome": "ready_no_report", "usd_per_hour": "1",
+                         "minutes_billed": "60"}], {})
+        self.assertEqual((out["boxes_tried"], out["boxes_checked"]), (1, 0))
+        self.assertEqual(out["outcomes"], {"ready_no_report": 1})
+        self.assertEqual(out["verdicts"], {})
+
     def test_bad_outcome_is_refused(self):
         with self.assertRaises(SystemExit):
             sa.total([{"box": "x", "outcome": "fine"}], {})
