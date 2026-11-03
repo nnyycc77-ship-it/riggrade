@@ -40,6 +40,7 @@ Each sampled card is graded under the grading spec, with the lowest pillar cappi
 peer class and workload class is then:
 
 1. **The sample's median card grade.** This is a median over sampled cards, never an average of pillar scores.
+   With an even number of sampled cards, the median is the worse of the two middle grades (fail closed).
 2. **Capped by the pass bound:**
    - lower bound at least 90%: the median grade stands;
    - lower bound at least 75% and below 90%: one grade lower, and Grade 3 stays Grade 3;
@@ -51,6 +52,12 @@ A worked example: 20 cards sampled, 19 passed, so the bound is 78%. That is the 
 the record method. The median card is Grade 2, so the site grade is Grade 3 for that class, and the entry says why.
 
 These bands are draft values for review, published per method version as the grading spec's bars are.
+
+What the bands mean in practice (coordinator review, Message 308): with every sampled card passing, the bound is 74%
+for 10 cards, so a 10-card sample can never give a site grade. A capped grade needs at least 11 cards, all passing
+(bound 76%). An uncapped median grade needs at least 29 cards, all passing (bound 90%). Any failure raises those
+minimums. These effective minimums are intended for v0; if they prove too strict, the bands or the minimum sample
+change by a new method version before any site is graded, never for one site.
 
 ## 5. Context beside the grade
 
@@ -75,12 +82,18 @@ page says so in one line above the context.
 - Either way, the price does not depend on the outcome, and the method is the same (`docs/independence.md`
   section 2).
 
+- **A hall with several operators** (a colocation hall with tenants) is graded per operator and per facility,
+  never pooled across operators. A hall-level page carries context only, and no grade. (Message 308.)
+- **A third-party sample needs written operator consent,** reviewed before any such run, covering the inventory
+  declaration, the consent to run, publication of the result including a failure, and no withdrawal.
+
 ## 8. What a site grade does not say
 
 - Nothing about cards not sampled beyond the bound, and nothing about future delivery.
 - Nothing about the site's ownership, its power contracts, its finances or its legal standing.
-- It does not verify the declared location. The county is the operator's declaration, and the entry says so
-  until a location check exists.
+- It does not verify the declared location. The county is the operator's declaration, and every site entry prints
+  "location declared by the operator, not verified" in the entry itself, not only in this method, until a location
+  check exists. No site entry is public before that line is on it.
 - It is not an accreditation, and it is not a rating of the operator as a company.
 
 ## 9. Open questions for the coordinator
@@ -91,6 +104,11 @@ page says so in one line above the context.
 4. Whether a location check is needed before any site entry is public. One option is a declared address matched
    against network latency from the boxes, but that is unproven and would need its own method.
 5. How a site entry treats a facility with several operators, for example a colocation hall with tenants.
+
+Answered by the coordinator in Message 308: the bands and the 90-day interval are accepted for v0 with their
+effective minimums printed (section 4); a third-party sample needs a written consent text (section 7); the location
+line goes in the entry (section 8); multi-operator halls are graded per operator and per facility (section 7). The
+consent text itself is still to be written and reviewed.
 
 ## 10. Build, when Phase 2 comes
 
