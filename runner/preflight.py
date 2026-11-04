@@ -838,7 +838,19 @@ def run(probes, seconds=30.0, url=DEFAULT_URL, download=True, directory=".",
     for f in findings:
         out.write("%-6s %-28s %s\n" % (f["status"].upper(), f["check"], f["detail"]))
     out.write("\nVERDICT: %s. %s\n" % (report["verdict"].upper(), report["advice"]))
+    if report["verdict"] in (WARN, FAIL):
+        out.write(next_step())
     return report
+
+
+def next_step(endpoint=None):
+    """The one pointer printed after a warn or fail: where the likely cause
+    and fix of each finding can be had. No price is printed here, so this
+    line can never state a price the service does not charge."""
+    base = (endpoint or os.environ.get("RIGGRADE_ENDPOINT") or DEFAULT_ENDPOINT).rstrip("/")
+    return (f"\nNEXT: for the likely cause and the fix of each warning, open {base}/checkout, choose the host "
+            f"fix-it report and paste preflight-report.json (an agent can POST it to {base}/fixit). The page "
+            "shows the current price and any free trial; nothing is sent unless you do this.\n")
 
 
 def main(argv=None):
