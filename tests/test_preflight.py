@@ -163,6 +163,19 @@ class RunTests(unittest.TestCase):
         self.assertTrue(os.path.exists("preflight-report.json"))
         self.assertIn("VERDICT: PASS", out.getvalue())
 
+    def test_next_step_only_after_warn_or_fail_and_never_a_price(self):
+        out = io.StringIO()
+        pf.run(FakeProbes(), seconds=1, out=out)
+        self.assertNotIn("NEXT:", out.getvalue())
+        out = io.StringIO()
+        pf.run(FakeProbes(fail_load=True), seconds=1, download=False, out=out)
+        text = out.getvalue()
+        self.assertIn("NEXT:", text)
+        self.assertIn("/checkout", text)
+        self.assertIn("preflight-report.json", text)
+        self.assertNotIn("USDC", text.split("NEXT:", 1)[1])
+        self.assertIn("https://example.test/v1/fixit", pf.next_step("https://example.test/v1/"))
+
     def test_compute_failure_is_recorded_and_fails(self):
         report = pf.run(FakeProbes(fail_load=True), seconds=1, download=False,
                         out=io.StringIO())

@@ -2,6 +2,29 @@
 
 RigGrade is an independent, single-operator GPU rig grading service with open rules. Whoever holds access to a rig runs an open, pinned benchmark container on it. The grading endpoint grades the result against fixed, published bars for the rig's peer class (similar cards) and workload class (job type: inference or training), and returns a label and an evidence pack. Grades are labels of measured quality, not promises.
 
+## Start here
+
+**Renting a GPU?** Check the box in one minute, free, before you start a long job:
+
+```bash
+pip install riggrade
+riggrade-preflight
+```
+
+It prints pass, warn or fail with the measured numbers: throttling, memory or compute already in use by someone
+else, PCIe link, driver against CUDA, ECC, host load, disk and download speed. Nothing is sent anywhere.
+
+**It warned or failed?** The [host fix-it report](docs/products.md) names the likely cause of each finding, the fix
+and who can act (host or renter). Paste `preflight-report.json` on the
+[checkout page](https://riggrade-674098696181.us-central1.run.app/riggrade/v1/checkout), which shows the current
+price and any free trial.
+
+**Hosting GPUs?** `riggrade-monitor` runs the light checks every 6 hours on your own box and alerts your webhook
+when a card gets worse ([docs/monitor.md](docs/monitor.md)). Free, and nothing is sent to RigGrade.
+
+**Building an agent that rents compute?** `riggrade-mcp` gives it the same check as a tool, so it can gate a long
+job on the verdict ([below](#use-the-mcp-server)).
+
 Status (1 Nov 2026): live at https://riggrade-674098696181.us-central1.run.app/riggrade/v1 with paid grading on. Agents can read `/.well-known/agent.json`, `/llms.txt` and `/riggrade/v1/openapi.json` on that host. Prices: 3 USDC per workload class for consumer cards, 5 USDC for data-centre cards, paid by x402 (USDC on Base). While a GPU class has no reference yet, each rig's first session there is free.
 
 - [Grading spec, v0.1](docs/grading-spec.md)
