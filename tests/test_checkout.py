@@ -59,6 +59,13 @@ class CheckoutPageTests(unittest.TestCase):
         self.assertIn("free_reference_session", body)
         self.assertIn("0 USDC operator claim", body)
 
+    def test_fixit_has_a_no_wallet_button_shown_only_when_free(self):
+        # Owner decision, 4 Nov 2026: during the free trial a person can get the fix-it report with no wallet.
+        _s, _h, body = self.page()
+        self.assertIn("id=freebtn hidden", body)
+        self.assertIn('"/fixit/free"', body)
+        self.assertIn('free && product === "fixit"', body)
+
     def test_page_names_every_payer_role_the_endpoint_accepts(self):
         self.assertEqual(checkout.ROLES, acceptance.PAYER_ROLES)
 

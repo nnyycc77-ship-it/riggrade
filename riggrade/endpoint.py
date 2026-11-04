@@ -369,6 +369,8 @@ class GradingApp:
                 return self.audit_line(start_response, body)
             if rest == ["fixit"]:
                 return self.fixit_report(start_response, environ, body)
+            if rest == ["fixit", "free"]:
+                return self.fixit_free(start_response, body)
             if rest == ["cluster", "acceptance"]:
                 return self.cluster_acceptance(start_response, environ, body)
             if rest == ["ledger"]:
@@ -776,6 +778,38 @@ class GradingApp:
             return {"report": doc, "preview": prev}, {"findings": prev["fixable"]}
         return self._sell(start_response, environ, "fixit", PREFIX + "/fixit", description,
                           prev, deliver)
+
+    def fixit_free(self, start_response, body):
+        """The fix-it report with no wallet, for people, only while the fix-it
+        free trial runs (owner decision, 4 Nov 2026). Agents keep the x402 route.
+        Nothing is charged and no payer exists, so nothing is screened; the use
+        is logged as free_trial (via web_no_wallet) so the digest counts it."""
+        if self.product_reasons_off("fixit") or not self.trial_active("fixit"):
+            return _json(start_response, "403 Forbidden",
+                         {"error": "the no-wallet fix-it report is only open during the free trial; "
+                                   "use POST " + PREFIX + "/fixit over x402", "charged": False})
+        report = body.get("preflight_report") if isinstance(body, dict) else None
+        if (not isinstance(report, dict) or report.get("preflight") is not True
+                or not isinstance(report.get("findings"), list)
+                or not all(isinstance(f, dict) for f in report["findings"])):
+            raise BadRequest("preflight_report (the preflight-report.json content) is required: "
+                             "an object with preflight true and a findings list of "
+                             "{check, status, detail} objects")
+        prev = fixit.preview(report)
+        if prev["fixable"] == 0:
+            return _json(start_response, "422 Unprocessable Entity",
+                         {"error": "nothing to fix: no finding warned or failed",
+                          "preview": prev, "charged": False})
+        doc = fixit.diagnose(report)
+        doc["paying_wallet"] = None
+        doc["free_trial"] = True
+        salelog.append(self.config.sale_log,
+                       {"product": fixit.PRODUCT, "amount_atomic": "0", "status": "free_trial",
+                        "via": "web_no_wallet", "payer": None, "tx": None, "findings": prev["fixable"],
+                        "at": self.clock()})
+        return _json(start_response, "200 OK",
+                     {"report": doc, "preview": prev, "charged": False,
+                      "free_until": self.free_until_text("fixit")})
 
     def cluster_acceptance(self, start_response, environ, body):
         pack = body.get("evidence_pack") if isinstance(body, dict) else None

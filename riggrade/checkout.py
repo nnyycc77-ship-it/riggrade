@@ -79,7 +79,8 @@ pre{background:#262626}.muted{color:#aaa}button{background:#e8e8e8;color:#151515
 <p class=muted>Pay for a RigGrade report from your own browser wallet, in USDC on Base. This page does what an
 agent does over x402: it asks the service for the price, your wallet signs a payment of exactly that amount to the
 address the service names, and the service settles it and returns your report. RigGrade never sees your keys.
-The price is the same whatever the result, and a failed check stays failed.</p>
+The price is the same whatever the result, and a failed check stays failed. During the fix-it report's free
+trial you can also get it with no wallet at all.</p>
 
 <div class=box>
 <label for=product>1. What do you want?</label>
@@ -99,6 +100,7 @@ The price is the same whatever the result, and a failed check stays failed.</p>
 <p id=price></p>
 <pre id=preview></pre>
 <p class=muted id=terms></p>
+<button id=freebtn hidden>Get it free, no wallet needed</button>
 <button id=pay>Connect wallet and sign</button>
 </div>
 
@@ -174,10 +176,13 @@ async function getQuote() {
       $("pay").disabled = true; return;
     }
     quote = doc;
+    $("freebtn").hidden = true;
     const req = doc.accepts[0];
     const free = req.amount === "0";
     say($("price"), doc.free_reference_session
       ? "Free reference session: this GPU class is still building its reference. Your wallet signs a 0 USDC operator claim to the address the service names; it is verified and never settled, and no money moves."
+      : free && product === "fixit"
+      ? "Free during the current free period. Get it now with no wallet, or sign a 0 USDC authorisation from your wallet if you prefer; either way no money moves."
       : free
       ? "Free during the current free period. Your wallet still signs a 0 USDC authorisation, so the payer can be screened like any other; no money moves."
       : "Price: " + usdc(req.amount) + " USDC on Base, paid to " + req.payTo + ".", "");
@@ -187,6 +192,8 @@ async function getQuote() {
       + " minutes. Nothing moves until the service settles it, and only after your file has been checked.";
     $("pay").textContent = free ? "Connect wallet and sign (free)" : "Connect wallet and pay " + usdc(req.amount) + " USDC";
     $("pay").disabled = false;
+    $("freebtn").hidden = !(free && product === "fixit" && !doc.free_reference_session);
+    $("freebtn").disabled = false;
   } catch (e) { $("quotebox").hidden = false; say($("price"), e.message, "err"); $("pay").disabled = true; }
 }
 
@@ -246,6 +253,30 @@ async function pay() {
   }
 }
 
+async function getFree() {
+  $("freebtn").disabled = true;
+  $("resultbox").hidden = false; $("download").hidden = true; $("links").textContent = ""; $("result").textContent = "";
+  say($("status"), "Preparing your report...", "muted");
+  try {
+    const res = await fetch(CFG.prefix + "/fixit/free", {method: "POST", body: JSON.stringify(body),
+      headers: {"Content-Type": "application/json", "Accept": "application/json"}});
+    let doc = {};
+    try { doc = await res.json(); } catch (e) { doc = {error: "the service answered " + res.status}; }
+    lastResult = doc;
+    if (res.status === 200) {
+      say($("status"), "Done. Free, no wallet used, nothing charged.", "ok");
+      $("result").textContent = JSON.stringify(doc.report || doc, null, 2);
+      $("download").hidden = false;
+    } else {
+      say($("status"), (doc.error || ("The service answered " + res.status)) + ". Nothing was charged.", "err");
+      $("freebtn").disabled = false;
+    }
+  } catch (e) {
+    say($("status"), (e && e.message) ? e.message : String(e), "err");
+    $("freebtn").disabled = false;
+  }
+}
+
 function download() {
   const blob = new Blob([JSON.stringify(lastResult, null, 2)], {type: "application/json"});
   const a = document.createElement("a");
@@ -258,6 +289,7 @@ $("sid").addEventListener("input", () => { $("quotebox").hidden = true; });
 $("role").addEventListener("change", () => { $("quotebox").hidden = true; });
 $("quote").addEventListener("click", getQuote);
 $("pay").addEventListener("click", pay);
+$("freebtn").addEventListener("click", getFree);
 $("download").addEventListener("click", download);
 choose();
 </script>

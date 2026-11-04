@@ -102,3 +102,45 @@ class TrialTests(Harness):
         _s, _h, desc = call(app, "GET", "/riggrade/v1")
         self.assertEqual(desc["products"]["fixit"]["price_usdc"], "2")
         self.assertNotIn("point_grade_free_trial", desc)
+
+
+class FreeNoWalletTests(Harness):
+    """The no-wallet fix-it path for people (owner decision, 4 Nov 2026)."""
+    app = TrialTests.app
+
+    def test_free_report_with_no_wallet_during_the_trial(self):
+        app = self.app()
+        status, _h, doc = call(app, "POST", "/riggrade/v1/fixit/free", FIXIT_BODY)
+        self.assertEqual(status, "200 OK", doc)
+        self.assertEqual((doc["charged"], doc["report"]["free_trial"], doc["report"]["paying_wallet"]),
+                         (False, True, None))
+        self.assertEqual(doc["free_until"], UNTIL)
+        self.assertEqual(self.adapter.calls, [])                       # no facilitator touched
+        (entry,) = salelog.read_chain(self.log)
+        self.assertEqual((entry["status"], entry["via"], entry["amount_atomic"], entry["payer"]),
+                         ("free_trial", "web_no_wallet", "0", None))
+
+    def test_closed_outside_the_trial_and_when_off(self):
+        for app in (self.app(trial=None, until=None), self.app(products="cluster")):
+            status, _h, doc = call(app, "POST", "/riggrade/v1/fixit/free", FIXIT_BODY)
+            self.assertEqual(status, "403 Forbidden")
+            self.assertFalse(doc["charged"])
+        app = self.app()
+        self.clock.t = AFTER
+        status, _h, _doc = call(app, "POST", "/riggrade/v1/fixit/free", FIXIT_BODY)
+        self.assertEqual(status, "403 Forbidden")
+        self.assertEqual(salelog.read_chain(self.log), [])
+
+    def test_bad_or_clean_reports_are_refused(self):
+        app = self.app()
+        status, _h, _doc = call(app, "POST", "/riggrade/v1/fixit/free", {"preflight_report": {"findings": []}})
+        self.assertEqual(status, "400 Bad Request")
+        clean = copy.deepcopy(FIXIT_BODY)
+        clean["preflight_report"]["findings"][0]["status"] = "pass"
+        status, _h, _doc = call(app, "POST", "/riggrade/v1/fixit/free", clean)
+        self.assertEqual(status, "422 Unprocessable Entity")
+        self.assertEqual(salelog.read_chain(self.log), [])
+
+    def test_not_listed_for_agents(self):
+        _s, _h, doc = call(self.app(), "GET", "/openapi.json")
+        self.assertNotIn("/fixit/free", doc["paths"])
