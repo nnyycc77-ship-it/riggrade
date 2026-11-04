@@ -548,3 +548,31 @@ class OperatorRulesTests(Harness):
         ref = doc["references"]["rtx4090-24"]["inference"]
         self.assertEqual((ref["rigs"], ref["operators"]), (5, 3))
         self.assertAlmostEqual(ref["largest_operator_share"], 0.4)
+
+
+class TrailingPunctuationTests(Harness):
+    """A link pasted into prose often keeps the bracket or comma after it."""
+
+    def get(self, app, path, query=""):
+        got = {}
+
+        def start_response(status, headers):
+            got["status"], got["headers"] = status, dict(headers)
+        body = b"".join(app({"REQUEST_METHOD": "GET", "PATH_INFO": path, "QUERY_STRING": query,
+                             "wsgi.input": io.BytesIO(b"")}, start_response))
+        return got["status"], got["headers"], body
+
+    def test_trailing_bracket_and_comma_redirect_to_the_page(self):
+        app = self.app()
+        for path in ("/riggrade/v1/checkout),", "/riggrade/v1/checkout.", "/riggrade/v1/checkout)"):
+            status, headers, _b = self.get(app, path)
+            self.assertEqual((status, headers["Location"]), ("301 Moved Permanently", "/riggrade/v1/checkout"))
+        status, headers, _b = self.get(app, "/riggrade/v1/checkout),", "product=fixit")
+        self.assertEqual(headers["Location"], "/riggrade/v1/checkout?product=fixit")
+        status, _h, _b = self.get(app, "/riggrade/v1/checkout")
+        self.assertEqual(status, "200 OK")
+
+    def test_post_is_never_redirected(self):
+        app = self.app()
+        status, _h, _doc = call(app, "POST", "/riggrade/v1/fixit),", {})
+        self.assertNotEqual(status, "301 Moved Permanently")

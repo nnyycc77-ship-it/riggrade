@@ -304,6 +304,13 @@ class GradingApp:
             for _chunk in self(dict(environ, REQUEST_METHOD="GET"), start_response):
                 pass
             return []
+        clean = path.rstrip(TRAILING_PUNCTUATION)
+        if method == "GET" and clean != path and clean:
+            # A link pasted into prose often carries the closing bracket or
+            # comma after it ("/riggrade/v1/checkout),"): send the visitor on
+            # to the page they meant instead of a 404 or 405.
+            query = environ.get("QUERY_STRING", "")
+            return _redirect(start_response, clean + ("?" + query if query else ""))
         if method == "GET" and path in DISCOVERY_PATHS:
             return self.discovery(start_response, environ, path)
         if not path.startswith(PREFIX):
@@ -1490,6 +1497,16 @@ def _read(environ):
         return json.loads(raw)
     except ValueError:
         raise BadRequest("body is not JSON")
+
+
+TRAILING_PUNCTUATION = ")]}>,.;:!'\"*"
+
+
+def _redirect(start_response, location):
+    data = b""
+    start_response("301 Moved Permanently", [("Location", location), ("Content-Length", "0"),
+                                             ("Cache-Control", "public, max-age=86400")])
+    return [data]
 
 
 def _json(start_response, status, payload, extra_headers=()):
