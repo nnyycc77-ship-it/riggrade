@@ -22,6 +22,7 @@ and only then settle. Attestation is verified by attestation_verifier
 """
 
 import base64
+import hashlib
 import datetime
 import json
 from urllib.parse import urlsplit
@@ -379,6 +380,8 @@ class GradingApp:
                 return self.ledger_feed(start_response, environ, body)
             if rest == ["price", "check"]:
                 return self.price_check(start_response, environ, body)
+            if rest == ["host", "standing-claim"]:
+                return self.standing_claim(start_response, environ, body)
             if rest == ["host", "consent"]:
                 return self.host_consent(start_response, environ, body)
             if rest == ["host", "certificate"]:
@@ -1241,11 +1244,61 @@ class GradingApp:
             return None, result.get("error", "claim refused")
         return result["payer"], None
 
+    STANDING_DAYS_MAX = 30
+    STANDING_DESCRIPTION = ("RigGrade standing operator claim, 0 USDC: one authorisation covers this rig "
+                            "identity's free reference sessions for up to 30 days; verified, never settled.")
+
+    def standing_claim(self, start_response, environ, body):
+        """Spec 13, standing claim (owner decision, 4 Nov 2026): the operator
+        signs the 0 USDC claim once for one rig identity and receives a token
+        that stands in for the per-session claim on that rig's free reference
+        sessions until it expires. Only a hash of the token is kept."""
+        rig = body.get("rig_id") if isinstance(body, dict) else None
+        days = body.get("days", self.STANDING_DAYS_MAX) if isinstance(body, dict) else None
+        if not isinstance(rig, str) or not record.RIG_ID.match(rig):
+            raise BadRequest("rig_id must be the rig identity the preflight or monitor printed (rg_ + 16 hex)")
+        if not isinstance(days, int) or isinstance(days, bool) or not 1 <= days <= self.STANDING_DAYS_MAX:
+            raise BadRequest(f"days must be a whole number from 1 to {self.STANDING_DAYS_MAX}")
+        if not self.on_sale:
+            return _json(start_response, "503 Service Unavailable",
+                         {"error": "claims open with the sale", "charged": False})
+        wallet, refused = self._operator_claim(environ, "standing:" + rig)
+        if wallet is None:
+            return self._payment_required(start_response, environ, PREFIX + "/host/standing-claim", "0",
+                                          self.STANDING_DESCRIPTION, error=refused)
+        token = "rgc_" + secrets.token_hex(24)
+        until = int(self.clock()) + days * 86400
+        self.store.put(_standing_key(token), {"wallet": wallet, "rig_id": rig, "until": until,
+                                              "at": int(self.clock())})
+        return _json(start_response, "200 OK",
+                     {"token": token, "rig_id": rig, "operator": wallet, "charged": False,
+                      "until": datetime.datetime.fromtimestamp(until, datetime.timezone.utc)
+                      .strftime("%Y-%m-%dT%H:%M:%SZ"),
+                      "note": "Shown once and kept by RigGrade only as a hash. Send it as the "
+                              "RigGrade-Claim-Token header on POST /session/{id}/grade for this rig's "
+                              "free reference sessions; riggrade-monitor --grade-when-idle does this. "
+                              "Anyone holding it can claim this rig's free sessions in your name, so "
+                              "keep it like a password."})
+
+    def _standing_operator(self, environ, session):
+        """The operator a valid standing-claim token names for this session's
+        rig identity, or None."""
+        token = environ.get("HTTP_RIGGRADE_CLAIM_TOKEN", "").strip()
+        if not token.startswith("rgc_"):
+            return None
+        rec = self.store.get(_standing_key(token))
+        rig = (session.get("bundle", {}).get("identity") or {}).get("rig_id")
+        if not rec or rec.get("rig_id") != rig or int(rec.get("until", 0)) < self.clock():
+            return None
+        return rec.get("wallet")
+
     def _free_reference_grade(self, start_response, sid, session, free, environ):
         # Spec 13: a free reference session is claimed with a 0 USDC x402
         # authorisation, so every counted rig has a verified operator. The
-        # 402 below asks for exactly that; nothing is ever settled.
-        operator, refused = self._operator_claim(environ, sid)
+        # 402 below asks for exactly that; nothing is ever settled. A valid
+        # standing-claim token for this rig stands in for that authorisation.
+        standing = self._standing_operator(environ, session)
+        operator, refused = (standing, None) if standing else self._operator_claim(environ, sid)
         if operator is None:
             prev = preview(session["bundle"], session["workloads"], self.references)
             return self._payment_required(start_response, environ,
@@ -1259,6 +1312,7 @@ class GradingApp:
                                      operator=operator)
         pack["free_reference_session"] = True
         pack["operator"] = operator
+        pack["operator_claim"] = "standing" if standing else "per_session"
         session["grade"] = {"labels": labels, "pack": pack, "payer": operator,
                             "host_paid": bool(session.get("host_wallet"))
                             and operator.lower() == session["host_wallet"].lower(),
@@ -1271,6 +1325,7 @@ class GradingApp:
         salelog.append(self.config.sale_log,
                        {"product": "riggrade_point_grade", "session_id": sid,
                         "status": "free_reference_session", "amount_atomic": "0",
+                        "claim": "standing" if standing else "per_session",
                         "free_workloads": free, "at": self.clock()})
         return _json(start_response, "200 OK",
                      {"labels": labels, "badges": badges, "evidence_pack": pack,
@@ -1288,6 +1343,10 @@ class GradingApp:
             return _json(start_response, "200 OK", self.heartbeats.register(body["rig_id"]))
         return _json(start_response, "200 OK",
                      self.heartbeats.beat(body["rig_id"], body.get("prev"), body.get("echo")))
+
+
+def _standing_key(token):
+    return "standing:" + hashlib.sha256(token.encode()).hexdigest()
 
 
 RESOURCE_TAGS = {"grade": ["gpu", "benchmark", "verification", "grading", "x402"],

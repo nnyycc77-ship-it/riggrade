@@ -42,6 +42,15 @@ PRODUCTS["grade"] = {"title": "Grade a benchmark session (claim or pay)", "path"
                      "what": "Grades a session whose result bundle was accepted. While its GPU class is still "
                              "building its reference, the first session per rig is free and your wallet signs a "
                              "0 USDC operator claim; no money moves."}
+# A standing operator claim (spec 13, owner decision 4 Nov 2026): a host's
+# wallet signs one 0 USDC claim for a rig identity and gets a token that lets
+# riggrade-monitor --grade-when-idle claim that rig's free reference sessions.
+PRODUCTS["standing"] = {"title": "Grade my rig free when idle (standing claim, 0 USDC)",
+                        "path": "/host/standing-claim", "field": "rig_id",
+                        "text": "your rig id (rg_ + 16 characters, printed by riggrade-preflight and riggrade-monitor)",
+                        "what": "For hosts. Your wallet signs one 0 USDC operator claim for this rig; no money moves. "
+                                "You get a token, valid 30 days, that riggrade-monitor --grade-when-idle uses to run "
+                                "free reference grades while the card is idle. Keep the token like a password."}
 ROLES = ("buyer", "provider", "lender", "insurer", "other", "undeclared")
 
 
@@ -143,7 +152,7 @@ async function readFile() {
   const p0 = CFG.products[product];
   if (p0.text) {
     const v = $("sid").value.trim();
-    if (!/^[A-Za-z0-9_-]{4,128}$/.test(v)) throw new Error("Paste the session id the container printed.");
+    if (!/^[A-Za-z0-9_-]{4,128}$/.test(v)) throw new Error("Paste " + p0.text + ".");
     const out0 = {}; out0[p0.field] = v; return out0;
   }
   const f = $("file").files[0];
@@ -179,7 +188,9 @@ async function getQuote() {
     $("freebtn").hidden = true;
     const req = doc.accepts[0];
     const free = req.amount === "0";
-    say($("price"), doc.free_reference_session
+    say($("price"), product === "standing"
+      ? "Free: your wallet signs one 0 USDC operator claim for this rig. It is verified and never settled, and no money moves. You get a token for riggrade-monitor."
+      : doc.free_reference_session
       ? "Free reference session: this GPU class is still building its reference. Your wallet signs a 0 USDC operator claim to the address the service names; it is verified and never settled, and no money moves."
       : free && product === "fixit"
       ? "Free during the current free period. Get it now with no wallet, or sign a 0 USDC authorisation from your wallet if you prefer; either way no money moves."

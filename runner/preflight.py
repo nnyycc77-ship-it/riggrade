@@ -840,7 +840,17 @@ def run(probes, seconds=30.0, url=DEFAULT_URL, download=True, directory=".",
     out.write("\nVERDICT: %s. %s\n" % (report["verdict"].upper(), report["advice"]))
     if report["verdict"] in (WARN, FAIL):
         out.write(next_step())
+    elif report["verdict"] == PASS and report.get("rig_id"):
+        out.write(host_step(report["rig_id"]))
     return report
+
+
+def host_step(rig_id, endpoint=None):
+    """After a pass: the host's free grade of this rig, run while it is idle."""
+    base = (endpoint or os.environ.get("RIGGRADE_ENDPOINT") or DEFAULT_ENDPOINT).rstrip("/")
+    return (f"\nHOST? Grade this rig free while it is idle: get a standing claim for rig {rig_id} at "
+            f"{base}/checkout (your wallet signs 0 USDC, nothing moves), then run "
+            "riggrade-monitor --grade-when-idle --claim-token <token>. It stops at once if a renter needs the card.\n")
 
 
 def next_step(endpoint=None):

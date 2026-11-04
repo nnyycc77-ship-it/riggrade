@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "riggrade"
-version = "0.3.2"
+version = "0.3.3"
 description = "Independent GPU rig grading: free preflight check, paid x402 grade, MCP server"
 readme = "README.md"
 license = "Apache-2.0"
