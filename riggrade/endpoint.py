@@ -27,6 +27,7 @@ import json
 from urllib.parse import urlsplit
 import re
 import secrets
+import sys
 
 from . import BENCH_VERSION
 from .classes import DATA_CENTRE, PEER_CLASSES, WORKLOAD_CLASSES, price_tier
@@ -228,6 +229,7 @@ class GradingApp:
         self.clock = clock
         self.adapter = adapter
         self.store = store or MemoryStore()
+        self.events = []   # the last few logged events, for tests and the operator
         self.references = references or ReferenceBook()
         self.verify_attestation = attestation_verifier or (lambda bundle: False)
         self.envelopes = envelopes or {}
@@ -684,8 +686,24 @@ class GradingApp:
         if bazaar is not None:
             doc["extensions"] = {"bazaar": bazaar}
         header = base64.b64encode(json.dumps(doc, sort_keys=True).encode()).decode()
+        if body_extra.get("preview") is not None:
+            # A real quote: a valid file or session reached the price. Empty
+            # discovery probes carry no preview and are not counted.
+            self._event("quote", product=product or "grade", amount=str(amount),
+                        retry=bool(self._payment_header(environ)))
         return _json(start_response, "402 Payment Required", dict(doc, charged=False, **body_extra),
                      [("PAYMENT-REQUIRED", header)])
+
+    def _event(self, kind, **fields):
+        """One structured log line (Cloud Run reads JSON on stdout as
+        jsonPayload): counts only, never an address, a wallet or a payload."""
+        line = dict({"severity": "INFO", "riggrade_event": kind}, **fields)
+        self.events = (self.events + [line])[-50:]
+        try:
+            sys.stdout.write(json.dumps(line, sort_keys=True) + "\n")
+            sys.stdout.flush()
+        except Exception:  # noqa: BLE001 - logging never breaks a request
+            pass
 
     # ------------------------------------------------------------ products
 

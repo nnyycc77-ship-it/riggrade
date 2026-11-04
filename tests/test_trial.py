@@ -144,3 +144,26 @@ class FreeNoWalletTests(Harness):
     def test_not_listed_for_agents(self):
         _s, _h, doc = call(self.app(), "GET", "/openapi.json")
         self.assertNotIn("/fixit/free", doc["paths"])
+
+
+class QuoteEventTests(Harness):
+    """Real quotes are logged; empty discovery probes are not (owner request, 4 Nov 2026)."""
+    app = TrialTests.app
+
+    def test_a_valid_file_logs_a_quote_and_a_probe_does_not(self):
+        app = self.app(trial=None, until=None)
+        call(app, "GET", "/riggrade/v1/fixit")
+        call(app, "POST", "/riggrade/v1/fixit")
+        self.assertEqual(app.events, [])
+        status, _h, _doc = call(app, "POST", "/riggrade/v1/fixit", FIXIT_BODY)
+        self.assertEqual(status, "402 Payment Required")
+        (event,) = app.events
+        self.assertEqual((event["riggrade_event"], event["product"], event["amount"], event["retry"]),
+                         ("quote", "fixit", "2000000", False))
+        self.assertNotIn("payer", event)
+
+    def test_a_grade_session_quote_is_logged(self):
+        app = self.app(trial=None, until=None)
+        _sid, (status, _h, _doc) = TrialTests.grade(self, app)
+        self.assertEqual(status, "402 Payment Required")
+        self.assertEqual([e["product"] for e in app.events], ["grade"])
