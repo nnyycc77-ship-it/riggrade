@@ -48,6 +48,17 @@ class DiscoveryTests(unittest.TestCase):
         self.assertNotIn("Disallow", text)
         self.assertIn("https://grade.example/llms.txt", text)
 
+    def test_sitemap_lists_the_readable_pages_and_robots_names_it(self):
+        # Seen in the 4 Nov digest: crawlers asked for /sitemap.xml and got 404.
+        status, headers, out = get(self.app, "/sitemap.xml")
+        self.assertTrue(status.startswith("200"))
+        self.assertTrue(headers["Content-Type"].startswith("application/xml"))
+        text = out.decode()
+        self.assertIn("<loc>https://grade.example/</loc>", text)
+        self.assertIn("<loc>https://grade.example/riggrade/v1/checkout</loc>", text)
+        _s, _h, robots = get(self.app, "/robots.txt")
+        self.assertIn("Sitemap: https://grade.example/sitemap.xml", robots.decode())
+
     def test_favicon_is_served_at_the_root(self):
         status, headers, out = get(self.app, "/favicon.ico")
         self.assertTrue(status.startswith("200"))

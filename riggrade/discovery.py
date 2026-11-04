@@ -160,8 +160,18 @@ def robots_txt(base):
         "Allow: /",
         "",
         "# RigGrade: " + base + "/llms.txt, " + base + "/openapi.json, " + base + "/.well-known/agent.json",
+        "Sitemap: " + base + "/sitemap.xml",
         "",
     ])
+
+
+def sitemap_xml(base, prefix):
+    """The pages a person can read: the landing page, the checkout page and
+    the agent documents. Search engines asked for it (4 Nov digest: 9 x 404)."""
+    urls = [base + "/", base + prefix + "/checkout", base + "/llms.txt", base + "/openapi.json"]
+    rows = "".join(f"  <url><loc>{u}</loc></url>\n" for u in urls)
+    return ('<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + rows + "</urlset>\n")
 
 
 # Discovery profile read by x402scan (its parser is @agentcash/discovery;

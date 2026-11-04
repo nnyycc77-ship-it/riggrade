@@ -62,7 +62,7 @@ V1_REFUSED = ("x402 v1 (X-PAYMENT) is not accepted; send PAYMENT-SIGNATURE with 
 # /.well-known/agent-card.json is the A2A card's current path (agent.json is
 # the older one; both serve the same card). robots.txt allows everything.
 AGENT_CARD_PATHS = ("/.well-known/agent.json", "/.well-known/agent-card.json")
-DISCOVERY_PATHS = ("/", "/favicon.ico", "/favicon.png", "/favicon.svg", *AGENT_CARD_PATHS, "/robots.txt",
+DISCOVERY_PATHS = ("/", "/favicon.ico", "/favicon.png", "/favicon.svg", *AGENT_CARD_PATHS, "/robots.txt", "/sitemap.xml",
                    signing.KEYS_PATH, "/llms.txt", "/openapi.json", PREFIX + "/openapi.json")
 MAX_BODY = 4 * 1024 * 1024
 USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
@@ -405,6 +405,11 @@ class GradingApp:
         if path == "/robots.txt":
             data = discovery.robots_txt(base).encode()
             start_response("200 OK", [("Content-Type", "text/plain; charset=utf-8"),
+                                      ("Content-Length", str(len(data)))])
+            return [data]
+        if path == "/sitemap.xml":
+            data = discovery.sitemap_xml(base, PREFIX).encode()
+            start_response("200 OK", [("Content-Type", "application/xml; charset=utf-8"),
                                       ("Content-Length", str(len(data)))])
             return [data]
         if path == signing.KEYS_PATH:
