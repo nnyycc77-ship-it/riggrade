@@ -176,6 +176,13 @@ class RunTests(unittest.TestCase):
         self.assertNotIn("USDC", text.split("NEXT:", 1)[1])
         self.assertIn("https://example.test/v1/fixit", pf.next_step("https://example.test/v1/"))
 
+    def test_host_step_after_a_pass_names_the_rig(self):
+        text = pf.host_step("rg_" + "1" * 16, "https://example.test/v1")
+        self.assertIn("rig rg_1111111111111111", text)
+        self.assertIn("https://example.test/v1/checkout", text)
+        self.assertIn("--grade-when-idle", text)
+        self.assertNotIn("USDC on Base", text)
+
     def test_compute_failure_is_recorded_and_fails(self):
         report = pf.run(FakeProbes(fail_load=True), seconds=1, download=False,
                         out=io.StringIO())

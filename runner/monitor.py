@@ -5,23 +5,28 @@ host's own webhook, the moment a GPU check gets worse or recovers:
 
     riggrade-monitor --webhook https://discord.com/api/webhooks/...   # every 6 hours
     riggrade-monitor --once                                           # one run, no loop
+    riggrade-monitor --grade-when-idle --claim-token rgc_...          # also grade free when idle
 
 Each run: memory and compute already in use (the card is busy with a renter's
 work, so the run is "skipped, busy" and nothing is loaded), then ECC counts,
 and a short load that reads clocks, slowdown flags, temperature and the PCIe
-link. It sends nothing to RigGrade. The only network call is the alert to the
-URL the host gives, and only when a check changes. State (the last status of
+link. Without --grade-when-idle it sends nothing to RigGrade: the only network
+call is the alert to the URL the host gives, and only when a check changes.
+With it, the monitor also runs a free reference grade when the rig has been
+idle long enough (runner/idlegrade.py). State (the last status of
 each check) is kept in a small JSON file on the box.
 """
 
 import argparse
 import datetime as dt
 import json
+import os
 import sys
 import time
 import urllib.request
 from pathlib import Path
 
+from runner import idlegrade
 from runner import preflight as pf
 
 CHECKS = ("foreign_memory", "foreign_compute", "clocks_under_load", "slowdown_reasons",
@@ -138,7 +143,7 @@ def save_state(path, state):
 
 
 def tick(probes, state_path, webhook=None, label="this box", seconds=LOAD_SECONDS, out=None,
-         now=time.time, opener=urllib.request.urlopen):
+         now=time.time, opener=urllib.request.urlopen, grade=None):
     stored = load_state(state_path)
     result = check_once(probes, seconds, now)
     events = changes(stored.get("last", {}), result)
@@ -159,11 +164,37 @@ def tick(probes, state_path, webhook=None, label="this box", seconds=LOAD_SECOND
     stored["runs"] = int(stored.get("runs", 0)) + 1
     stored["last_run"] = {"at": result["at"], "state": result["state"], "verdict": result["verdict"]}
     save_state(state_path, stored)
+    if grade is not None:
+        graded = maybe_grade(stored, result, grade, now)
+        if graded is not None:
+            save_state(state_path, stored)
+            if webhook:
+                alert(webhook, f"RigGrade monitor, {label}: idle grade run {graded['outcome']}"
+                      + (": " + "; ".join(graded.get("badges") or []) if graded.get("badges") else
+                         (": " + graded["detail"] if graded.get("detail") else "")), [], opener=opener)
+            print("grade run: " + graded["outcome"], file=out or sys.stdout)
     summary = f"{result['state']}: {result['verdict']}, {len(events)} change(s)"
     if sent is not None:
         summary += ", alert " + ("sent" if sent["sent"] else "failed: " + sent.get("error", ""))
     print(summary, file=out or sys.stdout)
     return result, events, sent
+
+
+def maybe_grade(stored, result, grade, now=time.time, run=idlegrade.run):
+    """Run one idle grade when due (runner/idlegrade.py). Returns the run's
+    record, or None when nothing was due. A failed or failing check never
+    starts a grade: only a rig whose checks all passed is graded."""
+    busy = result["state"] == "busy" or result["verdict"] != pf.PASS
+    if not idlegrade.due(stored, busy, now(), grade["idle_hours"], grade["every_days"]):
+        return None
+    try:
+        record = run(grade["endpoint"], grade["token"])
+    except Exception as exc:  # noqa: BLE001 - e.g. Docker missing: reported, the monitor keeps running
+        record = {"at": int(now()), "outcome": "failed", "detail": f"{type(exc).__name__}: {exc}"}
+    stored["last_grade"] = record
+    if record["outcome"] == "stopped, card needed":
+        stored["idle_since"] = None
+    return record
 
 
 def main(argv=None, probes=None, sleep=time.sleep):
@@ -174,10 +205,27 @@ def main(argv=None, probes=None, sleep=time.sleep):
     ap.add_argument("--state", default=str(DEFAULT_STATE), help="state file (default ~/.riggrade-monitor.json)")
     ap.add_argument("--label", default="this box", help="how alerts name this box")
     ap.add_argument("--seconds", type=float, default=LOAD_SECONDS, help="load length in seconds (default 10)")
+    ap.add_argument("--grade-when-idle", action="store_true",
+                    help="free reference grade of this rig when every card has been idle --idle-hours "
+                         "(needs Docker with GPU access and --claim-token; stops at once if a renter's "
+                         "process appears on the GPU)")
+    ap.add_argument("--claim-token", default=os.environ.get("RIGGRADE_CLAIM_TOKEN"),
+                    help="your standing-claim token for this rig (from the checkout page; or RIGGRADE_CLAIM_TOKEN)")
+    ap.add_argument("--idle-hours", type=float, default=idlegrade.IDLE_HOURS,
+                    help="hours every card must stay idle before a grade run (default 6)")
+    ap.add_argument("--grade-every-days", type=float, default=idlegrade.EVERY_DAYS,
+                    help="days between grade runs (default 30)")
+    ap.add_argument("--endpoint", default=os.environ.get("RIGGRADE_ENDPOINT") or pf.DEFAULT_ENDPOINT)
     a = ap.parse_args(argv)
+    grade = None
+    if a.grade_when_idle:
+        if not a.claim_token:
+            ap.error("--grade-when-idle needs --claim-token (get one free on the checkout page)")
+        grade = {"token": a.claim_token, "endpoint": a.endpoint, "idle_hours": a.idle_hours,
+                 "every_days": a.grade_every_days}
     probes = probes or pf.Probes()
     while True:
-        tick(probes, a.state, a.webhook, a.label, a.seconds)
+        tick(probes, a.state, a.webhook, a.label, a.seconds, grade=grade)
         if a.once:
             return 0
         sleep(max(0.25, a.every) * 3600)

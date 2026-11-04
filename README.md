@@ -20,7 +20,8 @@ and who can act (host or renter). Paste `preflight-report.json` on the
 price and any free trial.
 
 **Hosting GPUs?** `riggrade-monitor` runs the light checks every 6 hours on your own box and alerts your webhook
-when a card gets worse ([docs/monitor.md](docs/monitor.md)). Free, and nothing is sent to RigGrade.
+when a card gets worse ([docs/monitor.md](docs/monitor.md)). Free, and nothing is sent to RigGrade. Add
+`--grade-when-idle` to have your rig graded free while it sits idle; it stops the moment a renter needs the card.
 
 **Building an agent that rents compute?** `riggrade-mcp` gives it the same check as a tool, so it can gate a long
 job on the verdict ([below](#use-the-mcp-server)).

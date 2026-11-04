@@ -25,6 +25,33 @@ No results are sent to RigGrade. The only network call is the alert to the URL y
 changed. The message body has `content` (read by Discord) and `text` (read by Slack), plus the events as JSON for
 any other receiver.
 
+## Grade this rig free while it is idle
+
+Owner decision, 4 Nov 2026. Your idle GPU time can earn your rig a free RigGrade grade, which you can show to
+renters. It also builds the class references that speed grades need (spec section 13).
+
+1. Find your rig id: `riggrade-preflight` prints it after a pass (`rg_` and 16 characters).
+2. On the [checkout page](https://riggrade-674098696181.us-central1.run.app/riggrade/v1/checkout), choose "Grade
+   my rig free when idle", paste the rig id and sign with your wallet. It is a 0 USDC operator claim: verified,
+   never settled, no money moves. You get a token valid for 30 days. Keep it like a password.
+3. Run the monitor with it (Docker with GPU access is needed):
+
+       riggrade-monitor --webhook https://discord.com/api/webhooks/... --grade-when-idle --claim-token rgc_...
+
+When every card has been idle for `--idle-hours` (default 6) and the rig has not been graded in
+`--grade-every-days` (default 30), the monitor runs the pinned benchmark container once, for about 1.5 hours on
+the inference workload, then asks for the free reference grade with your token. It tells your webhook the result.
+The first run downloads the benchmark image, which is several GB.
+
+- **The card stays the renter's.** Every 30 seconds during the run the monitor lists the processes on the GPUs.
+  If any of them is not inside the grade container, it stops the container at once, records "stopped, card
+  needed" and starts the idle clock again.
+- **Only a rig whose checks all passed is graded.** A warn or fail run never starts a grade.
+- **What is sent.** With this option the monitor and the container talk to RigGrade: the benchmark session (the
+  measured bundle, as for any grade) and the grade request with your token. Without it, nothing is sent.
+- **The token.** It covers free reference sessions for that one rig only, until it expires. All operator rules
+  still apply: at most 2 rigs per operator count toward a class reference.
+
 ## Running it as a service
 
 A systemd unit, one per box. `ExecStart` must be the path pip installed the command to on that box: check it with
