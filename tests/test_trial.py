@@ -230,3 +230,32 @@ class GradeNoWalletTests(Harness):
     def test_not_listed_for_agents(self):
         _s, _h, doc = call(self.app(), "GET", "/openapi.json")
         self.assertFalse([p for p in doc["paths"] if p.endswith("/grade/free")])
+
+
+class GradeLinkTests(Harness):
+    """The grade URL the container prints opens a ready checkout in a browser."""
+    app = TrialTests.app
+
+    def open(self, app, path, accept):
+        got = {}
+
+        def start_response(status, headers):
+            got["status"], got["headers"] = status, dict(headers)
+        b"".join(app({"REQUEST_METHOD": "GET", "PATH_INFO": path, "HTTP_ACCEPT": accept,
+                      "wsgi.input": __import__("io").BytesIO(b"")}, start_response))
+        return got["status"], got["headers"]
+
+    def test_browser_lands_on_the_checkout_with_the_session_filled_in(self):
+        app = self.app()
+        status, headers = self.open(app, "/riggrade/v1/session/rg_s_abc123/grade",
+                                    "text/html,application/xhtml+xml,*/*;q=0.8")
+        self.assertEqual((status, headers["Location"]),
+                         ("302 Found", "/riggrade/v1/checkout?product=grade&session_id=rg_s_abc123"))
+        self.assertEqual(headers["Cache-Control"], "no-store")
+
+    def test_agents_and_odd_ids_are_not_redirected(self):
+        app = self.app()
+        status, _h = self.open(app, "/riggrade/v1/session/rg_s_abc123/grade", "application/json")
+        self.assertNotEqual(status, "302 Found")
+        status, _h = self.open(app, "/riggrade/v1/session/a<b>c/grade", "text/html")
+        self.assertNotEqual(status, "302 Found")

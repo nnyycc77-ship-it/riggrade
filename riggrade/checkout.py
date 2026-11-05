@@ -311,6 +311,17 @@ $("pay").addEventListener("click", pay);
 $("freebtn").addEventListener("click", getFree);
 $("download").addEventListener("click", download);
 choose();
+// A link from the benchmark container (?product=grade&session_id=...) opens
+// with the session filled in and the quote already asked for.
+(function fromLink() {
+  const q = new URLSearchParams(window.location.search);
+  const want = q.get("product"), sid = q.get("session_id");
+  if (!want || !CFG.products[want]) return;
+  $("product").value = want; choose();
+  if (sid && CFG.products[want].text && /^[A-Za-z0-9_-]{4,128}$/.test(sid)) {
+    $("sid").value = sid; getQuote();
+  }
+})();
 </script>
 </body></html>
 """
