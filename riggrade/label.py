@@ -69,7 +69,8 @@ def badge_text(label, date_text):
     parts.append("declared %s run, %s" % (runner, attested))
     if "provisional" in tag:
         parts.append("provisional bars")
-    parts.append(date_text)
+    if date_text:
+        parts.append(date_text)
     return " · ".join(parts)
 
 
