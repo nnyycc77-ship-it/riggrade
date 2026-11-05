@@ -141,3 +141,46 @@ class EndToEndTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AutoGradeTests(unittest.TestCase):
+    """Owner decision, 5 Nov 2026: during the trial the container asks for the
+    free, no-wallet grade itself and prints it, so the run ends with the grade."""
+
+    def app(self, tmp, trial=True):
+        from tests.test_endpoint import WALLET, FakeAdapter
+        env = {"RIGGRADE_ENABLED": "1", "PAYOUT_WALLET_ADDRESS": WALLET, "RIGGRADE_SECRET": "x",
+               "RIGGRADE_IMAGE_DIGESTS": IMAGE, "RIGGRADE_SALE_LOG": str(Path(tmp) / "s.jsonl")}
+        if trial:
+            env.update(RIGGRADE_TRIAL_PRODUCTS="grade", RIGGRADE_TRIAL_UNTIL="2027-12-31")
+        return GradingApp(env, lambda: 1_800_000_000, adapter=FakeAdapter())
+
+    def go(self, app, **kw):
+        out = io.StringIO()
+        clock = FakeClock()
+        report = run(InProcessClient(app), FakeBackend(clock), identity.parse(CSV.splitlines()[0]),
+                     ["inference"], "host", IMAGE, out=out, clock=clock, **kw)
+        return report, out.getvalue()
+
+    def test_the_run_ends_with_the_grade(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            report, text = self.go(self.app(tmp))
+        self.assertTrue(report["graded"])
+        self.assertTrue(report["grade"]["labels"])
+        self.assertTrue(report["grade"]["evidence_pack"]["no_wallet"])
+        self.assertIn("Your RigGrade grade (free, no wallet used, nothing charged):", text)
+        self.assertTrue(text.rstrip().endswith("}"))            # the JSON report still ends the output
+
+    def test_switched_off_for_idle_grading(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self.app(tmp)
+            report, text = self.go(app, auto_grade=False)
+        self.assertNotIn("graded", report)
+        self.assertNotIn("Your RigGrade grade", text)
+
+    def test_outside_the_trial_it_points_to_the_grade_url(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            report, text = self.go(self.app(tmp, trial=False))
+        self.assertFalse(report["graded"])
+        self.assertIn("Open the grade_url below in a browser", text)
+        self.assertTrue(report["grade_url"].endswith("/grade"))

@@ -32,5 +32,8 @@ class InProcessClient:
     def start(self, session_id):
         return self._post("/session/%s/start" % session_id)
 
+    def grade_free(self, session_id):
+        return self._post(f"/session/{session_id}/grade/free")
+
     def submit(self, session_id, bundle):
         return self._post("/session/%s/bundle" % session_id, bundle)
