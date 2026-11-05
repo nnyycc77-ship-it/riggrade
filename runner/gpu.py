@@ -4,7 +4,43 @@ Needs torch with CUDA, as provided by the pinned image. Not exercised by
 the CPU test suite: these functions run only on a rented or granted rig.
 """
 
+import subprocess
 import time
+
+# Same bars as the preflight's foreign-use warnings: memory or compute already
+# in use before the run starts means someone else holds the card.
+BUSY_USED_GB = 1.0
+BUSY_UTIL_PCT = 10
+
+
+def sharing_snapshot(run=subprocess.run):
+    """What else is on the cards right now, from nvidia-smi: memory in use (GiB)
+    and utilization per GPU, and the number of compute processes. None where
+    nvidia-smi does not answer."""
+    def query(args):
+        try:
+            out = run(["nvidia-smi"] + args, capture_output=True, text=True, timeout=20, check=False)
+        except (OSError, subprocess.SubprocessError):
+            return None
+        return out.stdout if out.returncode == 0 else None
+    gpus = query(["--query-gpu=memory.used,utilization.gpu", "--format=csv,noheader,nounits"])
+    apps = query(["--query-compute-apps=pid", "--format=csv,noheader"])
+    used, util = [], []
+    for row in (gpus or "").splitlines():
+        parts = [x.strip() for x in row.split(",")]
+        if len(parts) == 2 and all(p.replace(".", "", 1).isdigit() for p in parts):
+            used.append(float(parts[0]) / 1024)
+            util.append(float(parts[1]))
+    return {"used_gb": used, "util_pct": util,
+            "apps": len([r for r in (apps or "").splitlines() if r.strip()]) if apps is not None else None}
+
+
+def busy(snapshot):
+    """True when the snapshot shows another job on the cards."""
+    if not snapshot:
+        return False
+    return any(u > BUSY_USED_GB for u in snapshot.get("used_gb") or []) or \
+        any(u > BUSY_UTIL_PCT for u in snapshot.get("util_pct") or [])
 
 
 def _torch():

@@ -62,6 +62,8 @@ def badge_text(label, date_text):
               "quick": "quick check, no heat test"}.get(label["form"], "full grade")]
     if label.get("capped_by") and grade != INSUFFICIENT:
         parts.append("capped by %s" % PILLAR_NAMES[label["capped_by"]])
+    if label.get("shared_during_run"):
+        parts.append("card shared during run")
     if label["status"] in ("on_watch", "demoted"):
         parts.append(label["status"].replace("_", " "))
     parts.append("declared %s run, %s" % (runner, attested))

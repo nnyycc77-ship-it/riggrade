@@ -14,6 +14,18 @@ riggrade-preflight
 It prints pass, warn or fail with the measured numbers: throttling, memory or compute already in use by someone
 else, PCIe link, driver against CUDA, ECC, host load, disk and download speed. Nothing is sent anywhere.
 
+**Want numbers for the card itself?** Run the quick check, about 10 minutes, free during the trial, no wallet. It
+measures health, speed and steadiness on the card you rented, and prints the result when it ends:
+
+```bash
+. container/bench-image.env   # BENCH_IMAGE, the pinned benchmark image
+docker run --rm --gpus all -e RIGGRADE_IMAGE_DIGEST=${BENCH_IMAGE#*@} $BENCH_IMAGE \
+  --endpoint https://riggrade-674098696181.us-central1.run.app --workloads inference --runner buyer --quick
+```
+
+It stops at once if another job is already using the GPU, because a shared card reads low. The full grade adds a
+60-minute heat test (about 1.5 hours in all); hosts get it free with `--grade-when-idle`, below.
+
 **It warned or failed?** The [host fix-it report](docs/products.md) names the likely cause of each finding, the fix
 and who can act (host or renter). Paste `preflight-report.json` on the
 [checkout page](https://riggrade-674098696181.us-central1.run.app/riggrade/v1/checkout), which shows the current
@@ -21,7 +33,8 @@ price and any free trial.
 
 **Hosting GPUs?** `riggrade-monitor` runs the light checks every 6 hours on your own box and alerts your webhook
 when a card gets worse ([docs/monitor.md](docs/monitor.md)). Free, and nothing is sent to RigGrade. Add
-`--grade-when-idle` to have your rig graded free while it sits idle; it stops the moment a renter needs the card.
+`--grade-when-idle` to have your rig get the full grade, heat test included, free while it sits idle; it stops the
+moment a renter needs the card. Each idle grade also helps build the speed reference for your GPU model.
 
 **Building an agent that rents compute?** `riggrade-mcp` gives it the same check as a tool, so it can gate a long
 job on the verdict ([below](#use-the-mcp-server)).
@@ -85,8 +98,8 @@ bundles only from a listed digest, so run it by digest, never by tag:
 
 ```bash
 . container/bench-image.env
-# RIGGRADE_IMAGE_DIGESTS (plural) comes from bench-image.env; the container reads the singular name.
-docker run --rm --gpus all -e RIGGRADE_IMAGE_DIGEST=$RIGGRADE_IMAGE_DIGESTS \
+# The container reads the digest of the image it runs from RIGGRADE_IMAGE_DIGEST (the part of BENCH_IMAGE after @).
+docker run --rm --gpus all -e RIGGRADE_IMAGE_DIGEST=${BENCH_IMAGE#*@} \
   -e RIGGRADE_ENDPOINT=https://riggrade-674098696181.us-central1.run.app/riggrade/v1 \
   $BENCH_IMAGE --help
 ```

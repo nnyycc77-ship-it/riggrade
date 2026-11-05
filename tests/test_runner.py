@@ -1,5 +1,6 @@
 import io
 import tempfile
+import types
 import unittest
 from pathlib import Path
 
@@ -243,3 +244,73 @@ class QuickCheckTests(unittest.TestCase):
             status, _h, _d = call(app, "POST", "/riggrade/v1/session",
                                   {"workload_classes": ["inference"], "declared_runner": "host", "mode": "fast"})
             self.assertEqual(status, "409 Conflict")
+
+
+class SharedCardTests(unittest.TestCase):
+    """Owner, 5 Nov 2026: another job on the card spoils a grade, so the
+    container refuses a busy card and marks a run another job joined."""
+    app = AutoGradeTests.app
+
+    class Backend(FakeBackend):
+        def __init__(self, clock, snaps):
+            super().__init__(clock)
+            self.snaps = list(snaps)
+
+        def sharing(self):
+            return self.snaps.pop(0) if len(self.snaps) > 1 else self.snaps[0]
+
+    IDLE = types.MappingProxyType({"used_gb": (0.3,), "util_pct": (0.0,), "apps": 0})
+
+    def test_busy_card_is_refused_before_a_session_opens(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self.app(tmp)
+            out = io.StringIO()
+            clock = FakeClock()
+            busy = {"used_gb": [9.5], "util_pct": [87.0], "apps": 1}
+            report = run(InProcessClient(app), self.Backend(clock, [busy]), identity.parse(CSV.splitlines()[0]),
+                         ["inference"], "host", IMAGE, out=out, clock=clock, mode="quick")
+            sessions = len(app.store.items()) if hasattr(app.store, "items") else 0
+        self.assertEqual((report["accepted"], report["stopped"]), (False, "card in use by another job"))
+        self.assertIn("another job is using this GPU", out.getvalue())
+        self.assertEqual(sessions, 0)
+
+    def test_a_job_joining_mid_run_marks_the_result(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self.app(tmp)
+            out = io.StringIO()
+            clock = FakeClock()
+            ours = {"used_gb": [20.0], "util_pct": [99.0], "apps": 1}
+            joined = dict(ours, apps=2)
+            snaps = [self.IDLE, ours, ours, joined]
+            report = run(InProcessClient(app), self.Backend(clock, snaps), identity.parse(CSV.splitlines()[0]),
+                         ["inference"], "host", IMAGE, out=out, clock=clock, mode="quick")
+        label = report["grade"]["labels"][0]
+        self.assertTrue(label["shared_during_run"])
+        self.assertIn("card shared during run", report["grade"]["badges"][0])
+        self.assertTrue(report["grade"]["evidence_pack"]["classes"]["inference"]["shared_during_run"])
+        self.assertIn("WARNING: another job used the card during the run", out.getvalue())
+
+    def test_a_clean_run_is_not_marked(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self.app(tmp)
+            clock = FakeClock()
+            ours = {"used_gb": [20.0], "util_pct": [99.0], "apps": 1}
+            report = run(InProcessClient(app), self.Backend(clock, [self.IDLE, ours]),
+                         identity.parse(CSV.splitlines()[0]), ["inference"], "host", IMAGE,
+                         out=io.StringIO(), clock=clock, mode="quick")
+        self.assertNotIn("shared_during_run", report["grade"]["labels"][0])
+
+    def test_snapshot_parses_nvidia_smi(self):
+        from runner import gpu
+
+        class Out:
+            def __init__(self, text):
+                self.stdout, self.returncode = text, 0
+
+        def fake(cmd, **_kw):
+            return Out("2048, 35\n0, 0\n" if "--query-gpu=memory.used,utilization.gpu" in cmd else "123\n")
+        snap = gpu.sharing_snapshot(run=fake)
+        self.assertEqual((snap["used_gb"], snap["util_pct"], snap["apps"]), ([2.0, 0.0], [35.0, 0.0], 1))
+        self.assertTrue(gpu.busy(snap))
+        self.assertFalse(gpu.busy({"used_gb": [0.2], "util_pct": [3.0], "apps": 0}))
+        self.assertFalse(gpu.busy(None))

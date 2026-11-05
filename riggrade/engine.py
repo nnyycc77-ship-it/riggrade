@@ -150,6 +150,9 @@ def grade_session(session, references, envelopes=None, attested=False,
         labels.append(build_label(rig_id, class_id, workload, grade, form,
                                   capped_by, pillars, status, tag, window,
                                   bundle.get("slice")))
+        if m.get("shared"):
+            # The container saw another compute job join during the run.
+            labels[-1]["shared_during_run"] = True
         pack_classes[workload] = {"measured_throughput": measured,
                                   "reference": reference,
                                   "reference_basis": references.basis(class_id, workload),
@@ -157,6 +160,7 @@ def grade_session(session, references, envelopes=None, attested=False,
                                   "speed_withheld": speed_withheld,
                                   "operator": operator,
                                   "consistency_measures": cmeasures,
+                                  "shared_during_run": bool(m.get("shared")),
                                   "downtime_hours": hours,
                                   "recheck_matched": matched}
         if record_reference and measured:

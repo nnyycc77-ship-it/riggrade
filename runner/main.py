@@ -37,6 +37,13 @@ def measure(backend, session_params, workloads, sustained_s=SUSTAINED_S,
     Returns (gate, micro, metrics, raw outputs).
     """
     gate, metrics, raw = {}, {}, {}
+    # Another job on the card during the run spoils speed and steadiness: watch
+    # the compute-process count against its value once our own load is up.
+    probe = getattr(backend, "sharing", None)
+
+    def apps_now():
+        snap = probe() if probe else None
+        return (snap or {}).get("apps")
     # The server sets sustained_s to 0 for a quick check (no 60-minute run).
     sustained_s = session_params.get("sustained_s", sustained_s)
     micro = backend.micro()
@@ -53,23 +60,28 @@ def measure(backend, session_params, workloads, sustained_s=SUSTAINED_S,
         # warm-up), which would read as inconsistency in the CV.
         warm, _lat = backend.ruler_pass(workload, session_params)
         raw["warmup." + workload] = {"throughput": warm}
+        baseline, seen = apps_now(), []
         passes, latencies = [], []
         for _ in range(session_params["passes"]):
             throughput, lat = backend.ruler_pass(workload, session_params)
             passes.append(throughput)
             latencies.extend(lat or [])
+            seen.append(apps_now())
         samples, t0 = [], clock()
         while sustained_s > 0:
             value = backend.sustained_sample(workload, session_params)
             elapsed = clock() - t0
             samples.append((elapsed, value))
+            seen.append(apps_now())
             if elapsed >= sustained_s:
                 break
+        shared = baseline is not None and any(n is not None and n > baseline for n in seen)
         metrics[workload] = {
             "throughput_passes": passes,
             "decay": stats.decay(samples),
             "p99_p50": stats.p99_p50(latencies) if workload == "inference" else None,
             "isolation_drop": None,
+            "shared": shared,
         }
         raw["ruler." + workload] = {"passes": passes, "latencies": latencies,
                                     "sustained": samples}
@@ -77,7 +89,19 @@ def measure(backend, session_params, workloads, sustained_s=SUSTAINED_S,
 
 
 def run(client, backend, identity, workloads, declared_runner, image_digest,
-        host_wallet=None, out=sys.stdout, auto_grade=True, mode="full", **measure_kw):
+        host_wallet=None, out=sys.stdout, auto_grade=True, mode="full", allow_shared=False,
+        **measure_kw):
+    probe = getattr(backend, "sharing", None)
+    if probe and not allow_shared:
+        from .gpu import busy
+        snap = probe()
+        if busy(snap):
+            used = ", ".join(f"{u:.1f}" for u in snap.get("used_gb") or [])
+            util = ", ".join(f"{u:.0f}" for u in snap.get("util_pct") or [])
+            out.write(f"Stopped before starting: another job is using this GPU ({used} GiB in use, {util}% busy).\n"
+                      "A grade on a shared card reads low. Stop the other job, or grade one free card with\n"
+                      "--gpus '\"device=N\"', or pass --allow-shared to run anyway.\n")
+            return {"accepted": False, "stopped": "card in use by another job", "sharing": snap}
     session = client.new_session(workloads, declared_runner, host_wallet, mode=mode)
     started = client.start(session["session_id"])
     gate, micro, metrics, raw = measure(backend, started["params"], workloads, **measure_kw)
@@ -116,6 +140,8 @@ def summary_lines(doc):
             lines.append(f"{workload}: not rated ({label.get('reason', 'no class')})")
             continue
         lines.append(f"{workload}: health checks passed")
+        if cls.get("shared_during_run"):
+            lines.append("  WARNING: another job used the card during the run; speed and steadiness may read low")
         if cls.get("measured_throughput"):
             lines.append(f"  speed measured: {cls['measured_throughput']:.1f} {UNITS.get(workload, 'per s')}")
         cm = cls.get("consistency_measures") or {}
@@ -173,6 +199,9 @@ class GpuBackend:
             results["card_link"] = g.card_link(self.identity["card_count"])[0]
         return results, g.free_memory_gb()
 
+    def sharing(self):
+        return self.gpu.sharing_snapshot()
+
     def micro(self):
         g = self.gpu
         return {"memory_gb": self.identity["memory_gb"],
@@ -203,6 +232,8 @@ def main(argv=None):
     ap.add_argument("--workloads", default="inference")
     ap.add_argument("--runner", choices=["buyer", "host"], required=True)
     ap.add_argument("--host-wallet")
+    ap.add_argument("--allow-shared", action="store_true",
+                    help="run even though another job is using the GPU (the result is marked shared)")
     ap.add_argument("--quick", action="store_true",
                     help="about 10 minutes: health checks, speed and steadiness, no 60-minute heat test")
     args = ap.parse_args(argv)
@@ -214,7 +245,7 @@ def main(argv=None):
         run(Client(args.endpoint), backend, identity, args.workloads.split(","),
             args.runner, image, args.host_wallet,
             auto_grade=os.environ.get("RIGGRADE_AUTO_GRADE", "1") != "0",
-            mode="quick" if args.quick else "full")
+            mode="quick" if args.quick else "full", allow_shared=args.allow_shared)
     finally:
         if backend.server is not None:
             backend.server.__exit__(None, None, None)
