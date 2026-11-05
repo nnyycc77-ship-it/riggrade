@@ -86,6 +86,19 @@ pre{background:#262626}.muted{color:#aaa}button{background:#e8e8e8;color:#151515
 </style></head>
 <body>
 <h1>RigGrade checkout</h1>
+
+<div class=box id=starthere>
+<h2>No file yet? Start here, free</h2>
+<p>On the GPU box you rented or host, run the one-minute check. It prints pass, warn or fail and writes
+<code>preflight-report.json</code>; nothing is sent anywhere:</p>
+<pre>pip install riggrade
+riggrade-preflight</pre>
+<p class=muted>It warned or failed? Choose "Host fix-it report" below and add that file: free during the trial,
+no wallet needed. Want measured speed and steadiness for the card itself? Run the 10-minute quick check; the
+result prints when it ends. The command is under "Start here" in the
+<a href="https://github.com/nnyycc77-ship-it/riggrade#start-here">README</a>.</p>
+</div>
+
 <p class=muted>Pay for a RigGrade report from your own browser wallet, in USDC on Base. This page does what an
 agent does over x402: it asks the service for the price, your wallet signs a payment of exactly that amount to the
 address the service names, and the service settles it and returns your report. RigGrade never sees your keys.
