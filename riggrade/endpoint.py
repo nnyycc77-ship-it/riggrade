@@ -334,6 +334,13 @@ class GradingApp:
                 return self.host_lookup(start_response, environ, rest[1], badge=len(rest) == 3)
             if method == "GET" and len(rest) == 3 and rest[:2] == ["cluster", "acceptance"]:
                 return self.certificate_lookup(start_response, rest[2], environ)
+            if method == "GET" and len(rest) == 3 and rest[0] == "session" and rest[2] == "grade" \
+                    and "text/html" in environ.get("HTTP_ACCEPT", "") and SESSION_ID_RE.match(rest[1]):
+                # The container prints this grade URL. Opened in a browser it
+                # lands on the checkout with the session filled in, so a person
+                # never copies the id by hand. Agents (no text/html) are unchanged.
+                return _redirect(start_response, PREFIX + "/checkout?product=grade&session_id=" + rest[1],
+                                 status="302 Found", cache="no-store")
             if method != "POST" and tuple(rest) in PAID_ROUTES:
                 # A bare probe of a paid route (x402 crawlers GET it): the 402
                 # challenge comes before any request validation.
@@ -1545,11 +1552,12 @@ def _read(environ):
 TRAILING_PUNCTUATION = ")],.;:!'\"*"
 
 
-def _redirect(start_response, location):
-    data = b""
-    start_response("301 Moved Permanently", [("Location", location), ("Content-Length", "0"),
-                                             ("Cache-Control", "public, max-age=86400")])
-    return [data]
+SESSION_ID_RE = re.compile(r"^[A-Za-z0-9_-]{4,128}$")
+
+
+def _redirect(start_response, location, status="301 Moved Permanently", cache="public, max-age=86400"):
+    start_response(status, [("Location", location), ("Content-Length", "0"), ("Cache-Control", cache)])
+    return [b""]
 
 
 def _json(start_response, status, payload, extra_headers=()):
