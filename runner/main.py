@@ -3,9 +3,12 @@
     python -m runner.main --endpoint https://... --workloads inference \
         --runner buyer [--host-wallet 0x...]
 
-The container never pays. After the bundle is accepted it prints the
-session id, the free preview and the grade URL; the payer buys the grade
-from that URL over x402 with their own wallet.
+The container never pays. After the bundle is accepted it asks for the free,
+no-wallet grade while the free trial runs (owner decision, 5 Nov 2026) and
+prints it, so a person sees the grade as soon as the run ends. Outside the
+trial, or with RIGGRADE_AUTO_GRADE=0 (riggrade-monitor's idle grading, which
+grades with its standing claim instead), it prints the session id, the free
+preview and the grade URL; opened in a browser that URL is the checkout.
 """
 
 import argparse
@@ -16,7 +19,7 @@ import time
 
 from . import bundle as bundle_mod
 from . import stats
-from .client import Client
+from .client import Client, EndpointError
 
 SUSTAINED_S = 3600  # spec 5.2: sustained 60-minute run
 
@@ -72,7 +75,7 @@ def measure(backend, session_params, workloads, sustained_s=SUSTAINED_S,
 
 
 def run(client, backend, identity, workloads, declared_runner, image_digest,
-        host_wallet=None, out=sys.stdout, **measure_kw):
+        host_wallet=None, out=sys.stdout, auto_grade=True, **measure_kw):
     session = client.new_session(workloads, declared_runner, host_wallet)
     started = client.start(session["session_id"])
     gate, micro, metrics, raw = measure(backend, started["params"], workloads, **measure_kw)
@@ -83,8 +86,31 @@ def run(client, backend, identity, workloads, declared_runner, image_digest,
     report = {"session_id": session["session_id"], "accepted": result.get("accepted"),
               "preview": result.get("preview"),
               "grade_url": client.base + "/session/%s/grade" % session["session_id"]}
+    if auto_grade and result.get("accepted"):
+        report.update(free_grade(client, session["session_id"], out))
     out.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
     return report
+
+
+def free_grade(client, session_id, out):
+    """Ask for the no-wallet grade; on success print it in plain words."""
+    try:
+        doc = client.grade_free(session_id)
+    except EndpointError as exc:
+        doc = {"error": str(exc)}
+    if not doc.get("labels"):
+        out.write("No free grade right now (%s). Open the grade_url below in a browser to get it.\n"
+                  % (doc.get("error") or "the service did not grade it"))
+        return {"graded": False}
+    out.write("\nYour RigGrade grade (free, no wallet used, nothing charged):\n")
+    for badge in doc.get("badges") or []:
+        out.write("  " + str(badge) + "\n")
+    if doc.get("note"):
+        out.write(str(doc["note"]) + "\n")
+    out.write("\n")
+    return {"graded": True, "grade": {"labels": doc.get("labels"), "badges": doc.get("badges"),
+                                      "evidence_pack": doc.get("evidence_pack"),
+                                      "free_until": doc.get("free_until")}}
 
 
 class GpuBackend:
@@ -143,7 +169,8 @@ def main(argv=None):
     backend = GpuBackend(identity)
     try:
         run(Client(args.endpoint), backend, identity, args.workloads.split(","),
-            args.runner, image, args.host_wallet)
+            args.runner, image, args.host_wallet,
+            auto_grade=os.environ.get("RIGGRADE_AUTO_GRADE", "1") != "0")
     finally:
         if backend.server is not None:
             backend.server.__exit__(None, None, None)

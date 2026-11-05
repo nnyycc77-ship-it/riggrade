@@ -100,6 +100,9 @@ def run(endpoint, token, now=time.time, sh=_sh, popen=subprocess.Popen, sleep=ti
     digest = image.split("@", 1)[1]
     cmd = ["docker", "run", "--rm", "--gpus", "all", "--name", name,
            "-e", f"RIGGRADE_IMAGE_DIGEST={digest}", "-e", f"RIGGRADE_ENDPOINT={endpoint}",
+           # Idle grading claims the grade with the standing token below, so the
+           # container must not take the no-wallet grade first (ignored by older images).
+           "-e", "RIGGRADE_AUTO_GRADE=0",
            image, "--endpoint", endpoint, "--workloads", "inference", "--runner", "host"]
     started = int(now())
     proc = popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
