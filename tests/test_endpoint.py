@@ -572,6 +572,11 @@ class TrailingPunctuationTests(Harness):
         status, _h, _b = self.get(app, "/riggrade/v1/checkout")
         self.assertEqual(status, "200 OK")
 
+    def test_path_template_braces_are_left_alone(self):
+        app = self.app()
+        status, _h, _b = self.get(app, "/riggrade/v1/cluster/acceptance/{id}")
+        self.assertNotEqual(status, "301 Moved Permanently")
+
     def test_post_is_never_redirected(self):
         app = self.app()
         status, _h, _doc = call(app, "POST", "/riggrade/v1/fixit),", {})
