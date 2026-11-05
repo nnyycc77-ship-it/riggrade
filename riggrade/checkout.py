@@ -37,11 +37,12 @@ PRODUCTS = {
 # A grade session (spec section 13): the session id the benchmark container
 # printed. While the class is building its reference the service asks for a
 # 0 USDC operator claim (verified, never settled); otherwise the grade price.
-PRODUCTS["grade"] = {"title": "Grade a benchmark session (claim or pay)", "path": "/grade", "field": "session_id",
+PRODUCTS["grade"] = {"title": "Grade a benchmark session (free, no wallet, during the trial)", "path": "/grade", "field": "session_id",
                      "text": "the session id the benchmark container printed (rg_s_...)",
-                     "what": "Grades a session whose result bundle was accepted. While its GPU class is still "
-                             "building its reference, the first session per rig is free and your wallet signs a "
-                             "0 USDC operator claim; no money moves."}
+                     "what": "Grades a session whose result bundle was accepted. During the free trial you can "
+                             "get the grade with no wallet. While its GPU class is still building its reference, "
+                             "signing a 0 USDC operator claim instead lets your rig help set that reference; no "
+                             "money moves either way."}
 # A standing operator claim (spec 13, owner decision 4 Nov 2026): a host's
 # wallet signs one 0 USDC claim for a rig identity and gets a token that lets
 # riggrade-monitor --grade-when-idle claim that rig's free reference sessions.
@@ -194,6 +195,10 @@ async function getQuote() {
       ? "Free reference session: this GPU class is still building its reference. Your wallet signs a 0 USDC operator claim to the address the service names; it is verified and never settled, and no money moves."
       : free && product === "fixit"
       ? "Free during the current free period. Get it now with no wallet, or sign a 0 USDC authorisation from your wallet if you prefer; either way no money moves."
+      : free && product === "grade" && doc.free_reference_session
+      ? "Free. Get your grade now with no wallet, or sign a 0 USDC operator claim so your rig also helps set this GPU class's reference; either way no money moves."
+      : free && product === "grade"
+      ? "Free during the current free period. Get your grade now with no wallet, or sign a 0 USDC authorisation if you prefer; either way no money moves."
       : free
       ? "Free during the current free period. Your wallet still signs a 0 USDC authorisation, so the payer can be screened like any other; no money moves."
       : "Price: " + usdc(req.amount) + " USDC on Base, paid to " + req.payTo + ".", "");
@@ -203,7 +208,7 @@ async function getQuote() {
       + " minutes. Nothing moves until the service settles it, and only after your file has been checked.";
     $("pay").textContent = free ? "Connect wallet and sign (free)" : "Connect wallet and pay " + usdc(req.amount) + " USDC";
     $("pay").disabled = false;
-    $("freebtn").hidden = !(free && product === "fixit" && !doc.free_reference_session);
+    $("freebtn").hidden = !(free && ((product === "fixit" && !doc.free_reference_session) || product === "grade"));
     $("freebtn").disabled = false;
   } catch (e) { $("quotebox").hidden = false; say($("price"), e.message, "err"); $("pay").disabled = true; }
 }
@@ -267,9 +272,12 @@ async function pay() {
 async function getFree() {
   $("freebtn").disabled = true;
   $("resultbox").hidden = false; $("download").hidden = true; $("links").textContent = ""; $("result").textContent = "";
-  say($("status"), "Preparing your report...", "muted");
+  say($("status"), product === "grade" ? "Grading..." : "Preparing your report...", "muted");
   try {
-    const res = await fetch(CFG.prefix + "/fixit/free", {method: "POST", body: JSON.stringify(body),
+    const url = product === "grade"
+      ? CFG.prefix + "/session/" + encodeURIComponent(body.session_id) + "/grade/free"
+      : CFG.prefix + "/fixit/free";
+    const res = await fetch(url, {method: "POST", body: JSON.stringify(body),
       headers: {"Content-Type": "application/json", "Accept": "application/json"}});
     let doc = {};
     try { doc = await res.json(); } catch (e) { doc = {error: "the service answered " + res.status}; }

@@ -167,3 +167,66 @@ class QuoteEventTests(Harness):
         _sid, (status, _h, _doc) = TrialTests.grade(self, app)
         self.assertEqual(status, "402 Payment Required")
         self.assertEqual([e["product"] for e in app.events], ["grade"])
+
+
+class GradeNoWalletTests(Harness):
+    """The no-wallet grade for people (owner decision, 5 Nov 2026)."""
+    app = TrialTests.app
+
+    def free(self, app, sid):
+        return call(app, "POST", f"/riggrade/v1/session/{sid}/grade/free")
+
+    def test_graded_free_with_no_wallet_and_never_feeds_the_reference(self):
+        app = self.app()
+        before = copy.deepcopy(self.book.__dict__)
+        sid, status, _b = self.run_session(app)
+        self.assertEqual(status, "200 OK")
+        status, _h, doc = self.free(app, sid)
+        self.assertEqual(status, "200 OK", doc)
+        pack = doc["evidence_pack"]
+        self.assertEqual((doc["charged"], pack["free_trial"], pack["no_wallet"], pack["paying_wallet"],
+                          pack["operator"]), (False, True, True, None, None))
+        self.assertTrue(doc["labels"])
+        self.assertEqual(self.adapter.calls, [])                       # no facilitator touched
+        self.assertEqual(self.book.__dict__, before)                   # reference set untouched
+        (entry,) = salelog.read_chain(self.log)
+        self.assertEqual((entry["status"], entry["via"], entry["amount_atomic"], entry["payer"]),
+                         ("free_trial", "web_no_wallet", "0", None))
+        status, _h, _doc = self.free(app, sid)
+        self.assertEqual(status, "409 Conflict")                       # graded once only
+
+    def test_closed_outside_the_trial(self):
+        for app in (self.app(trial=None, until=None), self.app(trial="fixit")):
+            sid, _s, _b = self.run_session(app)
+            status, _h, doc = self.free(app, sid)
+            self.assertEqual(status, "403 Forbidden")
+            self.assertFalse(doc["charged"])
+        app = self.app()
+        sid, _s, _b = self.run_session(app)
+        self.clock.t = AFTER
+        status, _h, _doc = self.free(app, sid)
+        self.assertEqual(status, "403 Forbidden")
+        self.assertEqual(salelog.read_chain(self.log), [])
+
+    def test_unknown_or_unsubmitted_session(self):
+        status, _h, _doc = self.free(self.app(), "rg_s_unknown")
+        self.assertEqual(status, "409 Conflict")
+
+    def test_a_building_class_keeps_the_rigs_free_reference_session(self):
+        # Empty reference book: the class is still building. A no-wallet grade
+        # leaves the rig's first, reference-setting session unused.
+        env = dict(self.env, RIGGRADE_TRIAL_PRODUCTS="grade", RIGGRADE_TRIAL_UNTIL=UNTIL)
+        app = GradingApp(env, self.clock, adapter=FakeAdapter())
+        rig = "rg_" + "7" * 16
+        sid, _s, _b = self.run_session(app, rig_id=rig)
+        status, _h, doc = self.free(app, sid)
+        self.assertEqual(status, "200 OK", doc)
+        self.assertEqual(app.references.basis("rtx4090-24", "inference")["rigs"], 0)
+        sid, _s, _b = self.run_session(app, rig_id=rig)
+        status, _h, doc = call(app, "POST", f"/riggrade/v1/session/{sid}/grade", payment="pay:0xop")
+        self.assertEqual(status, "200 OK", doc)
+        self.assertTrue(doc["free_reference_session"])
+
+    def test_not_listed_for_agents(self):
+        _s, _h, doc = call(self.app(), "GET", "/openapi.json")
+        self.assertFalse([p for p in doc["paths"] if p.endswith("/grade/free")])

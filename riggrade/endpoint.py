@@ -343,6 +343,8 @@ class GradingApp:
             body = _read(environ)
             if rest == ["session"]:
                 return self.new_session(start_response, body)
+            if len(rest) == 4 and rest[0] == "session" and rest[2:] == ["grade", "free"]:
+                return self.grade(start_response, rest[1], environ, no_wallet=True)
             if len(rest) == 3 and rest[0] == "session":
                 sid, action = rest[1], rest[2]
                 if action == "start":
@@ -505,7 +507,12 @@ class GradingApp:
                      {"accepted": True,
                       "preview": preview(body, session["workloads"], self.references)})
 
-    def grade(self, start_response, sid, environ, resource_path=None):
+    def grade(self, start_response, sid, environ, resource_path=None, no_wallet=False):
+        if no_wallet and not self.trial_active("grade"):
+            return _json(start_response, "403 Forbidden",
+                         {"error": "the no-wallet grade is only open during the free trial; "
+                                   f"use POST {PREFIX}/session/{sid}/grade over x402",
+                          "charged": False})
         session = self.store.get(sid)
         if session is None or session.get("bundle") is None:
             return _json(start_response, "409 Conflict",
@@ -546,6 +553,8 @@ class GradingApp:
                                    "building its reference and this rig's free first "
                                    "session there is already used",
                           "preview": prev, "charged": False})
+        if no_wallet:
+            return self._no_wallet_grade(start_response, sid, session, free, payable)
         if not payable:
             return self._free_reference_grade(start_response, sid, session, free, environ)
         tier = price_tier(class_id)
@@ -1338,6 +1347,39 @@ class GradingApp:
                      {"labels": labels, "badges": badges, "evidence_pack": pack,
                       "charged": False, "free_reference_session": True,
                       "note": FREE_REFERENCE_NOTE})
+
+    def _no_wallet_grade(self, start_response, sid, session, free, payable):
+        """The grade with no wallet, for people, only while the grade free trial
+        runs (owner decision, 5 Nov 2026). Agents keep the x402 route. No payer
+        and no operator exist, so the session never enters a class reference
+        (spec 13 needs a verified operator for that), and the rig's free
+        reference-building session stays unused. Logged as free_trial, via
+        web_no_wallet, so the digest counts it."""
+        attested = bool(self.verify_attestation(session["bundle"]))
+        labels, pack = grade_session(session, self.references, self.envelopes,
+                                     attested=attested, now=self.clock(),
+                                     host_paid=False, operator=None, record_reference=False)
+        pack["paying_wallet"] = None
+        pack["operator"] = None
+        pack["free_trial"] = True
+        pack["no_wallet"] = True
+        session["grade"] = {"labels": labels, "pack": pack, "payer": None,
+                            "host_paid": False, "at": self.clock()}
+        badges = [badge_text(lab, "") for lab in labels]
+        if lint(badges):
+            raise RuntimeError(f"promise words in badge text: {lint(badges)}")
+        session["graded"] = True
+        self.store.put(sid, session)
+        salelog.append(self.config.sale_log,
+                       {"product": "riggrade_point_grade", "session_id": sid, "amount_atomic": "0",
+                        "status": "free_trial", "via": "web_no_wallet", "payer": None, "tx": None,
+                        "paid_workloads": payable, "free_workloads": free, "at": self.clock()})
+        return _json(start_response, "200 OK",
+                     {"labels": labels, "badges": badges, "evidence_pack": pack, "charged": False,
+                      "free_until": self.free_until_text("grade"),
+                      "note": "Graded free with no wallet. A no-wallet grade never adds this rig to a "
+                              "class reference; to help build one, grade with the 0 USDC operator claim "
+                              f"at {PREFIX}/session/{sid}/grade instead."})
 
     def heartbeat(self, start_response, body):
         if not self.on_sale:
