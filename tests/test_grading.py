@@ -245,3 +245,12 @@ class OperatorConcentrationTests(unittest.TestCase):
             book.add("rtx4090-24", "inference", "rig-0", 100.0, operator="0xA")
             again = g.ReferenceBook(path)
             self.assertAlmostEqual(again.operator_share("rtx4090-24", "inference", "0xa"), 1.0)
+
+
+class BadgeDateTests(unittest.TestCase):
+    def test_no_trailing_separator_without_a_date(self):
+        label = build_label("rg_" + "1" * 16, "rtx4090-24", "inference", 2, "point", "evidence",
+                            {"speed": 1, "consistency": 1}, "assigned",
+                            evidence_tag("host", False, False), {"from": 0, "to": 1})
+        self.assertFalse(badge_text(label, "").rstrip().endswith("·"))
+        self.assertTrue(badge_text(label, "5 Nov 2026").endswith("· 5 Nov 2026"))
