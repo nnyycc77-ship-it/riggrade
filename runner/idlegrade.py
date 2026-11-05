@@ -21,7 +21,7 @@ import urllib.request
 # The published benchmark image the server accepts (container/bench-image.env;
 # a test holds the two together).
 BENCH_IMAGE = ("ghcr.io/nnyycc77-ship-it/riggrade-bench@sha256:"
-               "6c2087bee4ee2d31b139fcfe96679d2d35e806d3e5d6def5fd32a71b3b3a767d")
+               "cf4d243cb6b47fcf1f246e9fe5eb840e93d47864fe4770f63052ad05ce1e177c")
 POLL_SECONDS = 30
 IDLE_HOURS = 6.0
 EVERY_DAYS = 30.0
