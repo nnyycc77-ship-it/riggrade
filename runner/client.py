@@ -29,10 +29,12 @@ class Client:
                 detail = payload.decode(errors="replace")
             raise EndpointError("%s %s: %s" % (exc.code, path, detail))
 
-    def new_session(self, workloads, declared_runner, host_wallet=None):
+    def new_session(self, workloads, declared_runner, host_wallet=None, mode=None):
         body = {"workload_classes": workloads, "declared_runner": declared_runner}
         if host_wallet:
             body["host_wallet"] = host_wallet
+        if mode and mode != "full":
+            body["mode"] = mode
         return self._post("/session", body)
 
     def start(self, session_id):

@@ -17,6 +17,11 @@ DISTRIBUTION_FILE = Path(__file__).resolve().parent / "spec" / "param-distributi
 RUNNERS = ("buyer", "host")
 
 
+# Full: the spec 5 run with the 60-minute sustained run. Quick (owner
+# decision, 5 Nov 2026): the same gate and passes without it, about 10 minutes.
+MODES = ("full", "quick")
+
+
 class SessionError(ValueError):
     pass
 
@@ -57,7 +62,9 @@ class Sessions:
         self.distribution = distribution or load_distribution()
         self.clock = clock
 
-    def issue(self, workloads, declared_runner, host_wallet=None):
+    def issue(self, workloads, declared_runner, host_wallet=None, mode="full"):
+        if mode not in MODES:
+            raise SessionError("mode must be full or quick")
         if not workloads or any(w not in WORKLOAD_CLASSES for w in workloads):
             raise SessionError("workload_classes must be a non-empty subset of %s"
                                % (WORKLOAD_CLASSES,))
@@ -69,6 +76,7 @@ class Sessions:
                    "workloads": sorted(set(workloads)),
                    "declared_runner": declared_runner,
                    "host_wallet": host_wallet,
+                   "mode": mode,
                    "issued_at": now,
                    "expires_at": now + COMPLETION_WINDOW_S,
                    "started_at": None, "params": None, "bundle": None}
@@ -82,6 +90,9 @@ class Sessions:
             session["params"] = draw_parameters(self.secret, session["nonce"],
                                                 session["workloads"],
                                                 self.distribution)
+            if session.get("mode") == "quick":
+                # The container skips the 60-minute sustained run (spec 5.2).
+                session["params"]["sustained_s"] = 0
             self.store.put(session_id, session)
         return session
 

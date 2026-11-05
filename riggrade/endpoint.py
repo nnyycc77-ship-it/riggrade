@@ -492,9 +492,10 @@ class GradingApp:
             raise BadRequest("body must be a JSON object")
         session = self.sessions.issue(body.get("workload_classes") or [],
                                       body.get("declared_runner"),
-                                      body.get("host_wallet"))
+                                      body.get("host_wallet"),
+                                      body.get("mode") or "full")
         return _json(start_response, "201 Created",
-                     {k: session[k] for k in ("session_id", "nonce", "expires_at")})
+                     {k: session[k] for k in ("session_id", "nonce", "expires_at", "mode")})
 
     def start(self, start_response, sid):
         session = self.sessions.start(sid)
@@ -527,6 +528,13 @@ class GradingApp:
         if session.get("graded"):
             return _json(start_response, "409 Conflict",
                          {"error": "session already graded", "charged": False})
+        if session.get("mode") == "quick" and not no_wallet:
+            # The quick check has no price of its own and never counts toward
+            # a reference: it is graded only free, with no wallet, in the trial.
+            return _json(start_response, "409 Conflict",
+                         {"error": "a quick check is graded free at "
+                                   f"{PREFIX}/session/{sid}/grade/free during the free trial; "
+                                   "a paid or reference grade needs a full run", "charged": False})
         prev = preview(session["bundle"], session["workloads"], self.references)
         if not self.on_sale:
             return _json(start_response, "503 Service Unavailable",

@@ -25,7 +25,7 @@ def evidence_tag(declared_runner, attested, host_paid=False, provisional=False):
 def build_label(rig_id, class_id, workload, grade, form, capped_by, pillars,
                 status, tag, window, slice_info=None):
     pillars = dict(pillars)
-    if form == "point":
+    if form in ("point", "quick"):
         pillars["reliability"] = NOT_MEASURED
     label = {
         "product": "RigGrade",
@@ -35,7 +35,9 @@ def build_label(rig_id, class_id, workload, grade, form, capped_by, pillars,
         "workload_class": workload,
         "grade": grade,
         "form": form,
-        "evidence_basis": "single session" if form == "point" else "trailing windows",
+        "evidence_basis": {"point": "single session",
+                           "quick": "single session, quick check: no 60-minute heat test"}.get(
+                               form, "trailing windows"),
         "capped_by": capped_by,
         "pillars": pillars,
         "status": status,
@@ -56,7 +58,8 @@ def badge_text(label, date_text):
     parts = [head,
              "%s class" % label_name(label["peer_class"]),
              WORKLOAD_NAMES[label["workload_class"]],
-             "point grade, single session" if label["form"] == "point" else "full grade"]
+             {"point": "point grade, single session",
+              "quick": "quick check, no heat test"}.get(label["form"], "full grade")]
     if label.get("capped_by") and grade != INSUFFICIENT:
         parts.append("capped by %s" % PILLAR_NAMES[label["capped_by"]])
     if label["status"] in ("on_watch", "demoted"):

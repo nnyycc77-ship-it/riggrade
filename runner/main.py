@@ -37,6 +37,8 @@ def measure(backend, session_params, workloads, sustained_s=SUSTAINED_S,
     Returns (gate, micro, metrics, raw outputs).
     """
     gate, metrics, raw = {}, {}, {}
+    # The server sets sustained_s to 0 for a quick check (no 60-minute run).
+    sustained_s = session_params.get("sustained_s", sustained_s)
     micro = backend.micro()
     raw["micro"] = micro
     order = session_params.get("pass_order") or list(workloads)
@@ -57,7 +59,7 @@ def measure(backend, session_params, workloads, sustained_s=SUSTAINED_S,
             passes.append(throughput)
             latencies.extend(lat or [])
         samples, t0 = [], clock()
-        while True:
+        while sustained_s > 0:
             value = backend.sustained_sample(workload, session_params)
             elapsed = clock() - t0
             samples.append((elapsed, value))
@@ -75,8 +77,8 @@ def measure(backend, session_params, workloads, sustained_s=SUSTAINED_S,
 
 
 def run(client, backend, identity, workloads, declared_runner, image_digest,
-        host_wallet=None, out=sys.stdout, auto_grade=True, **measure_kw):
-    session = client.new_session(workloads, declared_runner, host_wallet)
+        host_wallet=None, out=sys.stdout, auto_grade=True, mode="full", **measure_kw):
+    session = client.new_session(workloads, declared_runner, host_wallet, mode=mode)
     started = client.start(session["session_id"])
     gate, micro, metrics, raw = measure(backend, started["params"], workloads, **measure_kw)
     raw["identity"] = identity
@@ -92,6 +94,47 @@ def run(client, backend, identity, workloads, declared_runner, image_digest,
     return report
 
 
+UNITS = {"inference": "output tokens/s", "training": "training tokens/s"}
+
+
+def summary_lines(doc):
+    """The grade in plain words: what was measured, not only the grade letter.
+    While a GPU class has no reference yet, speed cannot be ranked, so the
+    measured numbers are the useful part of the result."""
+    pack = doc.get("evidence_pack") or {}
+    lines = []
+    for label in doc.get("labels") or []:
+        workload = label.get("workload_class")
+        cls = (pack.get("classes") or {}).get(workload) or {}
+        if cls.get("gate_failed"):
+            lines.append(f"{workload}: health checks FAILED: {', '.join(cls['gate_failed'])}")
+            continue
+        if cls.get("withdrawn"):
+            lines.append(f"{workload}: the card does not match its reported model ({cls['withdrawn']})")
+            continue
+        if not cls:
+            lines.append(f"{workload}: not rated ({label.get('reason', 'no class')})")
+            continue
+        lines.append(f"{workload}: health checks passed")
+        if cls.get("measured_throughput"):
+            lines.append(f"  speed measured: {cls['measured_throughput']:.1f} {UNITS.get(workload, 'per s')}")
+        cm = cls.get("consistency_measures") or {}
+        steady = label.get("pillars", {}).get("consistency")
+        if "cv" in cm:
+            lines.append(f"  steadiness: grade {steady} (spread {cm['cv'] * 100:.1f}% across passes)")
+        if isinstance(cm.get("decay"), (int, float)):
+            lines.append(f"  heat test (60 min): {cm['decay'] * 100:.1f}% slower at the end")
+        elif label.get("form") == "quick":
+            lines.append("  heat test: not run (quick check; run the full grade for it)")
+        basis = cls.get("reference_basis") or {}
+        if cls.get("speed_ratio") is not None:
+            lines.append(f"  speed vs other {label.get('peer_class')} rigs: {cls['speed_ratio'] * 100:.0f}% of the class median")
+        else:
+            lines.append(f"  speed rank: not yet; the {label.get('peer_class')} reference is still building "
+                         f"({basis.get('rigs', 0)} of {basis.get('min_rigs', 5)} rigs)")
+    return lines
+
+
 def free_grade(client, session_id, out):
     """Ask for the no-wallet grade; on success print it in plain words."""
     try:
@@ -102,12 +145,10 @@ def free_grade(client, session_id, out):
         out.write("No free grade right now (%s). Open the grade_url below in a browser to get it.\n"
                   % (doc.get("error") or "the service did not grade it"))
         return {"graded": False}
-    out.write("\nYour RigGrade grade (free, no wallet used, nothing charged):\n")
-    for badge in doc.get("badges") or []:
-        out.write("  " + str(badge) + "\n")
-    if doc.get("note"):
-        out.write(str(doc["note"]) + "\n")
-    out.write("\n")
+    out.write("\nYour RigGrade result (free, no wallet used, nothing charged):\n")
+    for line in summary_lines(doc):
+        out.write("  " + line + "\n")
+    out.write("Badge: " + "; ".join(str(b) for b in doc.get("badges") or []) + "\n\n")
     return {"graded": True, "grade": {"labels": doc.get("labels"), "badges": doc.get("badges"),
                                       "evidence_pack": doc.get("evidence_pack"),
                                       "free_until": doc.get("free_until")}}
@@ -162,6 +203,8 @@ def main(argv=None):
     ap.add_argument("--workloads", default="inference")
     ap.add_argument("--runner", choices=["buyer", "host"], required=True)
     ap.add_argument("--host-wallet")
+    ap.add_argument("--quick", action="store_true",
+                    help="about 10 minutes: health checks, speed and steadiness, no 60-minute heat test")
     args = ap.parse_args(argv)
     from . import identity as identity_mod
     identity = identity_mod.collect()
@@ -170,7 +213,8 @@ def main(argv=None):
     try:
         run(Client(args.endpoint), backend, identity, args.workloads.split(","),
             args.runner, image, args.host_wallet,
-            auto_grade=os.environ.get("RIGGRADE_AUTO_GRADE", "1") != "0")
+            auto_grade=os.environ.get("RIGGRADE_AUTO_GRADE", "1") != "0",
+            mode="quick" if args.quick else "full")
     finally:
         if backend.server is not None:
             backend.server.__exit__(None, None, None)

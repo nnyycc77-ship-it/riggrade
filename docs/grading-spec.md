@@ -92,6 +92,15 @@ Three measures. The pillar takes the worst of the three, and inference adds the 
 
 For a slice, the controlled noisy-neighbour isolation score (section 9) counts as a fourth measure: a throughput drop under the published aggressor load of at most 5% for Grade 1 and at most 12% for Grade 2.
 
+#### Quick check (owner decision, 5 Nov 2026)
+
+A session opened with `"mode": "quick"` runs the same gate, micro-benchmarks, warm-up and benchmark passes, but not the 60-minute sustained run: the server sets `params.sustained_s` to 0, and the whole run takes about 10 minutes. Its result has the form `quick`.
+- Consistency takes the spread across passes and, for inference, p99/p50. The decay is reported as not measured.
+- The badge reads "quick check, no heat test".
+- A quick check never sets or moves a class reference.
+- It is graded only free, with no wallet, during the free trial (`/session/{id}/grade/free`). The paid and claimed grade routes refuse it.
+- A full run is still the only way to a point or full grade with the heat test.
+
 ### 5.3 Reliability (full grades only)
 
 Measured from the heartbeat chain (section 7) over the trailing 30 days, stated as allowed downtime per 30 days.
