@@ -72,6 +72,11 @@ def grade_session(session, references, envelopes=None, attested=False,
     rig_id = identity.get("rig_id") or "rg_unknown"
     class_id = identify(identity.get("device_name"), identity.get("memory_gb"))
     window = {"from": session["started_at"], "to": now}
+    quick = session.get("mode") == "quick"
+    if quick:
+        # A quick check never sets or moves a class reference: references come
+        # from full runs only.
+        record_reference = False
     labels, pack_classes = [], {}
 
     if class_id is None:
@@ -120,12 +125,15 @@ def grade_session(session, references, envelopes=None, attested=False,
         else:
             held_grade, was_on_watch = held_w, False
         speed, below_keep = grading.speed_grade(ratio, held_grade, was_on_watch)
-        consistency, cmeasures = grading.consistency_grade(
-            passes, m.get("decay"), m.get("p99_p50"), m.get("isolation_drop"))
+        if quick:
+            consistency, cmeasures = grading.quick_consistency_grade(passes, m.get("p99_p50"))
+        else:
+            consistency, cmeasures = grading.consistency_grade(
+                passes, m.get("decay"), m.get("p99_p50"), m.get("isolation_drop"))
         pillars = {"speed": speed, "consistency": consistency}
-        form = "point"
+        form = "quick" if quick else "point"
         hours = None
-        if heartbeat is not None:
+        if heartbeat is not None and not quick:
             reliability, hours = grading.reliability_grade(heartbeat, now)
             pillars["reliability"] = reliability
             form = "full"
@@ -170,6 +178,7 @@ def _unrated(session, rig_id, class_id, workload, window, attested, host_paid,
 def _pack(session, class_id, classes, attested, host_paid):
     bundle = session["bundle"]
     return {"session_id": session["session_id"],
+            "mode": session.get("mode", "full"),
             "bench_version": bundle.get("bench_version"),
             "image_digest": bundle.get("image_digest"),
             "params": session["params"],

@@ -168,7 +168,9 @@ class AutoGradeTests(unittest.TestCase):
         self.assertTrue(report["graded"])
         self.assertTrue(report["grade"]["labels"])
         self.assertTrue(report["grade"]["evidence_pack"]["no_wallet"])
-        self.assertIn("Your RigGrade grade (free, no wallet used, nothing charged):", text)
+        self.assertIn("Your RigGrade result (free, no wallet used, nothing charged):", text)
+        self.assertIn("inference: health checks passed", text)
+        self.assertIn("speed rank: not yet", text)
         self.assertTrue(text.rstrip().endswith("}"))            # the JSON report still ends the output
 
     def test_switched_off_for_idle_grading(self):
@@ -176,7 +178,7 @@ class AutoGradeTests(unittest.TestCase):
             app = self.app(tmp)
             report, text = self.go(app, auto_grade=False)
         self.assertNotIn("graded", report)
-        self.assertNotIn("Your RigGrade grade", text)
+        self.assertNotIn("Your RigGrade result", text)
 
     def test_outside_the_trial_it_points_to_the_grade_url(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -184,3 +186,60 @@ class AutoGradeTests(unittest.TestCase):
         self.assertFalse(report["graded"])
         self.assertIn("Open the grade_url below in a browser", text)
         self.assertTrue(report["grade_url"].endswith("/grade"))
+
+
+class QuickCheckTests(unittest.TestCase):
+    """Owner decision, 5 Nov 2026: a quick check, about 10 minutes, with no
+    60-minute heat test, graded free during the trial and never a reference."""
+    app = AutoGradeTests.app
+
+    def test_quick_run_skips_the_sustained_run_and_says_so(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self.app(tmp)
+            out = io.StringIO()
+            clock = FakeClock()
+            report = run(InProcessClient(app), FakeBackend(clock), identity.parse(CSV.splitlines()[0]),
+                         ["inference"], "host", IMAGE, out=out, clock=clock, mode="quick")
+            text = out.getvalue()
+            basis = app.references.basis("rtx4090-24", "inference")
+        self.assertTrue(report["graded"])
+        label = report["grade"]["labels"][0]
+        self.assertEqual(label["form"], "quick")
+        self.assertIn("quick check", label["evidence_basis"])
+        self.assertIn("quick check, no heat test", report["grade"]["badges"][0])
+        self.assertEqual(report["grade"]["evidence_pack"]["mode"], "quick")
+        self.assertIn("heat test: not run (quick check", text)
+        self.assertEqual(basis["rigs"], 0)                       # never a reference
+
+    def test_paid_or_claimed_grade_refused_for_a_quick_session(self):
+        from tests.test_endpoint import call
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self.app(tmp)
+            clock = FakeClock()
+            report = run(InProcessClient(app), FakeBackend(clock), identity.parse(CSV.splitlines()[0]),
+                         ["inference"], "host", IMAGE, out=io.StringIO(), clock=clock,
+                         mode="quick", auto_grade=False)
+            status, _h, doc = call(app, "POST", f"/riggrade/v1/session/{report['session_id']}/grade",
+                                   payment="pay")
+        self.assertEqual(status, "409 Conflict")
+        self.assertIn("quick check", doc["error"])
+
+    def test_sustained_s_zero_takes_no_samples(self):
+        clock = FakeClock()
+        params = {"passes": 3, "pass_order": ["inference"], "sustained_s": 0}
+        _g, _m, metrics, raw = measure(FakeBackend(clock), params, ["inference"], clock=clock)
+        self.assertIsNone(metrics["inference"]["decay"])
+        self.assertEqual(raw["ruler.inference"]["sustained"], [])
+
+    def test_quick_session_is_never_sold_or_claimed(self):
+        from tests.test_endpoint import call
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self.app(tmp)
+            _s, _h, s = call(app, "POST", "/riggrade/v1/session",
+                             {"workload_classes": ["inference"], "declared_runner": "host", "mode": "quick"})
+            self.assertEqual(s["mode"], "quick")
+            _s, _h, st = call(app, "POST", f"/riggrade/v1/session/{s['session_id']}/start")
+            self.assertEqual(st["params"]["sustained_s"], 0)
+            status, _h, _d = call(app, "POST", "/riggrade/v1/session",
+                                  {"workload_classes": ["inference"], "declared_runner": "host", "mode": "fast"})
+            self.assertEqual(status, "409 Conflict")

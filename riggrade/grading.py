@@ -133,6 +133,21 @@ def consistency_grade(throughput_passes, decay, p99_p50=None,
     return max(grades.values()), measures
 
 
+def quick_consistency_grade(throughput_passes, p99_p50=None):
+    """Quick check (owner decision, 5 Nov 2026): the spec 5.2 measures a short
+    run can take, the spread across passes and, for inference, p99/p50. The
+    sustained-run decay is not measured, so a quick result never claims it."""
+    cv = coefficient_of_variation(throughput_passes or [])
+    if cv is None:
+        return INSUFFICIENT, {}
+    measures = {"cv": cv}
+    if p99_p50 is not None:
+        measures["p99_p50"] = p99_p50
+    grades = {name: _limit_grade(value, CONSISTENCY_LIMITS[name])
+              for name, value in measures.items()}
+    return max(grades.values()), dict(measures, decay="not measured (quick check)")
+
+
 def heartbeat_downtime(accepted_ts, window_start, window_end):
     """Spec 7. Seconds of downtime and of coverage in the window.
 

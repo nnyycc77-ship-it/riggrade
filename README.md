@@ -91,6 +91,9 @@ docker run --rm --gpus all -e RIGGRADE_IMAGE_DIGEST=$RIGGRADE_IMAGE_DIGESTS \
   $BENCH_IMAGE --help
 ```
 
+Add `--quick` for a quick check of about 10 minutes: health checks, speed and steadiness, without the 60-minute
+heat test. During the free trial the run ends with the result printed, free, with no wallet.
+
 The container carries the runner and the spec only. The grading server,
 payment code and screen list never ship in it.
 
