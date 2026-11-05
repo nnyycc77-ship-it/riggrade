@@ -1499,7 +1499,8 @@ def _read(environ):
         raise BadRequest("body is not JSON")
 
 
-TRAILING_PUNCTUATION = ")]}>,.;:!'\"*"
+# Not "}": API docs and probes write path templates such as ".../{id}".
+TRAILING_PUNCTUATION = ")],.;:!'\"*"
 
 
 def _redirect(start_response, location):
