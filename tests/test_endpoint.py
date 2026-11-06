@@ -149,10 +149,20 @@ class SessionTests(Harness):
         app = self.app()
         status, _h, _d = call(app, "POST", "/riggrade/v1/session",
                               {"workload_classes": ["mining"], "declared_runner": "buyer"})
-        self.assertEqual(status, "409 Conflict")
+        self.assertEqual(status, "400 Bad Request")
         status, _h, _d = call(app, "POST", "/riggrade/v1/session",
                               {"workload_classes": ["inference"], "declared_runner": "x"})
-        self.assertEqual(status, "409 Conflict")
+        self.assertEqual(status, "400 Bad Request")
+        # An empty body is malformed input, not a state conflict (OpenAPI: 400).
+        status, _h, doc = call(app, "POST", "/riggrade/v1/session", {})
+        self.assertEqual(status, "400 Bad Request")
+        self.assertFalse(doc["charged"])
+
+    def test_unknown_session_is_404(self):
+        app = self.app()
+        status, _h, doc = call(app, "POST", "/riggrade/v1/session/rs_0000000000000000/start", {})
+        self.assertEqual(status, "404 Not Found")
+        self.assertEqual(doc["error"], "unknown_session")
 
     def test_bundle_checks(self):
         app = self.app()

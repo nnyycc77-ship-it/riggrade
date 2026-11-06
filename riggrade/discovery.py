@@ -222,6 +222,7 @@ def openapi(base, prefix, contact_email=None, pricecheck=False):
         **({"x-payment-info": payment_info(paid)} if paid else {}),
         **({"requestBody": {"required": True, "content": {"application/json": {"schema": body}}}} if body else {}),
         "responses": {"200": {"description": "OK"}, "400": {"description": "bad request"},
+                      "404": {"description": "no such session"},
                       "409": {"description": "session state does not allow this"},
                       **(extra or {})}}}
     return {

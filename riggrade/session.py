@@ -23,7 +23,15 @@ MODES = ("full", "quick")
 
 
 class SessionError(ValueError):
-    pass
+    """The session's state does not allow the request (HTTP 409)."""
+
+
+class SessionInputError(SessionError):
+    """The request itself is malformed: answered 400, as the OpenAPI says."""
+
+
+class SessionNotFound(SessionError):
+    """No session with this id: answered 404."""
 
 
 def load_distribution(path=None):
@@ -64,12 +72,12 @@ class Sessions:
 
     def issue(self, workloads, declared_runner, host_wallet=None, mode="full"):
         if mode not in MODES:
-            raise SessionError("mode must be full or quick")
+            raise SessionInputError("mode must be full or quick")
         if not workloads or any(w not in WORKLOAD_CLASSES for w in workloads):
-            raise SessionError("workload_classes must be a non-empty subset of %s"
-                               % (WORKLOAD_CLASSES,))
+            raise SessionInputError("workload_classes must be a non-empty subset of %s"
+                                    % (WORKLOAD_CLASSES,))
         if declared_runner not in RUNNERS:
-            raise SessionError("declared_runner must be buyer or host")
+            raise SessionInputError("declared_runner must be buyer or host")
         now = self.clock()
         session = {"session_id": "rs_" + secrets.token_hex(8),
                    "nonce": secrets.token_hex(16),
@@ -130,7 +138,7 @@ class Sessions:
     def _live(self, session_id):
         session = self.store.get(session_id)
         if session is None:
-            raise SessionError("unknown_session")
+            raise SessionNotFound("unknown_session")
         if self.clock() > session["expires_at"]:
             raise SessionError("window_expired")
         return session
