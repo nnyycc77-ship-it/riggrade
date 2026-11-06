@@ -36,7 +36,7 @@ from .engine import grade_session, preview
 from .grading import CAP_PER_OPERATOR, MAX_OPERATOR_SHARE, MIN_OPERATORS, ReferenceBook
 from .heartbeat import Heartbeats
 from .label import STATEMENT, badge_text, lint
-from .session import MemoryStore, SessionError, Sessions
+from .session import MemoryStore, SessionError, SessionInputError, SessionNotFound, Sessions
 from . import salelog
 from . import discovery
 from . import fixit
@@ -402,8 +402,10 @@ class GradingApp:
                 return self.host_consent(start_response, environ, body)
             if rest == ["host", "certificate"]:
                 return self.host_certificate(start_response, environ, body)
-        except (BadRequest, rental.BadRequest, pricecheck.BadRequest) as exc:
+        except (BadRequest, rental.BadRequest, pricecheck.BadRequest, SessionInputError) as exc:
             return _json(start_response, "400 Bad Request", {"error": str(exc), "charged": False})
+        except SessionNotFound as exc:
+            return _json(start_response, "404 Not Found", {"error": str(exc), "charged": False})
         except SessionError as exc:
             return _json(start_response, "409 Conflict", {"error": str(exc), "charged": False})
         return _json(start_response, "404 Not Found", {"error": "not_found"})

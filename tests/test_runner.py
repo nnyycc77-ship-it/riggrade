@@ -243,7 +243,7 @@ class QuickCheckTests(unittest.TestCase):
             self.assertEqual(st["params"]["sustained_s"], 0)
             status, _h, _d = call(app, "POST", "/riggrade/v1/session",
                                   {"workload_classes": ["inference"], "declared_runner": "host", "mode": "fast"})
-            self.assertEqual(status, "409 Conflict")
+            self.assertEqual(status, "400 Bad Request")
 
 
 class SharedCardTests(unittest.TestCase):
