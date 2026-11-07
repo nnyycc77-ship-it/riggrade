@@ -164,7 +164,7 @@ class SessionTests(Harness):
             got = {}
             environ = {"REQUEST_METHOD": "GET", "PATH_INFO": path, "CONTENT_LENGTH": "0",
                        "wsgi.input": io.BytesIO(b"")}
-            b"".join(app(environ, lambda s, h: got.update(status=s, headers=dict(h))))
+            b"".join(app(environ, lambda s, h, got=got: got.update(status=s, headers=dict(h))))
             self.assertEqual(got["status"], "301 Moved Permanently")
             self.assertEqual(got["headers"]["Location"], "/riggrade/v1/checkout")
 
