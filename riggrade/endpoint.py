@@ -66,6 +66,7 @@ V1_REFUSED = ("x402 v1 (X-PAYMENT) is not accepted; send PAYMENT-SIGNATURE with 
 AGENT_CARD_PATHS = ("/.well-known/agent.json", "/.well-known/agent-card.json")
 DISCOVERY_PATHS = ("/", "/favicon.ico", "/favicon.png", "/favicon.svg", *AGENT_CARD_PATHS, "/robots.txt", "/sitemap.xml",
                    signing.KEYS_PATH, "/llms.txt", "/openapi.json", PREFIX + "/openapi.json")
+PRICING_PATHS = ("/pricing", "/prices", PREFIX + "/pricing")
 MAX_BODY = 4 * 1024 * 1024
 USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 # Decided prices (plan Revision 5, decided items 1), USDC atomic units.
@@ -313,6 +314,9 @@ class GradingApp:
             return _redirect(start_response, clean + ("?" + query if query else ""))
         if method == "GET" and path in DISCOVERY_PATHS:
             return self.discovery(start_response, environ, path)
+        if method == "GET" and path in PRICING_PATHS:
+            # People guess /pricing; the prices live on the checkout page.
+            return _redirect(start_response, PREFIX + "/checkout")
         if not path.startswith(PREFIX):
             return _json(start_response, "404 Not Found", {"error": "not_found"})
         rest = path[len(PREFIX):].strip("/").split("/")
@@ -524,7 +528,9 @@ class GradingApp:
                                    f"use POST {PREFIX}/session/{sid}/grade over x402",
                           "charged": False})
         session = self.store.get(sid)
-        if session is None or session.get("bundle") is None:
+        if session is None:
+            return _json(start_response, "404 Not Found", {"error": "unknown_session", "charged": False})
+        if session.get("bundle") is None:
             return _json(start_response, "409 Conflict",
                          {"error": "no accepted bundle for this session", "charged": False})
         if session.get("graded"):

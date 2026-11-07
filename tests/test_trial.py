@@ -209,8 +209,10 @@ class GradeNoWalletTests(Harness):
         self.assertEqual(salelog.read_chain(self.log), [])
 
     def test_unknown_or_unsubmitted_session(self):
-        status, _h, _doc = self.free(self.app(), "rg_s_unknown")
-        self.assertEqual(status, "409 Conflict")
+        status, _h, doc = self.free(self.app(), "rg_s_unknown")
+        self.assertEqual(status, "404 Not Found")
+        self.assertEqual(doc["error"], "unknown_session")
+        self.assertFalse(doc["charged"])
 
     def test_a_building_class_keeps_the_rigs_free_reference_session(self):
         # Empty reference book: the class is still building. A no-wallet grade
