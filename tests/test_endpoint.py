@@ -158,6 +158,16 @@ class SessionTests(Harness):
         self.assertEqual(status, "400 Bad Request")
         self.assertFalse(doc["charged"])
 
+    def test_pricing_redirects_to_checkout(self):
+        app = self.app()
+        for path in ("/pricing", "/prices", "/riggrade/v1/pricing"):
+            got = {}
+            environ = {"REQUEST_METHOD": "GET", "PATH_INFO": path, "CONTENT_LENGTH": "0",
+                       "wsgi.input": io.BytesIO(b"")}
+            b"".join(app(environ, lambda s, h, got=got: got.update(status=s, headers=dict(h))))
+            self.assertEqual(got["status"], "301 Moved Permanently")
+            self.assertEqual(got["headers"]["Location"], "/riggrade/v1/checkout")
+
     def test_unknown_session_is_404(self):
         app = self.app()
         status, _h, doc = call(app, "POST", "/riggrade/v1/session/rs_0000000000000000/start", {})
