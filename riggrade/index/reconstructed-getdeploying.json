@@ -1,12 +1,14 @@
 {
+ "a1_notice_ends": "2026-11-15",
  "ambiguous_dropped": {
   "nvidia-a100": "memory not stated: could be a100-sxm-80, a100-pcie-80 or a100-pcie-40",
   "nvidia-h100": "form not stated: could be h100-sxm-80 or h100-pcie-80"
  },
  "billing": "ON_DEMAND",
+ "chip_families": {},
  "classes": {
   "h200-sxm-141": {
-   "latest_week": "2026-10-26",
+   "latest_week": "2026-11-09",
    "source_name": "nvidia-h200",
    "weeks": {
     "2025-10-27": {
@@ -432,11 +434,27 @@
      "offering_count": 83,
      "provider_count": 35,
      "provider_median_price": 4.875
+    },
+    "2026-11-02": {
+     "max_price": 13.78,
+     "median_price": 4.8605,
+     "min_price": 2.09,
+     "offering_count": 97,
+     "provider_count": 38,
+     "provider_median_price": 5.0
+    },
+    "2026-11-09": {
+     "max_price": 13.78,
+     "median_price": 4.59,
+     "min_price": 2.09,
+     "offering_count": 106,
+     "provider_count": 35,
+     "provider_median_price": 4.74
     }
    }
   },
   "l40s-48": {
-   "latest_week": "2026-10-26",
+   "latest_week": "2026-11-09",
    "source_name": "nvidia-l40s",
    "weeks": {
     "2025-10-27": {
@@ -862,11 +880,27 @@
      "offering_count": 105,
      "provider_count": 33,
      "provider_median_price": 1.57
+    },
+    "2026-11-02": {
+     "max_price": 7.5772,
+     "median_price": 1.8,
+     "min_price": 0.38,
+     "offering_count": 97,
+     "provider_count": 34,
+     "provider_median_price": 1.603
+    },
+    "2026-11-09": {
+     "max_price": 7.5772,
+     "median_price": 1.8,
+     "min_price": 0.38,
+     "offering_count": 87,
+     "provider_count": 32,
+     "provider_median_price": 1.643
     }
    }
   },
   "rtx3090-24": {
-   "latest_week": "2026-10-26",
+   "latest_week": "2026-11-09",
    "source_name": "nvidia-rtx-3090",
    "weeks": {
     "2025-10-27": {
@@ -1292,11 +1326,27 @@
      "offering_count": 11,
      "provider_count": 7,
      "provider_median_price": 0.225
+    },
+    "2026-11-02": {
+     "max_price": 0.494,
+     "median_price": 0.22,
+     "min_price": 0.1,
+     "offering_count": 18,
+     "provider_count": 7,
+     "provider_median_price": 0.253
+    },
+    "2026-11-09": {
+     "max_price": 0.572,
+     "median_price": 0.2,
+     "min_price": 0.1,
+     "offering_count": 22,
+     "provider_count": 7,
+     "provider_median_price": 0.22
     }
    }
   },
   "rtx4090-24": {
-   "latest_week": "2026-10-26",
+   "latest_week": "2026-11-09",
    "source_name": "nvidia-rtx-4090",
    "weeks": {
     "2025-10-27": {
@@ -1722,11 +1772,27 @@
      "offering_count": 26,
      "provider_count": 12,
      "provider_median_price": 0.47
+    },
+    "2026-11-02": {
+     "max_price": 2.22,
+     "median_price": 0.485,
+     "min_price": 0.33,
+     "offering_count": 41,
+     "provider_count": 15,
+     "provider_median_price": 0.475
+    },
+    "2026-11-09": {
+     "max_price": 2.22,
+     "median_price": 0.5,
+     "min_price": 0.26,
+     "offering_count": 46,
+     "provider_count": 17,
+     "provider_median_price": 0.49
     }
    }
   },
   "rtx5090-32": {
-   "latest_week": "2026-10-26",
+   "latest_week": "2026-11-09",
    "source_name": "nvidia-rtx-5090",
    "weeks": {
     "2025-10-27": {
@@ -2152,18 +2218,34 @@
      "offering_count": 46,
      "provider_count": 16,
      "provider_median_price": 0.745
+    },
+    "2026-11-02": {
+     "max_price": 2.52,
+     "median_price": 0.8,
+     "min_price": 0.35,
+     "offering_count": 47,
+     "provider_count": 15,
+     "provider_median_price": 0.72
+    },
+    "2026-11-09": {
+     "max_price": 2.52,
+     "median_price": 0.75,
+     "min_price": 0.35,
+     "offering_count": 57,
+     "provider_count": 17,
+     "provider_median_price": 0.72
     }
    }
   }
  },
  "corrections": [],
  "dropped_rows_by_source_name": {
-  "amd-mi250": 14,
+  "amd-mi250": 13,
   "amd-mi300x": 53,
   "amd-mi325x": 40,
   "amd-mi355x": 53,
   "amd-radeon-pro-v520": 53,
-  "intel-gaudi2": 18,
+  "intel-gaudi2": 20,
   "nvidia-a10": 53,
   "nvidia-a100": 53,
   "nvidia-a10g": 53,
@@ -2177,9 +2259,9 @@
   "nvidia-a6000": 53,
   "nvidia-a800": 53,
   "nvidia-b200": 53,
-  "nvidia-b300": 51,
+  "nvidia-b300": 53,
   "nvidia-gb200": 53,
-  "nvidia-gb300": 15,
+  "nvidia-gb300": 17,
   "nvidia-gh200": 53,
   "nvidia-gt710": 39,
   "nvidia-gt730": 39,
@@ -2200,16 +2282,16 @@
   "nvidia-m4000": 53,
   "nvidia-m60": 53,
   "nvidia-p100": 53,
-  "nvidia-p1000": 14,
+  "nvidia-p1000": 12,
   "nvidia-p2000": 4,
   "nvidia-p4": 53,
   "nvidia-p40": 53,
   "nvidia-p4000": 53,
   "nvidia-p5000": 53,
-  "nvidia-p600": 14,
+  "nvidia-p600": 12,
   "nvidia-p6000": 53,
   "nvidia-p620": 39,
-  "nvidia-rtx-2000-ada": 15,
+  "nvidia-rtx-2000-ada": 17,
   "nvidia-rtx-2060": 53,
   "nvidia-rtx-2060-super": 38,
   "nvidia-rtx-2070": 53,
@@ -2223,9 +2305,9 @@
   "nvidia-rtx-3080": 53,
   "nvidia-rtx-3080-ti": 53,
   "nvidia-rtx-3090-ti": 53,
-  "nvidia-rtx-4000": 10,
+  "nvidia-rtx-4000": 12,
   "nvidia-rtx-4000-ada": 53,
-  "nvidia-rtx-4000-sff-ada": 10,
+  "nvidia-rtx-4000-sff-ada": 12,
   "nvidia-rtx-4060": 51,
   "nvidia-rtx-4060-ti": 53,
   "nvidia-rtx-4070": 53,
@@ -2234,7 +2316,7 @@
   "nvidia-rtx-4080": 53,
   "nvidia-rtx-4500-ada": 20,
   "nvidia-rtx-5000": 53,
-  "nvidia-rtx-5000-ada": 40,
+  "nvidia-rtx-5000-ada": 41,
   "nvidia-rtx-5060": 53,
   "nvidia-rtx-5060-ti": 53,
   "nvidia-rtx-5070": 53,
@@ -2243,12 +2325,12 @@
   "nvidia-rtx-5880-ada": 36,
   "nvidia-rtx-6000": 53,
   "nvidia-rtx-6000-ada": 53,
-  "nvidia-rtx-pro-4000": 41,
-  "nvidia-rtx-pro-4500": 33,
-  "nvidia-rtx-pro-5000": 35,
+  "nvidia-rtx-pro-4000": 43,
+  "nvidia-rtx-pro-4500": 35,
+  "nvidia-rtx-pro-5000": 37,
   "nvidia-rtx-pro-6000": 53,
-  "nvidia-rtx-pro-6000d": 19,
-  "nvidia-t1000": 14,
+  "nvidia-rtx-pro-6000d": 21,
+  "nvidia-t1000": 12,
   "nvidia-t4": 53,
   "nvidia-t4g": 53,
   "nvidia-v100": 53,
@@ -2261,6 +2343,14 @@
    "sha256": "20e445304c88a18750d6d831121317fea85135d56f5ea91a993580e93d26868a",
    "source_last_snapshot": "2026-11-01",
    "source_latest_week": "2026-10-26",
+   "url": "https://getdeploying.com/dataset/gpu-prices/weekly.json"
+  },
+  {
+   "bytes": 4169281,
+   "retrieved_at": "2026-11-10T04:17:59Z",
+   "sha256": "0e85928ca737a6f6d089df80070bd6d62931bbd74a3ef0efa508ac39a7351a19",
+   "source_last_snapshot": "2026-11-09",
+   "source_latest_week": "2026-11-09",
    "url": "https://getdeploying.com/dataset/gpu-prices/weekly.json"
   }
  ],
